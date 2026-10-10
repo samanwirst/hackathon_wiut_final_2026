@@ -67,7 +67,12 @@ unrelated usage and is treated conservatively, never reported as this rental's
 measured cost. Cleanup keeps retrying until authoritative absence is established.
 
 Limit download to the pinned image and model assets, avoid package builds and
-large logs, and copy only bounded evidence. Inspect actual network usage and
+large logs, and copy only bounded evidence. `download_remote_teacher.py` selects
+14 assets totaling 16,595,961,188 bytes at the pinned revision (metadata verified
+22:08 UTC), caps model files at 22 GiB and transport at 25 GiB, verifies sizes
+and available LFS SHA256 values, and performs no automatic retry. This transfer
+has not been executed. Start the completed local model with offline Hub mode
+so model startup cannot perform additional implicit downloads. Inspect actual network usage and
 the instance-specific charge records during use. **Credit exhaustion is not a
 spend cap**: Vast documents continued storage billing and possible saved-card
 negative-balance charges. Confirm destruction, temporary SSH key removal, and
