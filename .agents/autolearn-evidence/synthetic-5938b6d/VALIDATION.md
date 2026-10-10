@@ -80,3 +80,22 @@ and `GET /api/autolearn/versions/1/gate`. The paired measurement runner verified
 version membership/image hashes and used the same held-out images for both paths.
 Safe JSON records and their hashes accompany this report. Local runtime paths
 and private raw datasets are deliberately outside the committed release.
+
+## Separate local GPU kernel measurement
+
+A separate process loaded the same pinned Teacher and profiled the same six
+held-out image hashes using PyTorch CPU/CUDA activity collection. Warm-up was
+excluded. Each measured image executed two actual candidate forward passes;
+14 total model forwards included warm-up, with zero HTTP requests or actions.
+Mean sum of CUDA kernel durations was **86.388 ms per image**. Kernel counts,
+per-image durations, copied raw model replies and trace hashes are recorded in
+`separate-gpu-kernel-profile.json`; grouped kernel/copy durations are in
+`gpu-kernel-aggregates.json`. Complete Chrome traces remain ignored locally.
+
+This is a separate direct-model profiling experiment with profiler overhead,
+not GPU timing from the earlier HTTP benchmark. Aggregate kernel duration is
+not allocation time, rental billing time or energy; overlapping kernel durations
+can differ from elapsed wall time. The original HTTP latency record is unchanged.
+Vast GPU inference and kernel time remain UNVERIFIED; no rental cost per event
+is inferred. PyTorch's [profiler documentation](https://docs.pytorch.org/docs/2.14/profiler.html)
+describes CPU/CUDA activity collection. Actual profiler runtime was Torch2.7.1+cu118.

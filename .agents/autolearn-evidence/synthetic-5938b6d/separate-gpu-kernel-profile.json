@@ -1,0 +1,464 @@
+{
+  "same_six_heldout_image_hashes_as_paired_benchmark": true,
+  "helper_code_sha256": "930be3d3b307993ed6bb712622ae75c6ed2b2e2477e95460642137b43f340d95",
+  "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+  "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+  "torch": "2.7.1+cu118",
+  "device": "NVIDIA GeForce RTX 3050 Laptop GPU",
+  "profiler": "torch.profiler CPU+CUDA with Chrome trace cat=kernel duration sum; memcpy separately",
+  "method": "candidate_sequence_softmax",
+  "actual_model_forwards_including_warmup": 14,
+  "actual_http_requests": 0,
+  "records": [
+    {
+      "sample_id": "s06-f00",
+      "image_sha256": "4bb6a5baafcd702d4e8fee6e0f5052f3557dc1e1d73c41600c64e7579e7c6e28",
+      "actual_reply": {
+        "id": "qa-kernel-0",
+        "object": "chat.completion",
+        "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "{\"label\": \"occupied\", \"confidence\": 0.9374814204617754}"
+            },
+            "finish_reason": "stop"
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 134,
+          "completion_tokens": 0,
+          "total_tokens": 134
+        },
+        "experimental_metrics": {
+          "request_id": "qa-kernel-0",
+          "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+          "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+          "image_count": 1,
+          "input_tokens": 134,
+          "output_tokens": 0,
+          "inference_seconds": 0.13343837700085714,
+          "gpu_peak_allocated_bytes": 1063381504,
+          "gpu_peak_reserved_bytes": 1084227584,
+          "deadline_reached": false,
+          "scoring": {
+            "method": "candidate_sequence_softmax",
+            "uncalibrated": true,
+            "formula": "s(label)=sum_t log P(candidate_token_t | image(s), prompt, prior_candidate_tokens); p(label)=exp(s)/sum_candidates exp(s)",
+            "candidate_labels": [
+              "occupied",
+              "empty"
+            ],
+            "candidate_token_ids": [
+              [
+                27450,
+                18
+              ],
+              [
+                16451,
+                18
+              ]
+            ],
+            "candidate_log_likelihoods": [
+              -4.104527473449707,
+              -6.812260627746582
+            ],
+            "normalized_probabilities": [
+              0.9374814204617754,
+              0.06251857953822464
+            ],
+            "model_forward_calls": 2,
+            "actual_model_processed_tokens": 272,
+            "output_is_generated_json": false
+          }
+        }
+      },
+      "profiled_wall_ms_including_overhead": 281.6845659981482,
+      "cuda_kernel_events": 3263,
+      "summed_cuda_kernel_ms": 100.947286,
+      "cuda_memcpy_events": 28,
+      "summed_cuda_memcpy_ms": 0.571309,
+      "trace_sha256": "908257832ca96bad44d5b117526a683bc6867be9cbc2ffe931b1019ed74b93ab",
+      "gpu_kernel_measurement": "MEASURED"
+    },
+    {
+      "sample_id": "s06-f01",
+      "image_sha256": "f5b86637d254afc8d165383232a6b6ee5f75b27aadf1cb31a21662ca6d24d622",
+      "actual_reply": {
+        "id": "qa-kernel-1",
+        "object": "chat.completion",
+        "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "{\"label\": \"occupied\", \"confidence\": 0.9310551503123619}"
+            },
+            "finish_reason": "stop"
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 134,
+          "completion_tokens": 0,
+          "total_tokens": 134
+        },
+        "experimental_metrics": {
+          "request_id": "qa-kernel-1",
+          "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+          "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+          "image_count": 1,
+          "input_tokens": 134,
+          "output_tokens": 0,
+          "inference_seconds": 0.10975399699964328,
+          "gpu_peak_allocated_bytes": 1063381504,
+          "gpu_peak_reserved_bytes": 1084227584,
+          "deadline_reached": false,
+          "scoring": {
+            "method": "candidate_sequence_softmax",
+            "uncalibrated": true,
+            "formula": "s(label)=sum_t log P(candidate_token_t | image(s), prompt, prior_candidate_tokens); p(label)=exp(s)/sum_candidates exp(s)",
+            "candidate_labels": [
+              "occupied",
+              "empty"
+            ],
+            "candidate_token_ids": [
+              [
+                27450,
+                18
+              ],
+              [
+                16451,
+                18
+              ]
+            ],
+            "candidate_log_likelihoods": [
+              -4.541675090789795,
+              -7.144686698913574
+            ],
+            "normalized_probabilities": [
+              0.9310551503123619,
+              0.06894484968763814
+            ],
+            "model_forward_calls": 2,
+            "actual_model_processed_tokens": 272,
+            "output_is_generated_json": false
+          }
+        }
+      },
+      "profiled_wall_ms_including_overhead": 170.0717599960626,
+      "cuda_kernel_events": 3263,
+      "summed_cuda_kernel_ms": 84.058825,
+      "cuda_memcpy_events": 28,
+      "summed_cuda_memcpy_ms": 0.513546,
+      "trace_sha256": "b0694643c8b10b66846f2088ab2ae4027022d3e73a5ffe8854e7c16d68dce631",
+      "gpu_kernel_measurement": "MEASURED"
+    },
+    {
+      "sample_id": "s07-f00",
+      "image_sha256": "e18fea284b68970a59650b24d5cce3ac6e1d76dfb80eb770a196bd2d597824b2",
+      "actual_reply": {
+        "id": "qa-kernel-2",
+        "object": "chat.completion",
+        "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "{\"label\": \"occupied\", \"confidence\": 0.9416618611816804}"
+            },
+            "finish_reason": "stop"
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 134,
+          "completion_tokens": 0,
+          "total_tokens": 134
+        },
+        "experimental_metrics": {
+          "request_id": "qa-kernel-2",
+          "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+          "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+          "image_count": 1,
+          "input_tokens": 134,
+          "output_tokens": 0,
+          "inference_seconds": 0.11151893199712504,
+          "gpu_peak_allocated_bytes": 1063381504,
+          "gpu_peak_reserved_bytes": 1084227584,
+          "deadline_reached": false,
+          "scoring": {
+            "method": "candidate_sequence_softmax",
+            "uncalibrated": true,
+            "formula": "s(label)=sum_t log P(candidate_token_t | image(s), prompt, prior_candidate_tokens); p(label)=exp(s)/sum_candidates exp(s)",
+            "candidate_labels": [
+              "occupied",
+              "empty"
+            ],
+            "candidate_token_ids": [
+              [
+                27450,
+                18
+              ],
+              [
+                16451,
+                18
+              ]
+            ],
+            "candidate_log_likelihoods": [
+              -3.9568915367126465,
+              -6.738281726837158
+            ],
+            "normalized_probabilities": [
+              0.9416618611816804,
+              0.058338138818319625
+            ],
+            "model_forward_calls": 2,
+            "actual_model_processed_tokens": 272,
+            "output_is_generated_json": false
+          }
+        }
+      },
+      "profiled_wall_ms_including_overhead": 168.95759500039276,
+      "cuda_kernel_events": 3263,
+      "summed_cuda_kernel_ms": 84.113012,
+      "cuda_memcpy_events": 28,
+      "summed_cuda_memcpy_ms": 0.48634499999999997,
+      "trace_sha256": "46fdba011812f75309e4c220316345266bf1dd5478c3b0239a960d6005cb2dde",
+      "gpu_kernel_measurement": "MEASURED"
+    },
+    {
+      "sample_id": "s07-f01",
+      "image_sha256": "8209024222b92aba6ab0498b3e873d31b4adcdaae3beb6374649cea93c11e38b",
+      "actual_reply": {
+        "id": "qa-kernel-3",
+        "object": "chat.completion",
+        "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "{\"label\": \"occupied\", \"confidence\": 0.9486219880410585}"
+            },
+            "finish_reason": "stop"
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 134,
+          "completion_tokens": 0,
+          "total_tokens": 134
+        },
+        "experimental_metrics": {
+          "request_id": "qa-kernel-3",
+          "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+          "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+          "image_count": 1,
+          "input_tokens": 134,
+          "output_tokens": 0,
+          "inference_seconds": 0.11029148800298572,
+          "gpu_peak_allocated_bytes": 1063381504,
+          "gpu_peak_reserved_bytes": 1084227584,
+          "deadline_reached": false,
+          "scoring": {
+            "method": "candidate_sequence_softmax",
+            "uncalibrated": true,
+            "formula": "s(label)=sum_t log P(candidate_token_t | image(s), prompt, prior_candidate_tokens); p(label)=exp(s)/sum_candidates exp(s)",
+            "candidate_labels": [
+              "occupied",
+              "empty"
+            ],
+            "candidate_token_ids": [
+              [
+                27450,
+                18
+              ],
+              [
+                16451,
+                18
+              ]
+            ],
+            "candidate_log_likelihoods": [
+              -4.885336875915527,
+              -7.8011369705200195
+            ],
+            "normalized_probabilities": [
+              0.9486219880410585,
+              0.05137801195894141
+            ],
+            "model_forward_calls": 2,
+            "actual_model_processed_tokens": 272,
+            "output_is_generated_json": false
+          }
+        }
+      },
+      "profiled_wall_ms_including_overhead": 167.69053299503867,
+      "cuda_kernel_events": 3263,
+      "summed_cuda_kernel_ms": 83.09325100000001,
+      "cuda_memcpy_events": 28,
+      "summed_cuda_memcpy_ms": 0.502922,
+      "trace_sha256": "4a18228b4d0811bd4dc409e32b260bdefd57b0f03336c12ea44b0466c749b687",
+      "gpu_kernel_measurement": "MEASURED"
+    },
+    {
+      "sample_id": "s11-f00",
+      "image_sha256": "b6da660387d56a31feb95ccce77b57ab310a542df5b216e24c03e99ff4d31d84",
+      "actual_reply": {
+        "id": "qa-kernel-4",
+        "object": "chat.completion",
+        "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "{\"label\": \"occupied\", \"confidence\": 0.9646545806574385}"
+            },
+            "finish_reason": "stop"
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 134,
+          "completion_tokens": 0,
+          "total_tokens": 134
+        },
+        "experimental_metrics": {
+          "request_id": "qa-kernel-4",
+          "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+          "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+          "image_count": 1,
+          "input_tokens": 134,
+          "output_tokens": 0,
+          "inference_seconds": 0.11018247999891173,
+          "gpu_peak_allocated_bytes": 1063381504,
+          "gpu_peak_reserved_bytes": 1084227584,
+          "deadline_reached": false,
+          "scoring": {
+            "method": "candidate_sequence_softmax",
+            "uncalibrated": true,
+            "formula": "s(label)=sum_t log P(candidate_token_t | image(s), prompt, prior_candidate_tokens); p(label)=exp(s)/sum_candidates exp(s)",
+            "candidate_labels": [
+              "occupied",
+              "empty"
+            ],
+            "candidate_token_ids": [
+              [
+                27450,
+                18
+              ],
+              [
+                16451,
+                18
+              ]
+            ],
+            "candidate_log_likelihoods": [
+              -3.795855760574341,
+              -7.102457046508789
+            ],
+            "normalized_probabilities": [
+              0.9646545806574385,
+              0.035345419342561475
+            ],
+            "model_forward_calls": 2,
+            "actual_model_processed_tokens": 272,
+            "output_is_generated_json": false
+          }
+        }
+      },
+      "profiled_wall_ms_including_overhead": 166.1313809963758,
+      "cuda_kernel_events": 3263,
+      "summed_cuda_kernel_ms": 83.094871,
+      "cuda_memcpy_events": 28,
+      "summed_cuda_memcpy_ms": 0.508424,
+      "trace_sha256": "8765a950b5f706e7e29ad11b0b44694d4a38341088e1ba9b7d5d72cb43eb8299",
+      "gpu_kernel_measurement": "MEASURED"
+    },
+    {
+      "sample_id": "s11-f01",
+      "image_sha256": "da565c26891fbf3559fc2dc110750e24bed78cee567f9d26e7dbf7fe74de0a2c",
+      "actual_reply": {
+        "id": "qa-kernel-5",
+        "object": "chat.completion",
+        "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "{\"label\": \"occupied\", \"confidence\": 0.9150992906319982}"
+            },
+            "finish_reason": "stop"
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 134,
+          "completion_tokens": 0,
+          "total_tokens": 134
+        },
+        "experimental_metrics": {
+          "request_id": "qa-kernel-5",
+          "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+          "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+          "image_count": 1,
+          "input_tokens": 134,
+          "output_tokens": 0,
+          "inference_seconds": 0.11032588699890766,
+          "gpu_peak_allocated_bytes": 1063381504,
+          "gpu_peak_reserved_bytes": 1084227584,
+          "deadline_reached": false,
+          "scoring": {
+            "method": "candidate_sequence_softmax",
+            "uncalibrated": true,
+            "formula": "s(label)=sum_t log P(candidate_token_t | image(s), prompt, prior_candidate_tokens); p(label)=exp(s)/sum_candidates exp(s)",
+            "candidate_labels": [
+              "occupied",
+              "empty"
+            ],
+            "candidate_token_ids": [
+              [
+                27450,
+                18
+              ],
+              [
+                16451,
+                18
+              ]
+            ],
+            "candidate_log_likelihoods": [
+              -5.230649471282959,
+              -7.608199596405029
+            ],
+            "normalized_probabilities": [
+              0.9150992906319982,
+              0.08490070936800172
+            ],
+            "model_forward_calls": 2,
+            "actual_model_processed_tokens": 272,
+            "output_is_generated_json": false
+          }
+        }
+      },
+      "profiled_wall_ms_including_overhead": 167.43793000205187,
+      "cuda_kernel_events": 3263,
+      "summed_cuda_kernel_ms": 83.020544,
+      "cuda_memcpy_events": 28,
+      "summed_cuda_memcpy_ms": 0.5431119999999999,
+      "trace_sha256": "8ab97b7cb4c39ea47882b671732a828300b4816f723447c489c6ec00d2f325af",
+      "gpu_kernel_measurement": "MEASURED"
+    }
+  ],
+  "gpu_kernel_measurement": "MEASURED",
+  "activation": false,
+  "actions": 0,
+  "limits": [
+    "Separate direct-model profiling process, NOT latency replacement for original paired HTTP run; profiler/model load excluded from previously measured mean.",
+    "Sum of kernel durations is aggregate kernel activity, not GPU allocation time, rental billing time or energy. Overlapping kernels can make aggregate different from elapsed wall.",
+    "Six unique synthetic inputs only; no new human labels, natural quality, routing/foveated claims or cost savings.",
+    "No remote provider/rental; actual dollars per inference remain UNVERIFIED."
+  ],
+  "mean_summed_cuda_kernel_ms": 86.38796483333334,
+  "teacher_helper_snapshot": "9170b7bd53cc198deebe0d9d903f0b3f28c2d391",
+  "related_application_snapshot": "5938b6d1f1396c1513d52ee9d9c3cdb377dc43a4"
+}
