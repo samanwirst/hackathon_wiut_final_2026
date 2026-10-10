@@ -52,6 +52,10 @@ the assigned SSH host/port/user from the operator's instance connection
 details, verify its host key, and use your own SSH identity. Bind the local
 forward to loopback too. Example commands are templates, not executed setup:
 
+Vast.ai documents key-based connections and local forwarding in its
+[official SSH guide](https://docs.vast.ai/guides/instances/connect/ssh).
+Use instance-specific connection details; never copy an example IP/port.
+
 ```sh
 # Remote GPU shell; VLLM_API_KEY is set securely out of source control.
 vllm serve Qwen/Qwen2.5-VL-7B-Instruct \

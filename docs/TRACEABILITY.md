@@ -6,8 +6,9 @@ the repo; the text version is treated as the source of truth). No conflicts with
 `docs/PRD.md` found for M1 scope.
 
 Statuses: planned | in_progress | implemented | verified | blocked.
-M1 as a whole is **blocked** after review of `cc59523`; ordinary happy-path
-tests below do not override the unresolved P1 findings in the final review.
+M1 is **accepted with documented P2 risks** after the exceptional review of
+`390b337`; the four P1 defects in the previous `cc59523` review were resolved.
+Accepted report: `.agents/reviews/M1.md`, pushed on `review/M1-r3`.
 
 ## M1 — vision-to-action pipeline
 
@@ -86,7 +87,7 @@ Full audit: `docs/VISUAL_ANALYTICS_AUDIT.md`. Planned is not implemented.
 | --- | --- | --- | --- |
 | M2-AC1 | Strict NL DSL, rejection, manual approval | Compiler/API/UI contracts and boundary tests | planned |
 | M2-AC2 | Cheap temporal candidate events select Teacher frame/ROI; zero calls for geometric rules | Pipeline/router and call-count integration checks | planned |
-| M2-AC3 | Real validated Teacher adapter; visible unknown/error/budget states | Provider smoke plus failure tests; no credential configured yet | blocked |
+| M2-AC3 | Real validated Teacher adapter; visible unknown/error/budget states | Provider interface/fallback tests planned; real self-hosted GPU run UNVERIFIED | planned |
 | M2-AC4 | Sampling, budgets, in-flight dedupe, bounded versioned cache | Call counts and invalidation/suppression tests | planned |
 | M2-AC5 | Actual routing counters, evidence, safe approval/action/data boundaries | API/UI integration and security checks | planned |
 | M3-AC1 | Real Teacher labels, human verification, dataset provenance | Reviewed sample manifest with both classes | planned |
@@ -99,3 +100,21 @@ Full audit: `docs/VISUAL_ANALYTICS_AUDIT.md`. Planned is not implemented.
 | M4-AC2 | Raw usage, timing, predictions, provenance and comparable quality | Reproducible benchmark artifacts | planned |
 | M4-AC3 | Cost derived from actual usage; honest cold/warm and savings claims | Dated rates/bill, denominators, no invented percentages | planned |
 | M4-AC4 | Clean deployment, unseen-input smoke, official deliverables, privacy/licenses | Startup smoke, reports and pitch; public deploy needs approval | planned |
+
+## Self-hosting and foveated experiment — operator update (2026-10-10)
+
+PRD version 1.2 and `docs/VLM_ARCHITECTURE.md` define these gates. No external
+provider API key is required at this stage. M1 is accepted; current M2 work
+continues without interruption or additional calls for this experiment.
+
+| ID | Requirement | Evidence required | Status |
+| --- | --- | --- | --- |
+| M2-AC3a | Configurable OpenAI-compatible self-hosted Teacher, VLM env vars, strict labels, bounded timeout/retries/concurrency, secure setup | Adapter/fallback/boundary tests; real vLLM smoke when GPU available | planned |
+| M2-EXP1 | Full frame, ROI, foveated context-plus-ROI interface; full-frame fallback and strategy-aware cache | Input provenance/selection tests; visibly unavailable unfinished strategies | planned |
+| M3-AC7 | Real GPU Teacher labels followed by verified-data Student evaluation | Actual labels/model identity and held-out predictions; currently UNVERIFIED | planned |
+| M3-EXP1 | Compare input strategies on the same held-out videos/events | Accuracy/recall, tokens or actual cost, latency, failure cases; unrun results UNVERIFIED | planned |
+| M4-AC3a | Actual Vast.ai rental accounting and GPU/latency/throughput/cost per event | Rental records, charged interval, GPU telemetry and paired input manifest; currently UNVERIFIED | planned |
+
+The CVPR 2025 paper is research motivation, not VisionFlow measurement.
+ROI-only crops discard scene context and are not labeled foveated. Pixel
+reduction is never assumed to scale linearly with tokens or monetary cost.
