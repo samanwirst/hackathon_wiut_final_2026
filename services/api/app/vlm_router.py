@@ -32,7 +32,7 @@ from typing import Callable
 from app import config
 from app.teacher import TeacherAdapter, TeacherResult, get_teacher
 
-RouteStatus = str  # called | cache_hit | deduped | suppressed_budget
+RouteStatus = str  # called | cache_hit | deduped | cancelled | suppressed_budget
 #                    | suppressed_cooldown | suppressed_sampling | failed | unavailable
 
 
@@ -190,13 +190,19 @@ class VlmRouter:
         prompt: str,
         labels: list[str],
         image_bytes: bytes,
+        admit: Callable[[], bool] | None = None,
         sample_interval_s: float | None = None,
         cooldown_s: float | None = None,
         budget: int | None = None,
     ) -> RouteDecision:
         """Resolve one candidate ROI. Checks, in order: cache, budget, sampling,
         cooldown, in-flight dedup, then a real Teacher call. Per-workflow
-        overrides fall back to the router defaults when None."""
+        overrides fall back to the router defaults when None.
+
+        ``admit``, when supplied, is re-checked at the transport boundary (just
+        before each outbound attempt) by the real adapter's guard: if it returns
+        False the attempt is revoked (e.g. the workflow was disabled) and the
+        decision is ``cancelled`` with no outbound request (M2-007)."""
         sample_interval_s = self.sample_interval_s if sample_interval_s is None else sample_interval_s
         cooldown_s = self.cooldown_s if cooldown_s is None else cooldown_s
         budget = self.budget_per_task if budget is None else budget
@@ -279,9 +285,16 @@ class VlmRouter:
         # the transport boundary: every outbound attempt (including retries)
         # consumes one unit and is counted; when the budget is gone the guard
         # returns False so the adapter stops before sending (M2-AC4).
-        guard_state = {"invoked": False, "granted": 0}
+        guard_state = {"invoked": False, "granted": 0, "revoked": False}
 
         def _attempt_guard() -> bool:
+            # M2-007: recheck authoritative approval at the transport boundary
+            # before admitting an outbound attempt. A workflow disabled after
+            # routing began must not disclose a new image to the provider.
+            if admit is not None and not admit():
+                guard_state["invoked"] = True
+                guard_state["revoked"] = True
+                return False
             with self._lock:
                 guard_state["invoked"] = True
                 used_now = self._budget_used.get(task_key, 0)
@@ -297,12 +310,38 @@ class VlmRouter:
         except Exception as exc:  # noqa: BLE001 — never propagate into the pipeline
             result = TeacherResult(status="error", model=model, error=f"adapter raised: {exc}"[:500])
 
+        # M2-007: admission was revoked at the transport boundary (workflow
+        # disabled); no outbound request/image disclosure occurred. Record it as
+        # cancelled — not a provider failure — consuming no budget and counting no
+        # completed call. Any in-flight duplicate wakes with no shared result.
+        if guard_state["revoked"] and guard_state["granted"] == 0:
+            with self._lock:
+                self._bump_status("cancelled")
+                self._inflight_result.pop(key, None)
+                own = self._inflight.pop(key, None)
+            if own is not None:
+                own.set()
+            return RouteDecision(
+                "cancelled", None, key, digest,
+                "workflow disabled before provider admission",
+            )
+
+        reports = bool(getattr(teacher, "reports_attempts", False))
         with self._lock:
             self.counters.adapter_invocations += 1
             self._bump_status(result.status)
             if result.status == "missing_credentials":
                 # Unavailable provider: no request was made, no budget consumed.
                 self.counters.unavailable += 1
+            elif reports:
+                # Real adapter: an outbound request happened iff the guard granted
+                # at least one attempt. A preflight/queue failure (oversize image,
+                # semaphore timeout, budget-exhausted retry) never granted the
+                # guard, so it consumed no budget and is not a completed provider
+                # call — it is only recorded as a failure below (M2-004).
+                if guard_state["granted"] > 0:
+                    self.counters.completed += 1
+                    self.counters.calls += 1
             else:
                 self.counters.completed += 1
                 self.counters.calls += 1

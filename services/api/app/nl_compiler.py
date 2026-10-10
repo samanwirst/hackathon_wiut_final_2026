@@ -9,12 +9,14 @@ Contract:
 
 - Output is always a *draft* (``requires_approval=True``, saved disabled). The
   user edits and explicitly approves/enables it; the compiler never arms a rule.
-- Unsupported or ambiguous requests are rejected with clear errors instead of a
-  fabricated workflow. Assumptions the compiler had to make surface as warnings
-  so the user can correct them before saving.
+- The grammar is intentionally narrow. A request that names more than one object
+  class, more than one trigger, an upper-bound count, a negated or unrecognised
+  visual condition, an unsupported appearance attribute, or an unsupported action
+  is **rejected** with a clear error rather than silently reduced to a partial
+  workflow (M2-001). Assumptions the compiler had to make surface as warnings.
 - A visual predicate (a question the geometric rule cannot answer, e.g. "the
-  hood is open") is attached only when explicitly requested; it routes to the
-  Teacher at runtime (M2-AC2), never during compilation.
+  hood is open") is attached only when explicitly requested, exactly once and
+  positively; it routes to the Teacher at runtime (M2-AC2), never at compile time.
 """
 
 from __future__ import annotations
@@ -38,7 +40,6 @@ _CLASS_SYNONYMS = {
 _ENTER_WORDS = ("enter", "enters", "arrive", "arrives", "comes into", "pulls into", "drives into")
 _EXIT_WORDS = ("exit", "exits", "leaves", "leave", "departs", "drives out", "pulls out")
 _DWELL_WORDS = ("stays", "stay", "remains", "remain", "dwell", "parked", "idles", "waits")
-_COUNT_WORDS = ("more than", "at least", "exceed", "exceeds", "count", "number of")
 
 # Supported visual conditions (whitelist). A visual condition is a question the
 # geometric rule cannot answer; only these recognised conditions are preserved as
@@ -65,17 +66,58 @@ _CONDITION_MARKERS = (
     "whose", "having its", "having their", "that has", "that is",
 )
 
+# Negation adjacent to a visual state word ("hood not open", "lights not on") or
+# an explicit closed/off state. A negated visual condition is rejected: the
+# Teacher confirms a *positive* predicate, so a negation would silently invert
+# the semantics (M2-001). "no" alone is omitted to avoid false positives.
+_NEGATION_NEAR_STATE = re.compile(
+    r"\b(?:not|never|without|isn['’]?t|aren['’]?t|wasn['’]?t|weren['’]?t|won['’]?t)\s+"
+    r"(?:\w+\s+){0,3}?(?:open|up|raised|popped|on|lit|flashing)\b"
+)
+_CLOSED_STATE = re.compile(
+    r"\b(?:hood|bonnet|trunk|boot|tailgate|door|doors|lights?|headlights?)\s+"
+    r"(?:\w+\s+){0,3}?(?:closed|shut|down|lowered)\b|\b(?:lights?|headlights?)\s+off\b"
+)
 
-def _match_visual_condition(text: str) -> dict | None:
-    for pat, desc in _VISUAL_CONDITIONS:
-        if pat.search(text):
-            return {
-                "prompt": f"Does the image clearly show that {desc}?",
-                "labels": ["yes", "no"],
-                "expected_label": "yes",
-                "description": desc,
-            }
-    return None
+# Unsupported appearance / attribute clauses (colour, tint, condition). These are
+# not something the geometric rule or the whitelisted visual predicates can
+# answer, so a request that constrains on them is rejected rather than dropped.
+_UNSUPPORTED_ATTR = re.compile(
+    r"\b(red|blue|green|black|white|silver|grey|gray|yellow|orange|brown|gold|"
+    r"tinted|dented|damaged|scratched|dirty|rusty|muddy|wet)\b"
+)
+
+# Unsupported actions: physical/control actuation or external dispatch. Only the
+# in-app create_notification is supported, so these are rejected (never silently
+# downgraded to a notification) (M2-001).
+_UNSUPPORTED_ACTION = re.compile(
+    r"\b(unlock|re-?lock|lock|activate|actuate|deactivate|disarm|arm the|"
+    r"honk|deploy|dispatch(?:\s+(?:security|a|the))?|sound the|"
+    r"(?:open|close|raise|lower|shut)\s+the\s+(?:gate|barrier|garage|door|arm|bay\s*door)|"
+    r"turn\s+(?:on|off)|switch\s+(?:on|off)|"
+    r"move\s+the\s+(?:robot|arm)|start\s+the\s+(?:engine|robot|motor)|"
+    r"stop\s+the\s+(?:engine|robot|motor))\b"
+)
+
+# External delivery / code execution (kept from the prior pass).
+_EXTERNAL_DELIVERY = re.compile(
+    r"\b(webhook|https?|post to|call the api|slack|telegram|e-?mails?|sms|"
+    r"text message|phone|call the)\b"
+)
+
+
+def _match_visual_conditions(text: str) -> list[str]:
+    """Return every recognised visual-condition description present in ``text``."""
+    return [desc for pat, desc in _VISUAL_CONDITIONS if pat.search(text)]
+
+
+def _build_predicate(desc: str) -> dict:
+    return {
+        "prompt": f"Does the image clearly show that {desc}?",
+        "labels": ["yes", "no"],
+        "expected_label": "yes",
+        "description": desc,
+    }
 
 
 @dataclass
@@ -115,17 +157,39 @@ def _find_class(text: str) -> tuple[str | None, list[str], list[str]]:
     return found[0], warnings, []
 
 
-def _find_trigger(text: str) -> str | None:
-    # Order matters: dwell/count phrasings often also contain "in zone".
-    if any(w in text for w in _DWELL_WORDS) or re.search(r"(longer|more|greater) than .*\b(second|minute|hour)", text):
-        return "dwell_in_zone"
-    if any(re.search(rf"{re.escape(w)}\b", text) for w in _COUNT_WORDS):
-        return "object_count_exceeded"
-    if any(re.search(rf"\b{re.escape(w)}\b", text) for w in _EXIT_WORDS):
-        return "object_exited_zone"
+def _has_count(text: str) -> bool:
+    """True when the text expresses an object-count comparison (not a duration)."""
+    for m in re.finditer(
+        r"\b(?:more than|at least|at most|no more than|fewer than|less than|over|"
+        r"exceeds?|up to|minimum of|maximum of)\s+(\d+)\s*(\w+)?",
+        text,
+    ):
+        unit = m.group(2) or ""
+        if not re.match(r"(second|sec|minute|min|hour|hr)", unit):
+            return True
+    if re.search(r"\b(number of|count of|how many)\b", text):
+        return True
+    if re.search(r"\b\d+\s*(?:or more|or above|\+)\b", text):
+        return True
+    return False
+
+
+def _trigger_families(text: str) -> list[str]:
+    """Return the distinct trigger families referenced in ``text`` (M2-001). More
+    than one means the request is ambiguous and is rejected by the caller."""
+    fams: list[str] = []
     if any(re.search(rf"\b{re.escape(w)}\b", text) for w in _ENTER_WORDS):
-        return "object_entered_zone"
-    return None
+        fams.append("object_entered_zone")
+    if any(re.search(rf"\b{re.escape(w)}\b", text) for w in _EXIT_WORDS):
+        fams.append("object_exited_zone")
+    dwell = any(re.search(rf"\b{re.escape(w)}\b", text) for w in _DWELL_WORDS) or bool(
+        re.search(r"\b(longer|more|greater) than\b.*\b(second|sec|minute|min|hour|hr)s?\b", text)
+    )
+    if dwell:
+        fams.append("dwell_in_zone")
+    if _has_count(text):
+        fams.append("object_count_exceeded")
+    return fams
 
 
 def _parse_duration_seconds(text: str) -> float | None:
@@ -141,43 +205,60 @@ def _parse_duration_seconds(text: str) -> float | None:
     return value
 
 
-def _parse_threshold(text: str) -> int | None:
-    m = re.search(r"(?:more than|at least|exceed[s]?|over)\s+(\d+)", text)
+def _parse_count(text: str) -> tuple[int | None, list[str], list[str]]:
+    """Return (threshold, warnings, errors) for a count comparison.
+
+    The engine fires on ``inside_count > threshold`` (strictly greater), so:
+    - "more than N" / "exceeds N" / "over N"  -> threshold = N (exclusive)
+    - "at least N" / "N or more"              -> threshold = N-1 (inclusive)
+    - "at most N" / "fewer than N" / ...       -> REJECTED (no upper bound)
+    An inclusive bound of 1 ("at least 1") cannot be expressed (threshold must be
+    >= 1) and is rejected explicitly (M2-001)."""
+    if re.search(r"\b(at most|no more than|fewer than|less than|up to|maximum of)\s+\d+", text):
+        return None, [], [
+            "only a lower-bound count is supported (e.g. 'more than N' or "
+            "'at least N'), not an upper bound"
+        ]
+    m = re.search(r"\b(?:at least|minimum of)\s+(\d+)\b", text) or re.search(
+        r"\b(\d+)\s*(?:or more|or above|\+)\b", text
+    )
     if m:
-        return int(m.group(1))
-    m = re.search(r"(\d+)\s+(?:or more)", text)
+        n = int(m.group(1))
+        thr = n - 1
+        if thr < 1:
+            return None, [], [
+                f"count threshold '{n}' is too low to express; use 'at least 2' or more"
+            ]
+        return thr, [
+            f"interpreting 'at least {n}' as more than {thr} (inclusive lower bound)"
+        ], []
+    m = re.search(
+        r"\b(?:more than|greater than|over|exceeds?)\s+(\d+)\b(?!\s*(?:second|sec|minute|min|hour|hr))",
+        text,
+    )
     if m:
-        return int(m.group(1))
-    return None
+        n = int(m.group(1))
+        if n < 1:
+            return None, [], ["count threshold must be at least 1"]
+        return n, [], []
+    return None, [], []
 
 
-def _match_zone(text: str, zones: list[dict]) -> tuple[int | None, list[str], list[str]]:
-    """Return (zone_id, warnings, errors). zones: [{'id','name'}]."""
+def _match_zone(text: str, zones: list[dict]) -> tuple[int | None, str, list[str], list[str]]:
+    """Return (zone_id, matched_name, warnings, errors). zones: [{'id','name'}]."""
     if not zones:
-        return None, [], ["no zones exist for this source — draw a zone first"]
+        return None, "", [], ["no zones exist for this source — draw a zone first"]
     # explicit name match
     for z in zones:
         name = z["name"].lower()
         if name and name in text:
-            return z["id"], [], []
+            return z["id"], name, [], []
     if len(zones) == 1:
-        return zones[0]["id"], [f"assuming zone '{zones[0]['name']}' (the only zone)"], []
+        return zones[0]["id"], zones[0]["name"].lower(), [
+            f"assuming zone '{zones[0]['name']}' (the only zone)"
+        ], []
     names = ", ".join(f"'{z['name']}'" for z in zones)
-    return None, [], [f"zone is ambiguous — name one of: {names}"]
-
-
-def _detect_visual_predicate(text: str) -> tuple[dict | None, bool]:
-    """Return (predicate, had_condition_marker).
-
-    ``predicate`` is a structured visual predicate when the text references a
-    supported visual condition (via a verify/check verb or a ``with its ...``
-    style connective). ``had_condition_marker`` is True when a condition clause
-    was requested at all; a marker with no recognised condition
-    (``had_condition_marker and predicate is None``) must be rejected by the
-    caller so an unsupported condition is never silently dropped."""
-    predicate = _match_visual_condition(text)
-    had_marker = any(m in text for m in _CONDITION_MARKERS)
-    return predicate, had_marker
+    return None, "", [], [f"zone is ambiguous — name one of: {names}"]
 
 
 def compile_text(text: str, source_id: int, zones: list[dict]) -> CompileResult:
@@ -204,16 +285,31 @@ def compile_text(text: str, source_id: int, zones: list[dict]) -> CompileResult:
             f"(one of {sorted(SUPPORTED_CLASSES)})"
         )
 
-    trigger_type = _find_trigger(low)
-    if trigger_type is None:
+    # Trigger: exactly one family is allowed. Alternatives/conjunctions such as
+    # "enters or exits" are rejected rather than silently reduced to one (M2-001).
+    families = _trigger_families(low)
+    trigger_type: str | None = None
+    if not families:
         errors.append(
             "could not identify a supported trigger — use words like 'enters', "
             "'exits', 'stays for N minutes', or 'more than N'"
         )
+    elif len(families) > 1:
+        errors.append(
+            "more than one trigger type was requested "
+            f"({', '.join(sorted(families))}); specify a single trigger "
+            "(enter, exit, dwell, or count)"
+        )
+    else:
+        trigger_type = families[0]
 
-    zone_id, zone_warn, zone_err = _match_zone(low, zones)
+    zone_id, zone_name, zone_warn, zone_err = _match_zone(low, zones)
     warnings += zone_warn
     errors += zone_err
+
+    # Text with the matched zone name removed, so leftover-attribute checks do not
+    # trip on words inside a zone name.
+    residual = low.replace(zone_name, " ") if zone_name else low
 
     duration_seconds = None
     threshold = None
@@ -222,26 +318,59 @@ def compile_text(text: str, source_id: int, zones: list[dict]) -> CompileResult:
         if duration_seconds is None:
             errors.append("dwell rule needs a duration, e.g. 'for 10 minutes'")
     if trigger_type == "object_count_exceeded":
-        threshold = _parse_threshold(low)
-        if threshold is None:
+        threshold, count_warn, count_err = _parse_count(low)
+        warnings += count_warn
+        errors += count_err
+        if threshold is None and not count_err:
             errors.append("count rule needs a threshold, e.g. 'more than 3 cars'")
 
-    visual_predicate, had_condition_marker = _detect_visual_predicate(low)
-    # A requested condition clause that is not a supported visual condition is
-    # rejected rather than silently dropped (M2-AC1).
-    if had_condition_marker and visual_predicate is None:
+    # Visual condition handling (M2-001): preserve a single positive recognised
+    # condition; reject negation, multiple conditions, and unrecognised clauses.
+    conditions = _match_visual_conditions(low)
+    had_condition_marker = any(m in low for m in _CONDITION_MARKERS)
+    negated = bool(_NEGATION_NEAR_STATE.search(low) or _CLOSED_STATE.search(low))
+    visual_predicate: dict | None = None
+    if negated and (conditions or had_condition_marker):
+        errors.append(
+            "negated visual conditions (e.g. 'hood not open') are not supported; "
+            "state the positive condition to verify"
+        )
+    elif len(conditions) > 1:
+        errors.append(
+            "more than one visual condition was requested "
+            f"({'; '.join(conditions)}); specify a single visual condition"
+        )
+    elif len(conditions) == 1:
+        visual_predicate = _build_predicate(conditions[0])
+    elif had_condition_marker:
+        # A requested condition clause that is not a supported visual condition is
+        # rejected rather than silently dropped (M2-AC1).
         errors.append(
             "an unsupported or unrecognized visual condition was requested; "
             "supported visual conditions: hood/trunk/door open, lights on"
         )
 
-    # Action: only in-app create_notification is supported. External delivery or
-    # code/command execution is rejected rather than silently downgraded to a
-    # local notification.
-    if re.search(r"\b(webhook|https?|post to|call the api|slack|telegram|e-?mails?|sms|text message|phone|call the)\b", low):
+    # Unsupported appearance/attribute clause (colour, tint, damage, ...). Checked
+    # on the zone-stripped text so a zone name cannot trigger it.
+    attr = _UNSUPPORTED_ATTR.search(residual)
+    if attr:
+        errors.append(
+            f"an unsupported attribute filter ('{attr.group(1)}') was requested; "
+            "VisionFlow cannot filter on colour or appearance"
+        )
+
+    # Action: only in-app create_notification is supported. External delivery,
+    # physical actuation, and code/command execution are rejected rather than
+    # silently downgraded to a local notification.
+    if _EXTERNAL_DELIVERY.search(low):
         errors.append(
             "external delivery (webhook/HTTP/email/SMS/phone/Slack/Telegram) is "
             "not available; only in-app notifications are supported"
+        )
+    if _UNSUPPORTED_ACTION.search(low):
+        errors.append(
+            "that action is not available (physical actuation / external dispatch); "
+            "only in-app notifications are supported"
         )
     if (
         re.search(r"\b(python|javascript|shell|bash|source code|exec|eval)\b", low)
@@ -284,7 +413,7 @@ def compile_text(text: str, source_id: int, zones: list[dict]) -> CompileResult:
     explanation = (
         f"{object_class} · {trigger_type}"
         + (f" ≥{duration_seconds:.0f}s" if duration_seconds else "")
-        + (f" >{threshold}" if threshold else "")
+        + (f" >{threshold}" if threshold is not None else "")
         + (f" · visual: {visual_predicate['description']}" if visual_predicate else "")
         + " → create_notification (draft, disabled until you approve)"
     )

@@ -97,6 +97,12 @@ class TeacherAdapter(ABC):
     """Classifies one image ROI against a visual predicate."""
 
     provider_name: str = "base"
+    # When True, the adapter accounts every real outbound attempt through the
+    # router-supplied ``on_attempt`` guard, so the router must NOT add its own
+    # fallback attempt/budget unit (M2-004). Stubs that do not call the guard
+    # leave this False and are charged one fallback unit so the budget still
+    # bounds them.
+    reports_attempts: bool = False
 
     @abstractmethod
     def classify(
@@ -159,6 +165,9 @@ class OpenAICompatibleTeacher(TeacherAdapter):
     """
 
     provider_name = "openai_compatible"
+    # The real adapter calls ``on_attempt`` before every outbound request, so the
+    # router accounts attempts/budget exclusively through that guard (M2-004).
+    reports_attempts = True
 
     def __init__(
         self,
@@ -295,9 +304,9 @@ class OpenAICompatibleTeacher(TeacherAdapter):
                     read=min(self.read_timeout, remaining),
                 )
                 try:
-                    resp = httpx.post(
+                    resp = self._post_with_deadline(
                         f"{self.api_base}/chat/completions",
-                        json=payload, headers=headers, timeout=attempt_timeout,
+                        payload, headers, attempt_timeout, deadline,
                     )
                 except httpx.TimeoutException as exc:
                     last = TeacherResult(
@@ -347,6 +356,43 @@ class OpenAICompatibleTeacher(TeacherAdapter):
             status="error", model=self.model, prompt_version=self.prompt_version,
             error="no response",
         )
+
+    def _post_with_deadline(self, url, payload, headers, attempt_timeout, deadline):
+        """Execute one POST bounded by the overall wall-clock ``deadline`` (M2-003).
+
+        httpx's phase timeouts reset per read, so a provider that trickles small
+        chunks within each read timeout can run far past the overall deadline. We
+        run the (blocking) request — connection, transfer and full-body read — in
+        a daemon worker and wait only until the remaining wall-clock budget. If it
+        has not finished by the deadline the request is abandoned and a late
+        response is rejected (raised as a timeout), never consumed. The existing
+        bounded queue, retries and backoff in :meth:`classify` are preserved."""
+        import httpx
+
+        box: dict = {}
+
+        def _call() -> None:
+            try:
+                box["resp"] = httpx.post(
+                    url, json=payload, headers=headers, timeout=attempt_timeout
+                )
+            except BaseException as exc:  # noqa: BLE001 — surfaced to the caller
+                box["exc"] = exc
+
+        worker = threading.Thread(target=_call, daemon=True)
+        worker.start()
+        remaining = deadline - time.perf_counter()
+        worker.join(timeout=max(0.0, remaining))
+        if worker.is_alive():
+            # Deadline hit while the request/body was still in flight: abandon the
+            # daemon worker (bounded by the semaphore + router budget) and reject
+            # any response that arrives after the deadline.
+            raise httpx.TimeoutException(
+                "overall wall-clock deadline exceeded during request/response"
+            )
+        if "exc" in box:
+            raise box["exc"]
+        return box["resp"]
 
     def _parse(self, resp, labels: Sequence[str], latency_ms: float) -> TeacherResult:
         try:

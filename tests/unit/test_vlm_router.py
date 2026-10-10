@@ -275,3 +275,92 @@ def test_inflight_duplicate_shares_before_sampling_gate():
     assert statuses == ["called", "deduped"]
     assert t.calls == 1  # the duplicate shared the single call
     assert all(d.confirmed for d in results.values())
+
+
+# -- M2-004 (re-opened): real-adapter preflight consumes no attempt/budget -----
+
+def test_real_adapter_preflight_consumes_no_budget(monkeypatch):
+    import json as _json
+
+    import httpx
+
+    from app.teacher import OpenAICompatibleTeacher
+
+    http = {"n": 0}
+
+    def forbidden_post(*a, **k):
+        http["n"] += 1
+        raise AssertionError("oversize preflight must make no outbound request")
+
+    monkeypatch.setattr(httpx, "post", forbidden_post)
+    teacher = OpenAICompatibleTeacher(
+        api_base="https://p/v1", api_key="k", model="vlm", prompt_version="v1",
+        max_image_bytes=2,
+    )
+    r = make_router(teacher, budget_per_task=1, sample_interval_s=0, cooldown_s=0)
+
+    d1 = route(r, roi=b"oversized")  # 9 bytes > max_image_bytes=2 -> local reject
+    assert http["n"] == 0
+    assert d1.result.status == "error"
+    assert r.counters.outbound_attempts == 0
+    assert r.counters.completed == 0
+    assert r.counters.calls == 0
+    assert r.counters.failed == 1
+
+    # Budget was NOT consumed by the preflight rejection: an admissible image now
+    # routes and actually calls out, consuming exactly one unit.
+    class _R:
+        status_code = 200
+        text = ""
+
+        def json(self):
+            return {
+                "choices": [
+                    {"message": {"content": _json.dumps({"label": "yes", "confidence": 0.9})}}
+                ],
+                "usage": {"total_tokens": 7},
+            }
+
+    def ok_post(*a, **k):
+        http["n"] += 1
+        return _R()
+
+    monkeypatch.setattr(httpx, "post", ok_post)
+    d2 = route(r, roi=b"x")  # 1 byte <= max_image_bytes=2
+    assert http["n"] == 1
+    assert d2.result.status == "ok"
+    assert r.counters.outbound_attempts == 1
+    assert r.counters.completed == 1
+    assert r.counters.calls == 1
+
+
+# -- M2-007 (re-opened): admission revoked at the transport boundary -----------
+
+def test_admit_false_cancels_without_outbound(monkeypatch):
+    import httpx
+
+    from app.teacher import OpenAICompatibleTeacher
+
+    http = {"n": 0}
+
+    def forbidden_post(*a, **k):
+        http["n"] += 1
+        raise AssertionError("no outbound request when admission is revoked")
+
+    monkeypatch.setattr(httpx, "post", forbidden_post)
+    teacher = OpenAICompatibleTeacher(
+        api_base="https://p/v1", api_key="k", model="vlm", prompt_version="v1",
+    )
+    r = make_router(teacher, budget_per_task=5, sample_interval_s=0, cooldown_s=0)
+
+    d = r.route(
+        task_key="t", scope="s", prompt="q", labels=["yes", "no"],
+        image_bytes=b"roi", admit=lambda: False,
+    )
+    assert d.status == "cancelled"
+    assert d.confirmed is False
+    assert http["n"] == 0
+    assert r.counters.outbound_attempts == 0
+    assert r.counters.completed == 0
+    assert r.counters.calls == 0
+    assert r.counters.by_status.get("cancelled") == 1

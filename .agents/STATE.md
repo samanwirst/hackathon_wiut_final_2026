@@ -8,13 +8,24 @@ M1 accepted with documented P2 risks at `390b337`, report `review/M1-r3`.
 M2 implementation committed as `c746fc0`; frozen review target `36e7ca84d4fe2048cd9c21522e2adfbfc5174798`.
 Controller checks: 111 tests passed, frontend build and real YOLO smoke passed.
 
-M2 review-fix pass (2026-10-10): the five reproduced P1 defects
-(M2-001..M2-005) are FIXED in `app/nl_compiler.py`, `app/teacher.py`,
-`app/vlm_router.py`, `app/pipeline.py` (+config/UI), with added unit tests.
-Tests were NOT executable in this implementation session (Bash denied by the
-sandbox); the controller must run the full suite + frontend build and commit,
-then fill the exact implementation SHA. No SHA is fabricated. Base for this
-pass: `2127d207a7bf2e1401d40e5ad82d926eb0f66a57`.
+M2 review-fix pass CYCLE 2 (2026-10-10): the five re-opened/new P1 defects
+(M2-001, M2-003, M2-004, M2-006, M2-007) are FIXED in `app/nl_compiler.py`,
+`app/teacher.py`, `app/vlm_router.py`, `app/pipeline.py` (+db status comments),
+with +18 added tests. Tests WERE executed this session: **123 passed**
+(`.venv/bin/python -m pytest tests/ -q --ignore=tests/orchestrator`). Git is
+blocked in the sandbox: the controller must commit and fill the exact
+implementation SHA (no SHA is fabricated). Base for this pass:
+`2127d207a7bf2e1401d40e5ad82d926eb0f66a57`. No frontend change this cycle;
+controller should still run the frontend build + real-YOLO smoke.
+
+M2 fixes summary: strict NL grammar now rejects negation, unsupported
+actions, alternative triggers, appearance attributes and converts inclusive
+counts (M2-001); Teacher enforces a cancellable wall-clock deadline across
+transport + body read (M2-003); router accounts real-adapter attempts only via
+the transport guard so a local preflight rejection costs no budget (M2-004);
+recovery resumes a persisted confirmation once and marks unconfirmed candidates
+interrupted (M2-006); provider admission re-checks workflow disable and records
+cancelled with no Teacher call (M2-007).
 
 Prior block: M2's controller parent was interrupted, the orphaned review
 exceeded the 1,200-second limit, and no complete structured review was

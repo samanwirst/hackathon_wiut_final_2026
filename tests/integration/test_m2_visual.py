@@ -261,3 +261,136 @@ def test_vlm_stats_and_calls_recorded(client, video_path):
     calls = client.get("/api/vlm/calls").json()
     assert calls and calls[0]["roi_hash"]
     assert calls[0]["model"] == "stub-vlm"
+
+
+# -- M2-006: recover a confirmed-but-undispatched visual action ----------------
+
+def test_resume_confirmed_visual_event_dispatches_once(client, video_path):
+    from app.db import ActionExecution, TrackEvent, Workflow, get_session
+
+    stub = StubTeacher(status="ok", label="yes")
+    set_router(VlmRouter(teacher_provider=lambda: stub, sample_interval_s=0, cooldown_s=0))
+    source, zone = _setup_source_zone(client, video_path, "r1.mp4")
+    wf_json = _make_visual_workflow(client, source, zone).json()
+    client.post(f"/api/workflows/{wf_json['id']}/enable")
+
+    session = get_session()
+    try:
+        wf = session.get(Workflow, wf_json["id"])
+        # Simulate an interrupt AFTER the positive visual result was committed and
+        # BEFORE action dispatch: a pending event carrying a valid confirmation.
+        ev = TrackEvent(
+            source_id=source["id"], workflow_id=wf.id, track_id=1,
+            type="object_entered_zone", class_name="car", video_timestamp=1.0,
+            confidence=0.9, detail="interrupted", dedupe_key="resume-confirmed-1",
+            action_status="pending", visual_status="ok", visual_label="yes",
+            visual_confidence=0.9,
+            visual_routing={"confirmed": True, "expected_label": "yes"},
+        )
+        session.add(ev)
+        session.commit()
+        ev_id = ev.id
+
+        # Recovery resumes the confirmed action through the guarded dispatch path.
+        assert pipeline._resume_pending_event(session, wf, ev) is True
+        session.refresh(ev)
+        assert ev.action_status == "done"
+        assert (
+            session.query(ActionExecution)
+            .filter(ActionExecution.event_id == ev_id)
+            .count()
+            == 1
+        )
+        # A confirmed visual resume fires no new Teacher call.
+        assert stub.calls == 0
+
+        # Idempotent: a second recovery does not re-dispatch.
+        assert pipeline._resume_pending_event(session, wf, ev) is True
+        assert (
+            session.query(ActionExecution)
+            .filter(ActionExecution.event_id == ev_id)
+            .count()
+            == 1
+        )
+    finally:
+        session.close()
+
+
+def test_resume_unconfirmed_visual_event_marked_interrupted(client, video_path):
+    from app.db import ActionExecution, TrackEvent, Workflow, get_session
+
+    stub = StubTeacher(status="ok", label="yes")
+    set_router(VlmRouter(teacher_provider=lambda: stub, sample_interval_s=0, cooldown_s=0))
+    source, zone = _setup_source_zone(client, video_path, "r2.mp4")
+    wf_json = _make_visual_workflow(client, source, zone).json()
+    client.post(f"/api/workflows/{wf_json['id']}/enable")
+
+    session = get_session()
+    try:
+        wf = session.get(Workflow, wf_json["id"])
+        # Pending event that was NEVER validly confirmed (routing never completed).
+        ev = TrackEvent(
+            source_id=source["id"], workflow_id=wf.id, track_id=1,
+            type="object_entered_zone", class_name="car", video_timestamp=1.0,
+            confidence=0.9, detail="interrupted", dedupe_key="resume-unconfirmed-1",
+            action_status="pending",
+        )
+        session.add(ev)
+        session.commit()
+        ev_id = ev.id
+
+        assert pipeline._resume_pending_event(session, wf, ev) is True
+        session.refresh(ev)
+        assert ev.action_status == "interrupted_unverified"
+        assert ev.visual_status == "interrupted"
+        # No action may fire for an unverified candidate.
+        assert (
+            session.query(ActionExecution)
+            .filter(ActionExecution.event_id == ev_id)
+            .count()
+            == 0
+        )
+        assert stub.calls == 0
+    finally:
+        session.close()
+
+
+# -- M2-007: a committed disable prevents provider admission / image disclosure -
+
+def test_disable_before_route_cancels_without_teacher_call(client, video_path):
+    from app.db import TrackEvent, Workflow, get_session
+    from visionflow_vision.events import TrackedObject
+
+    stub = StubTeacher(status="ok", label="yes")
+    set_router(VlmRouter(teacher_provider=lambda: stub, sample_interval_s=0, cooldown_s=0))
+    source, zone = _setup_source_zone(client, video_path, "d1.mp4")
+    wf_json = _make_visual_workflow(client, source, zone).json()
+    client.post(f"/api/workflows/{wf_json['id']}/enable")
+    # Disable commits under dispatch_admission_lock and returns 200 before routing.
+    assert client.post(f"/api/workflows/{wf_json['id']}/disable").status_code == 200
+
+    session = get_session()
+    try:
+        wf = session.get(Workflow, wf_json["id"])
+        ev = TrackEvent(
+            source_id=source["id"], workflow_id=wf.id, track_id=1,
+            type="object_entered_zone", class_name="car", video_timestamp=1.0,
+            confidence=0.9, detail="candidate", dedupe_key="disable-route-1",
+            action_status="pending",
+        )
+        session.add(ev)
+        session.commit()
+
+        frame = np.full((240, 320, 3), 40, dtype=np.uint8)
+        objs = [TrackedObject(track_id=1, class_name="car", confidence=0.9,
+                              x1=10, y1=10, x2=60, y2=60)]
+        confirmed = pipeline._route_visual(session, wf, ev, frame, objs)
+
+        assert confirmed is False
+        session.refresh(ev)
+        assert ev.visual_status == "cancelled"
+        assert ev.action_status == "cancelled"
+        # The disable prevented the provider request entirely: no image disclosed.
+        assert stub.calls == 0
+    finally:
+        session.close()

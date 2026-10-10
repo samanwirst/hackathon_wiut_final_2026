@@ -284,6 +284,43 @@ def _route_visual(session, wf: Workflow, event: TrackEvent, frame, objects) -> b
     scope = task_key
     router = get_router()
 
+    # M2-007: serialize provider-request admission with workflow disable. A
+    # disable that has already committed (under ``dispatch_admission_lock``) must
+    # prevent any new Teacher call and the associated image disclosure. We recheck
+    # the authoritative enabled state under the same lock before admitting the
+    # route; if revoked we record the candidate as cancelled WITHOUT any Teacher
+    # call. (The real adapter additionally rechecks ``admit`` at the transport
+    # boundary for a disable that lands mid-route.)
+    with dispatch_admission_lock:
+        admitted = _workflow_enabled(wf.id)
+    if not admitted:
+        logger.info(
+            "workflow %s disabled before visual routing; cancelling event %s with no Teacher call",
+            wf.id, event.id,
+        )
+        event.visual_status = "cancelled"
+        event.action_status = "cancelled"
+        event.visual_routing = {
+            "route_status": "cancelled",
+            "reason": "workflow disabled before provider admission",
+        }
+        session.add(
+            VlmCall(
+                event_id=event.id, source_id=event.source_id, workflow_id=wf.id,
+                task_key=task_key, status="cancelled",
+                reason="workflow disabled before provider admission",
+            )
+        )
+        session.add(
+            ActionExecution(
+                event_id=event.id, action_type=wf.dsl["action"]["type"],
+                status="cancelled", attempt_count=0,
+                error="workflow disabled before provider admission",
+            )
+        )
+        session.commit()
+        return False
+
     try:
         image_bytes = _encode_roi(frame, objects, event)
         decision = router.route(
@@ -292,6 +329,7 @@ def _route_visual(session, wf: Workflow, event: TrackEvent, frame, objects) -> b
             prompt=vp["prompt"],
             labels=labels,
             image_bytes=image_bytes,
+            admit=lambda: _workflow_enabled(wf.id),
             sample_interval_s=vp.get("sample_interval_seconds"),
             cooldown_s=vp.get("cooldown_seconds"),
             budget=vp.get("budget"),
@@ -349,7 +387,9 @@ def _route_visual(session, wf: Workflow, event: TrackEvent, frame, objects) -> b
         )
     )
     if not confirmed:
-        event.action_status = "skipped_visual"
+        # A mid-route disable revoked at the transport boundary is recorded as
+        # cancelled (M2-007); every other non-confirmation is skipped_visual.
+        event.action_status = "cancelled" if decision.status == "cancelled" else "skipped_visual"
         session.commit()
         logger.info(
             "event %s visual predicate NOT confirmed (route=%s teacher=%s label=%s); no action",
@@ -411,15 +451,42 @@ def _resume_pending_event(session, wf: Workflow, existing: TrackEvent) -> bool:
     )
     if existing.action_status != "pending" or has_execution:
         return True  # already dispatched; keep dedupe, do not re-run
-    # A visual-predicate workflow must never dispatch an action without a
-    # confirmed Teacher result. If an interrupted run left the event pending
-    # before routing completed, leave it visibly pending rather than firing an
-    # unverified action (honest recovery; documented limitation).
+    # A visual-predicate workflow must never dispatch an action without a VALID,
+    # persisted confirmation (M2-006). Two interrupted cases:
+    #   1. The Teacher already confirmed the predicate (visual_status == 'ok' with
+    #      the still-matching expected label) but the process died before action
+    #      dispatch -> resume exactly once through the guarded idempotent dispatch
+    #      path (which rechecks current approval).
+    #   2. The candidate was never validly confirmed (routing never completed, was
+    #      suppressed, errored or returned a non-matching label) -> we have no
+    #      frame to safely re-route during recovery, so record an explicit
+    #      interrupted/error state instead of leaving it silently pending or
+    #      firing an unverified action.
     if wf.dsl.get("visual_predicate"):
+        vp = wf.dsl["visual_predicate"]
+        expected = str(vp.get("expected_label", "")).strip().lower()
+        routing = existing.visual_routing or {}
+        confirmed = (
+            existing.visual_status == "ok"
+            and existing.visual_label is not None
+            and str(existing.visual_label).strip().lower() == expected
+            and routing.get("confirmed") is True
+        )
+        if confirmed:
+            logger.info(
+                "resuming confirmed visual event %s through guarded dispatch", existing.id
+            )
+            _dispatch_action(session, wf, existing)
+            return True
         logger.info(
-            "event %s is a pending visual candidate; not auto-dispatching without confirmation",
+            "visual event %s lacks a valid confirmation at recovery; marking interrupted "
+            "(no auto-dispatch, no re-route without a frame)",
             existing.id,
         )
+        existing.action_status = "interrupted_unverified"
+        if existing.visual_status is None:
+            existing.visual_status = "interrupted"
+        session.commit()
         return True
     logger.info("resuming undispatched action for event %s", existing.id)
     _dispatch_action(session, wf, existing)

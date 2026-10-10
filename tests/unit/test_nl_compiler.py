@@ -135,3 +135,83 @@ def test_multiple_classes_rejected():
     )
     assert not r.ok
     assert any("more than one object class" in e for e in r.errors)
+
+
+# -- M2-001 (re-opened): negation, unsupported actions, alternatives, counts ---
+
+def test_negated_visual_condition_rejected():
+    # "hood not open" must NOT become a positive hood-open predicate.
+    r = compile_text(
+        "When a car enters Service Bay A with its hood not open, create an alert",
+        1, ZONES,
+    )
+    assert not r.ok
+    assert any("negat" in e.lower() for e in r.errors)
+    assert r.draft is None
+
+
+def test_closed_state_condition_rejected():
+    r = compile_text(
+        "When a car enters Service Bay A with its hood closed, create an alert",
+        1, ZONES,
+    )
+    assert not r.ok
+    assert any("negat" in e.lower() for e in r.errors)
+
+
+def test_unsupported_physical_action_rejected():
+    # "unlock the gate" must be rejected, not silently downgraded to a notification.
+    r = compile_text("When a car enters Service Bay A, unlock the gate", 1, ZONES)
+    assert not r.ok
+    assert any("action is not available" in e for e in r.errors)
+    assert r.draft is None
+
+
+def test_open_the_gate_action_rejected():
+    r = compile_text("When a car enters Service Bay A, open the gate", 1, ZONES)
+    assert not r.ok
+    assert any("action is not available" in e for e in r.errors)
+
+
+def test_alternative_triggers_rejected():
+    r = compile_text(
+        "When a car enters or exits Service Bay A, create an alert", 1, ZONES
+    )
+    assert not r.ok
+    assert any("more than one trigger" in e for e in r.errors)
+
+
+def test_inclusive_count_converted_to_exclusive_threshold():
+    # "at least 3" is inclusive (>=3); the engine fires on strictly-greater-than,
+    # so the threshold must be 2 (count > 2 == count >= 3), with a disclosed note.
+    r = compile_text("alert when at least 3 cars are in Service Bay A", 1, ZONES)
+    assert r.ok, r.errors
+    assert r.draft["trigger"]["type"] == "object_count_exceeded"
+    assert r.draft["trigger"]["threshold"] == 2
+    assert any("inclusive" in w.lower() or "at least" in w.lower() for w in r.warnings)
+    WorkflowDSL.model_validate(r.draft)
+
+
+def test_upper_bound_count_rejected():
+    r = compile_text("alert when fewer than 3 cars are in Service Bay A", 1, ZONES)
+    assert not r.ok
+    assert any("lower-bound" in e for e in r.errors)
+
+
+def test_inclusive_count_too_low_rejected():
+    r = compile_text("alert when at least 1 car is in Service Bay A", 1, ZONES)
+    assert not r.ok
+    assert any("too low" in e for e in r.errors)
+
+
+def test_unsupported_colour_attribute_rejected():
+    r = compile_text("alert me when a red car enters Service Bay A", 1, ZONES)
+    assert not r.ok
+    assert any("attribute" in e.lower() or "colour" in e.lower() for e in r.errors)
+
+
+def test_plain_more_than_count_still_exclusive():
+    # Regression guard: the common exclusive phrasing is unchanged.
+    r = compile_text("tell me when more than 3 cars are in Service Bay A", 1, ZONES)
+    assert r.ok, r.errors
+    assert r.draft["trigger"]["threshold"] == 3

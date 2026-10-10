@@ -84,10 +84,11 @@ class TrackEvent(Base):
     dedupe_key: Mapped[str] = mapped_column(String(255), unique=True)
     evidence_path: Mapped[str | None] = mapped_column(Text, nullable=True)
     action_status: Mapped[str] = mapped_column(String(32), default="pending")
-    # pending | done | failed | cancelled | skipped_visual
+    # pending | done | failed | cancelled | skipped_visual | interrupted_unverified
     # Visual routing provenance (M2). NULL for geometric-only events.
     visual_status: Mapped[str | None] = mapped_column(String(32), nullable=True)
-    # ok | unknown | error | timeout | invalid_response | missing_credentials
+    # ok | unknown | low_confidence | error | timeout | invalid_response
+    # | missing_credentials | cancelled | interrupted
     # | suppressed_budget | suppressed_cooldown | suppressed_sampling
     visual_label: Mapped[str | None] = mapped_column(String(64), nullable=True)
     visual_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
@@ -121,8 +122,8 @@ class VlmCall(Base):
     workflow_id: Mapped[int] = mapped_column(Integer)
     task_key: Mapped[str] = mapped_column(String(255))
     status: Mapped[str] = mapped_column(String(32))
-    # called | cache_hit | deduped | suppressed_budget | suppressed_cooldown
-    # | suppressed_sampling | failed | unavailable
+    # called | cache_hit | deduped | cancelled | suppressed_budget
+    # | suppressed_cooldown | suppressed_sampling | failed | unavailable
     teacher_status: Mapped[str | None] = mapped_column(String(32), nullable=True)
     model: Mapped[str | None] = mapped_column(String(128), nullable=True)
     prompt_version: Mapped[str | None] = mapped_column(String(32), nullable=True)
