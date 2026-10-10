@@ -44,6 +44,12 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname
 
 app = FastAPI(title="VisionFlow AI", version="0.1.0")
 
+# AutoLearn (M3 experimental vertical slice). Isolated from the accepted M1/M2
+# pipeline; never dispatches a workflow action. See app/autolearn/.
+from app.autolearn.api import router as autolearn_router  # noqa: E402
+
+app.include_router(autolearn_router)
+
 
 @app.on_event("startup")
 def _startup() -> None:

@@ -632,7 +632,7 @@ export default function Home() {
             )}
             <span className="chip planned"><span className="dot" /> NL agent · planned</span>
             <span className="chip planned"><span className="dot" /> Teacher VLM · unavailable</span>
-            <span className="chip planned"><span className="dot" /> AutoLearn · planned</span>
+            <a className="chip planned" href="/autolearn" style={{ textDecoration: "none" }}><span className="dot" /> AutoLearn · experimental →</a>
             <span className="chip unavailable"><span className="dot" /> Foveated · unverified</span>
           </div>
         </div>

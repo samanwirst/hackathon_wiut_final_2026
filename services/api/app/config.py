@@ -15,6 +15,10 @@ DATA_DIR = Path(os.environ.get("VISIONFLOW_DATA_DIR", REPO_ROOT / "data"))
 UPLOAD_DIR = DATA_DIR / "uploads"
 SNAPSHOT_DIR = DATA_DIR / "snapshots"
 EVIDENCE_DIR = DATA_DIR / "evidence"
+# AutoLearn (M3 experimental vertical slice): stored dataset images/crops and
+# trained Student model artifacts. Both are git-ignored (see .gitignore).
+AUTOLEARN_IMAGE_DIR = DATA_DIR / "autolearn" / "images"
+AUTOLEARN_MODEL_DIR = DATA_DIR / "autolearn" / "models"
 DB_PATH = DATA_DIR / "visionflow.db"
 
 MAX_UPLOAD_MB = int(os.environ.get("MAX_UPLOAD_MB", "200"))
@@ -138,6 +142,39 @@ DEMO_SAFE_VISUAL_MESSAGE = (
 )
 
 
+# --- AutoLearn (M3 experimental) -------------------------------------------
+# This is an isolated, explicitly UNVERIFIED experiment. It never authorizes a
+# Teacher-backed workflow action: the offline labeling client below is only used
+# to propose dataset labels for human review, never wired to workflow dispatch.
+#
+# Encoder: a frozen, pretrained torchvision ResNet18. Student: a small logistic
+# regression fitted on frozen embeddings. Minimum independent (session-disjoint)
+# groups required before a split can be built — refuse rather than invent an
+# evaluation on too little data.
+AUTOLEARN_MIN_TRAIN_GROUPS = int(os.environ.get("AUTOLEARN_MIN_TRAIN_GROUPS", "2"))
+AUTOLEARN_MIN_VAL_GROUPS = int(os.environ.get("AUTOLEARN_MIN_VAL_GROUPS", "1"))
+AUTOLEARN_MIN_TEST_GROUPS = int(os.environ.get("AUTOLEARN_MIN_TEST_GROUPS", "1"))
+# Predefined held-out quality gate for activation (M3-AC5). Student may only be
+# activated for offline classification when its held-out metrics clear this gate
+# AND a human explicitly approves. Never dispatches a workflow action.
+AUTOLEARN_GATE_MIN_F1 = float(os.environ.get("AUTOLEARN_GATE_MIN_F1", "0.75"))
+AUTOLEARN_GATE_MIN_TEST = int(os.environ.get("AUTOLEARN_GATE_MIN_TEST", "4"))
+# Student decisions below this probability margin fall back to the Teacher
+# (budgeted, non-actioning) or an explicit unknown state (M3-AC6).
+AUTOLEARN_STUDENT_MIN_MARGIN = float(os.environ.get("AUTOLEARN_STUDENT_MIN_MARGIN", "0.10"))
+
+# Offline labeling HTTP client bounds (separate from the frozen legacy M2
+# Teacher transport, which this experiment must not reuse). Server-only config.
+AUTOLEARN_LABEL_OVERALL_TIMEOUT = float(os.environ.get("AUTOLEARN_LABEL_OVERALL_TIMEOUT", "30"))
+AUTOLEARN_LABEL_CONNECT_TIMEOUT = float(os.environ.get("AUTOLEARN_LABEL_CONNECT_TIMEOUT", "5"))
+AUTOLEARN_LABEL_READ_TIMEOUT = float(os.environ.get("AUTOLEARN_LABEL_READ_TIMEOUT", "25"))
+AUTOLEARN_LABEL_MAX_IMAGE_BYTES = int(os.environ.get("AUTOLEARN_LABEL_MAX_IMAGE_BYTES", str(4 * 1024 * 1024)))
+AUTOLEARN_LABEL_MAX_RESPONSE_BYTES = int(os.environ.get("AUTOLEARN_LABEL_MAX_RESPONSE_BYTES", str(1024 * 1024)))
+AUTOLEARN_LABEL_MAX_TOKENS = int(os.environ.get("AUTOLEARN_LABEL_MAX_TOKENS", "200"))
+# Bounded concurrency for the offline job (serial by requirement).
+AUTOLEARN_LABEL_CONCURRENCY = 1
+
+
 def ensure_dirs() -> None:
-    for d in (UPLOAD_DIR, SNAPSHOT_DIR, EVIDENCE_DIR):
+    for d in (UPLOAD_DIR, SNAPSHOT_DIR, EVIDENCE_DIR, AUTOLEARN_IMAGE_DIR, AUTOLEARN_MODEL_DIR):
         d.mkdir(parents=True, exist_ok=True)
