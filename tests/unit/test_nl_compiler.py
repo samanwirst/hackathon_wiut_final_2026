@@ -92,3 +92,46 @@ def test_visual_predicate_detected():
 def test_empty_rejected():
     assert not compile_text("", 1, ZONES).ok
     assert not compile_text("  ", 1, ZONES).ok
+
+
+# -- M2-001: strict grammar — preserve supported conditions, reject the rest --
+
+def test_with_condition_preserves_visual_predicate():
+    # "with its hood open" is a supported visual condition and must be preserved,
+    # not silently dropped into a plain geometric notification.
+    r = compile_text(
+        "When a car enters Service Bay A with its hood open, create an alert",
+        1, ZONES,
+    )
+    assert r.ok, r.errors
+    assert "visual_predicate" in r.draft
+    assert "hood" in r.draft["visual_predicate"]["description"]
+    WorkflowDSL.model_validate(r.draft)
+
+
+def test_unsupported_visual_condition_rejected():
+    r = compile_text(
+        "When a car enters Service Bay A with its windows tinted, alert me", 1, ZONES
+    )
+    assert not r.ok
+    assert any("condition" in e.lower() for e in r.errors)
+
+
+def test_email_action_rejected():
+    r = compile_text("When a car enters Service Bay A, email the advisor", 1, ZONES)
+    assert not r.ok
+    assert any("external delivery" in e for e in r.errors)
+
+
+def test_code_execution_rejected():
+    r = compile_text("When a car enters Service Bay A, run Python code", 1, ZONES)
+    assert not r.ok
+    assert any("executing code" in e for e in r.errors)
+
+
+def test_multiple_classes_rejected():
+    r = compile_text(
+        "When a car or truck enters Service Bay A, create an alert", 1, ZONES
+    )
+    assert not r.ok
+    assert any("more than one object class" in e for e in r.errors)

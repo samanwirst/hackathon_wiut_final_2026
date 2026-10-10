@@ -30,7 +30,7 @@ import logging
 import re
 import time
 from abc import ABC, abstractmethod
-from typing import Literal, Sequence
+from typing import Callable, Literal, Sequence
 
 import threading
 
@@ -43,6 +43,7 @@ logger = logging.getLogger("visionflow.teacher")
 TeacherStatus = Literal[
     "ok",
     "unknown",
+    "low_confidence",
     "error",
     "timeout",
     "invalid_response",
@@ -72,12 +73,24 @@ class TeacherResult(BaseModel):
 class _ProviderResponse(BaseModel):
     """Strict schema the provider's JSON content must satisfy. Unexpected fields
     are rejected and confidence must be finite and bounded — the model cannot
-    smuggle a free-form or out-of-range answer into a confirmed action."""
+    smuggle a free-form or out-of-range answer into a confirmed action.
+
+    ``confidence`` is optional *here* because an explicit ``unknown`` answer may
+    omit it; a *classified* label, however, must carry a confidence or it is
+    downgraded to ``invalid_response`` in :meth:`OpenAICompatibleTeacher._parse`
+    (M2-AC3)."""
 
     model_config = ConfigDict(extra="forbid")
 
     label: str
     confidence: float | None = Field(default=None, ge=0.0, le=1.0, allow_inf_nan=False)
+
+
+# A router-supplied guard invoked immediately before every outbound HTTP attempt
+# (M2-AC4). It consumes/accounts the shared per-task request budget at the
+# transport boundary and returns False when no budget remains, so a retry that
+# would exceed the budget is never sent.
+AttemptGuard = Callable[[], bool]
 
 
 class TeacherAdapter(ABC):
@@ -87,10 +100,18 @@ class TeacherAdapter(ABC):
 
     @abstractmethod
     def classify(
-        self, image_bytes: bytes, prompt: str, labels: Sequence[str]
+        self,
+        image_bytes: bytes,
+        prompt: str,
+        labels: Sequence[str],
+        on_attempt: AttemptGuard | None = None,
     ) -> TeacherResult:
         """Return a validated TeacherResult for one ROI. Never raises for
-        provider/transport failures — those become non-confirming statuses."""
+        provider/transport failures — those become non-confirming statuses.
+
+        ``on_attempt``, when supplied by the router, is called once before each
+        outbound request; if it returns False the adapter must not send that
+        request (budget exhausted)."""
 
     @property
     def available(self) -> bool:
@@ -111,7 +132,16 @@ class UnavailableTeacher(TeacherAdapter):
     def available(self) -> bool:
         return False
 
-    def classify(self, image_bytes: bytes, prompt: str, labels: Sequence[str]) -> TeacherResult:
+    def classify(
+        self,
+        image_bytes: bytes,
+        prompt: str,
+        labels: Sequence[str],
+        on_attempt: AttemptGuard | None = None,
+    ) -> TeacherResult:
+        # Makes no outbound request, so ``on_attempt`` is never invoked and no
+        # budget/attempt is consumed: an unavailable provider contributes zero
+        # actual requests (M2-AC4).
         return TeacherResult(
             status="missing_credentials",
             model=None,
@@ -144,6 +174,7 @@ class OpenAICompatibleTeacher(TeacherAdapter):
         max_concurrency: int = 1,
         max_image_bytes: int = 4 * 1024 * 1024,
         max_tokens: int = 200,
+        min_confidence: float = 0.5,
     ) -> None:
         self.api_base = api_base.rstrip("/")
         self.api_key = api_key
@@ -155,6 +186,7 @@ class OpenAICompatibleTeacher(TeacherAdapter):
         self.max_retries = max(0, max_retries)
         self.max_image_bytes = max_image_bytes
         self.max_tokens = max_tokens
+        self.min_confidence = min_confidence
         # Bounded concurrency so a burst of candidates cannot overwhelm the
         # self-hosted server (AC3a semaphore/queue limit).
         self._semaphore = threading.BoundedSemaphore(max(1, max_concurrency))
@@ -185,7 +217,13 @@ class OpenAICompatibleTeacher(TeacherAdapter):
             }
         ]
 
-    def classify(self, image_bytes: bytes, prompt: str, labels: Sequence[str]) -> TeacherResult:
+    def classify(
+        self,
+        image_bytes: bytes,
+        prompt: str,
+        labels: Sequence[str],
+        on_attempt: AttemptGuard | None = None,
+    ) -> TeacherResult:
         import httpx
 
         if len(image_bytes) > self.max_image_bytes:
@@ -203,38 +241,78 @@ class OpenAICompatibleTeacher(TeacherAdapter):
         headers = {"Content-Type": "application/json"}
         if self.api_key:  # optional: omitted for a private authenticated tunnel
             headers["Authorization"] = f"Bearer {self.api_key}"
-        timeout = httpx.Timeout(
-            self.overall_timeout, connect=self.connect_timeout, read=self.read_timeout
-        )
 
+        # A single monotonic deadline bounds EVERYTHING: queue (semaphore)
+        # acquisition, each HTTP attempt, and every backoff (M2-003). No phase
+        # may run past ``deadline``; when the remaining budget is exhausted the
+        # call returns a ``timeout`` result instead of overrunning.
         t0 = time.perf_counter()
+        deadline = t0 + self.overall_timeout
+
+        def _elapsed_ms() -> float:
+            return (time.perf_counter() - t0) * 1000.0
+
+        def _remaining() -> float:
+            return deadline - time.perf_counter()
+
+        # Bound semaphore acquisition by the remaining deadline.
+        acquire_budget = _remaining()
+        if acquire_budget <= 0 or not self._semaphore.acquire(timeout=acquire_budget):
+            return TeacherResult(
+                status="timeout", model=self.model, prompt_version=self.prompt_version,
+                latency_ms=_elapsed_ms(),
+                error="overall deadline exceeded before acquiring Teacher concurrency slot",
+            )
+
         last: TeacherResult | None = None
-        # Bounded attempts: retries consume the budget and only cover transient
-        # failures (timeout / connection / 5xx). Auth (401/403) and schema
-        # failures fail visibly without retrying.
-        with self._semaphore:
+        # Bounded attempts: each outbound attempt consults the router budget
+        # guard first, and retries only cover transient failures
+        # (timeout / connection / 5xx). Auth (401/403) and schema failures fail
+        # visibly without retrying.
+        try:
             for attempt in range(self.max_retries + 1):
+                remaining = _remaining()
+                if remaining <= 0:
+                    last = last or TeacherResult(
+                        status="timeout", model=self.model,
+                        prompt_version=self.prompt_version, latency_ms=_elapsed_ms(),
+                        error=f"overall deadline exceeded before attempt {attempt + 1}",
+                    )
+                    break
+                # Budget guard at the transport boundary: a retry that would
+                # exceed the shared per-task budget is never sent (M2-AC4).
+                if on_attempt is not None and not on_attempt():
+                    last = last or TeacherResult(
+                        status="error", model=self.model,
+                        prompt_version=self.prompt_version, latency_ms=_elapsed_ms(),
+                        error=f"request budget exhausted before attempt {attempt + 1}",
+                    )
+                    break
+                # Clamp each phase timeout to the remaining deadline.
+                attempt_timeout = httpx.Timeout(
+                    min(self.overall_timeout, remaining),
+                    connect=min(self.connect_timeout, remaining),
+                    read=min(self.read_timeout, remaining),
+                )
                 try:
                     resp = httpx.post(
                         f"{self.api_base}/chat/completions",
-                        json=payload, headers=headers, timeout=timeout,
+                        json=payload, headers=headers, timeout=attempt_timeout,
                     )
                 except httpx.TimeoutException as exc:
                     last = TeacherResult(
                         status="timeout", model=self.model,
-                        prompt_version=self.prompt_version,
-                        latency_ms=(time.perf_counter() - t0) * 1000.0,
+                        prompt_version=self.prompt_version, latency_ms=_elapsed_ms(),
                         error=f"provider timeout (attempt {attempt + 1}): {exc}"[:500],
                     )
                 except httpx.HTTPError as exc:
                     last = TeacherResult(
                         status="error", model=self.model,
-                        prompt_version=self.prompt_version,
-                        latency_ms=(time.perf_counter() - t0) * 1000.0,
+                        prompt_version=self.prompt_version, latency_ms=_elapsed_ms(),
                         error=f"transport error (attempt {attempt + 1}): {exc}"[:500],
                     )
                 else:
-                    latency_ms = (time.perf_counter() - t0) * 1000.0
+                    latency_ms = _elapsed_ms()
                     if resp.status_code in (401, 403):
                         return TeacherResult(
                             status="error", model=self.model,
@@ -255,8 +333,16 @@ class OpenAICompatibleTeacher(TeacherAdapter):
                         )
                     else:
                         return self._parse(resp, labels, latency_ms)
+                # Backoff only if another attempt remains AND it fits the deadline.
                 if attempt < self.max_retries:
-                    time.sleep(min(2.0, 0.5 * (2 ** attempt)))  # bounded backoff
+                    remaining = _remaining()
+                    if remaining <= 0:
+                        break
+                    backoff = min(2.0, 0.5 * (2 ** attempt), remaining)
+                    if backoff > 0:
+                        time.sleep(backoff)
+        finally:
+            self._semaphore.release()
         return last or TeacherResult(
             status="error", model=self.model, prompt_version=self.prompt_version,
             error="no response",
@@ -294,6 +380,8 @@ class OpenAICompatibleTeacher(TeacherAdapter):
 
         allowed = {l.lower() for l in labels}
         label = validated.label.strip().lower()
+        # ``unknown`` is an explicit, separate non-confirming outcome; confidence
+        # is optional for it.
         if label == "unknown":
             return TeacherResult(
                 status="unknown", label=None, confidence=validated.confidence,
@@ -306,6 +394,28 @@ class OpenAICompatibleTeacher(TeacherAdapter):
                 prompt_version=self.prompt_version, latency_ms=latency_ms,
                 usage=_billable(usage),
                 error=f"label {label!r} not in declared set {sorted(allowed)}",
+            )
+        # A *classified* label must carry a confidence — a positive answer with
+        # no confidence cannot confirm an action (M2-AC3).
+        if validated.confidence is None:
+            return TeacherResult(
+                status="invalid_response", model=self.model,
+                prompt_version=self.prompt_version, latency_ms=latency_ms,
+                usage=_billable(usage),
+                error=f"classified label {label!r} missing required confidence",
+            )
+        # Below the configured minimum the classification stands but is
+        # non-confirming (distinct from ``unknown``): the label/confidence stay
+        # visible for provenance, yet ``confirmed`` is False.
+        if validated.confidence < self.min_confidence:
+            return TeacherResult(
+                status="low_confidence", label=label, confidence=validated.confidence,
+                model=self.model, prompt_version=self.prompt_version,
+                latency_ms=latency_ms, usage=_billable(usage),
+                error=(
+                    f"confidence {validated.confidence:.3f} below minimum "
+                    f"{self.min_confidence:.3f}"
+                ),
             )
         return TeacherResult(
             status="ok", label=label, confidence=validated.confidence,
@@ -372,6 +482,7 @@ def get_teacher() -> TeacherAdapter:
             max_concurrency=config.VLM_MAX_CONCURRENCY,
             max_image_bytes=config.VLM_MAX_IMAGE_BYTES,
             max_tokens=config.VLM_MAX_TOKENS,
+            min_confidence=config.VLM_MIN_CONFIDENCE,
         )
     elif config.VLM_BASE_URL and not config.VLM_MODEL:
         _teacher = UnavailableTeacher("VLM_BASE_URL set but VLM_MODEL is unset")

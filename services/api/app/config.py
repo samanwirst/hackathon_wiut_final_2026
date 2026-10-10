@@ -56,6 +56,11 @@ VLM_MAX_RETRIES = int(os.environ.get("VLM_MAX_RETRIES", "1"))  # extra attempts 
 VLM_MAX_CONCURRENCY = int(os.environ.get("VLM_MAX_CONCURRENCY", "1"))
 VLM_MAX_IMAGE_BYTES = int(os.environ.get("VLM_MAX_IMAGE_BYTES", str(4 * 1024 * 1024)))
 VLM_MAX_TOKENS = int(os.environ.get("VLM_MAX_TOKENS", "200"))
+# Minimum confidence a classified Teacher response must report before it may
+# confirm a visual action (M2-AC3). A classified label missing confidence is an
+# invalid response; a classified label below this threshold is non-confirming
+# (status ``low_confidence``), kept distinct from an explicit ``unknown``.
+VLM_MIN_CONFIDENCE = float(os.environ.get("VLM_MIN_CONFIDENCE", "0.5"))
 # Bumped whenever the prompt template or image preprocessing changes so cached
 # results from an older prompt/preprocessing version are never reused (M2-AC4).
 TEACHER_PROMPT_VERSION = os.environ.get("TEACHER_PROMPT_VERSION", "v1")

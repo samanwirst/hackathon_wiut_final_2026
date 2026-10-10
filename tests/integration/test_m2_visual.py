@@ -58,7 +58,7 @@ class StubTeacher(TeacherAdapter):
         self.label = label
         self.calls = 0
 
-    def classify(self, image_bytes, prompt, labels):
+    def classify(self, image_bytes, prompt, labels, on_attempt=None):
         self.calls += 1
         return TeacherResult(status=self.status, label=self.label, confidence=0.9,
                              model=self.model, latency_ms=1.0, usage={"total_tokens": 7})

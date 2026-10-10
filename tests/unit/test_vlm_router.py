@@ -18,13 +18,44 @@ class FakeTeacher(TeacherAdapter):
         self.calls = 0
         self._lock = threading.Lock()
 
-    def classify(self, image_bytes, prompt, labels):
+    def classify(self, image_bytes, prompt, labels, on_attempt=None):
         with self._lock:
             self.calls += 1
         return TeacherResult(
             status=self._status, label=self._label, confidence=0.8,
             model=self.model, latency_ms=1.0, usage={"total_tokens": 5},
         )
+
+
+class AttemptTeacher(TeacherAdapter):
+    """Reports outbound attempts via the router's guard (M2-AC4). It retries once
+    on a simulated transient 5xx, so a budget of 1 must block the retry."""
+
+    provider_name = "attempt"
+    model = "attempt-vlm"
+
+    def __init__(self, max_retries=1):
+        self.max_retries = max_retries
+        self.attempts = 0
+
+    def classify(self, image_bytes, prompt, labels, on_attempt=None):
+        last = TeacherResult(status="error", model=self.model, error="no attempt")
+        for i in range(self.max_retries + 1):
+            if on_attempt is not None and not on_attempt():
+                last = TeacherResult(
+                    status="error", model=self.model,
+                    error="budget exhausted before attempt",
+                )
+                break
+            self.attempts += 1
+            if i == 0:  # first attempt is a transient failure
+                last = TeacherResult(status="error", model=self.model, error="503")
+                continue
+            return TeacherResult(
+                status="ok", label="yes", confidence=0.9, model=self.model,
+                latency_ms=1.0, usage={"total_tokens": 5},
+            )
+        return last
 
 
 class Clock:
@@ -162,3 +193,85 @@ def test_unavailable_teacher_route_not_confirmed():
     assert d.status == "called"
     assert d.result.status == "missing_credentials"
     assert d.confirmed is False
+
+
+# -- M2-004: budget accounting at the transport boundary ----------------------
+
+def test_budget_consumes_every_outbound_attempt(monkeypatch):
+    # budget_per_task=1 with a teacher that would retry: the retry must be blocked
+    # because the first outbound attempt already consumed the only budget unit.
+    t = AttemptTeacher(max_retries=1)
+    r = make_router(t, budget_per_task=1, sample_interval_s=0, cooldown_s=0)
+    d = route(r, roi=b"roi-a")
+    assert t.attempts == 1  # retry blocked by budget
+    assert r.counters.outbound_attempts == 1
+    assert r.counters.adapter_invocations == 1
+    assert d.result.status == "error"  # transient failure, never confirmed
+    assert d.confirmed is False
+
+
+def test_budget_allows_retry_within_budget():
+    t = AttemptTeacher(max_retries=1)
+    r = make_router(t, budget_per_task=5, sample_interval_s=0, cooldown_s=0)
+    d = route(r, roi=b"roi-a")
+    assert t.attempts == 2  # 503 then valid
+    assert r.counters.outbound_attempts == 2
+    assert r.counters.completed == 1
+    assert d.confirmed is True
+
+
+def test_unavailable_contributes_zero_requests():
+    from app.teacher import UnavailableTeacher
+
+    r = make_router(UnavailableTeacher(), budget_per_task=10, sample_interval_s=0, cooldown_s=0)
+    route(r)
+    snap = r.counters.snapshot()
+    assert snap["unavailable"] == 1
+    assert snap["outbound_attempts"] == 0  # no actual request made
+    assert snap["calls"] == 0              # no completed classification
+    assert snap["adapter_invocations"] == 1
+
+
+# -- M2-005: in-flight dedup precedes the sampling/budget/cooldown gates -------
+
+def test_inflight_duplicate_shares_before_sampling_gate():
+    import time as _time
+
+    release = threading.Event()
+
+    class BlockingTeacher(TeacherAdapter):
+        provider_name = "block"
+        model = "block-vlm"
+
+        def __init__(self):
+            self.calls = 0
+
+        def classify(self, image_bytes, prompt, labels, on_attempt=None):
+            self.calls += 1
+            release.wait(2.0)
+            return TeacherResult(status="ok", label="yes", confidence=0.9,
+                                 model=self.model, latency_ms=1.0)
+
+    t = BlockingTeacher()
+    # sampling=2, cooldown=5: a naive design would reject the concurrent duplicate
+    # as suppressed_sampling; dedup-before-gates must instead share the call.
+    r = make_router(t, clock=_time.monotonic, budget_per_task=10,
+                    sample_interval_s=2, cooldown_s=5)
+    results = {}
+
+    def worker(name):
+        results[name] = route(r, roi=b"same-roi")
+
+    t1 = threading.Thread(target=worker, args=("a",))
+    t2 = threading.Thread(target=worker, args=("b",))
+    t1.start()
+    _time.sleep(0.3)  # let the first own the in-flight slot and block in classify
+    t2.start()
+    _time.sleep(0.3)  # let the duplicate attach to the in-flight slot (dedup wait)
+    release.set()     # now unblock the owner's classify; it publishes the result
+    t1.join(3)
+    t2.join(3)
+    statuses = sorted(d.status for d in results.values())
+    assert statuses == ["called", "deduped"]
+    assert t.calls == 1  # the duplicate shared the single call
+    assert all(d.confirmed for d in results.values())

@@ -73,6 +73,7 @@ type CompileResponse = {
 type VlmStats = {
   live: {
     calls: number;
+    outbound_attempts: number;
     cache_hits: number;
     cache_misses: number;
     suppressed_budget: number;
@@ -603,13 +604,14 @@ export default function Home() {
             <table>
               <thead>
                 <tr>
-                  <th>Teacher calls</th><th>Cache hits</th><th>Confirmed</th><th>Unknown</th>
+                  <th>Teacher calls</th><th>Outbound attempts</th><th>Cache hits</th><th>Confirmed</th><th>Unknown</th>
                   <th>Failed</th><th>Suppr. budget</th><th>Suppr. cooldown</th><th>Suppr. sampling</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
                   <td>{vlmStats.live.calls}</td>
+                  <td>{vlmStats.live.outbound_attempts}</td>
                   <td>{vlmStats.live.cache_hits}</td>
                   <td>{vlmStats.live.confirmed}</td>
                   <td>{vlmStats.live.unknown}</td>

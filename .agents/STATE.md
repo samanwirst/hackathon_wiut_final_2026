@@ -8,10 +8,17 @@ M1 accepted with documented P2 risks at `390b337`, report `review/M1-r3`.
 M2 implementation committed as `c746fc0`; frozen review target `36e7ca84d4fe2048cd9c21522e2adfbfc5174798`.
 Controller checks: 111 tests passed, frontend build and real YOLO smoke passed.
 
-M2 is **BLOCKED**: its controller parent was interrupted, the orphaned review
+M2 review-fix pass (2026-10-10): the five reproduced P1 defects
+(M2-001..M2-005) are FIXED in `app/nl_compiler.py`, `app/teacher.py`,
+`app/vlm_router.py`, `app/pipeline.py` (+config/UI), with added unit tests.
+Tests were NOT executable in this implementation session (Bash denied by the
+sandbox); the controller must run the full suite + frontend build and commit,
+then fill the exact implementation SHA. No SHA is fabricated. Base for this
+pass: `2127d207a7bf2e1401d40e5ad82d926eb0f66a57`.
+
+Prior block: M2's controller parent was interrupted, the orphaned review
 exceeded the 1,200-second limit, and no complete structured review was
-returned. The existing reviewer was terminated; no extra implementation or
-review call was launched. M2 is not accepted; M3/M4 have not started.
+returned. M2 is not yet accepted; M3/M4 have not started.
 Report: `.agents/reviews/M2.md`, pushed on `review/M2`.
 
 PRD v1.2, `docs/VLM_ARCHITECTURE.md` and `docs/METRICS.md` preserve the

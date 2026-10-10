@@ -6,6 +6,8 @@ separate, credential-dependent step and is documented as a blocker when no key
 is configured. The point here is that malformed / out-of-vocabulary / error
 responses can never become a confirmed positive visual condition."""
 
+import time
+
 import httpx
 import pytest
 
@@ -158,7 +160,7 @@ def test_transient_5xx_is_retried(monkeypatch):
         calls["n"] += 1
         if calls["n"] == 1:
             return _Resp(503, None, "busy")
-        return _Resp(200, _envelope('{"label": "yes"}'))
+        return _Resp(200, _envelope('{"label": "yes", "confidence": 0.9}'))
 
     t = make_teacher(max_retries=1)
     monkeypatch.setattr(httpx, "post", post)
@@ -166,6 +168,86 @@ def test_transient_5xx_is_retried(monkeypatch):
     r = t.classify(b"img", "q", ["yes", "no"])
     assert r.status == "ok"
     assert calls["n"] == 2
+
+
+# -- M2-002: confidence required + minimum threshold --------------------------
+
+def test_missing_confidence_on_positive_rejected(monkeypatch):
+    # A classified (non-unknown) label with no confidence cannot confirm.
+    t = make_teacher()
+    monkeypatch.setattr(
+        httpx, "post", lambda *a, **k: _Resp(200, _envelope('{"label": "yes"}'))
+    )
+    r = t.classify(b"img", "q", ["yes", "no"])
+    assert r.status == "invalid_response"
+    assert r.confirmed is False
+
+
+def test_zero_confidence_not_confirmed(monkeypatch):
+    t = make_teacher(min_confidence=0.5)
+    monkeypatch.setattr(
+        httpx, "post",
+        lambda *a, **k: _Resp(200, _envelope('{"label": "yes", "confidence": 0.0}')),
+    )
+    r = t.classify(b"img", "q", ["yes", "no"])
+    assert r.status == "low_confidence"
+    assert r.label == "yes"
+    assert r.confirmed is False
+
+
+def test_below_minimum_confidence_not_confirmed(monkeypatch):
+    t = make_teacher(min_confidence=0.6)
+    monkeypatch.setattr(
+        httpx, "post",
+        lambda *a, **k: _Resp(200, _envelope('{"label": "yes", "confidence": 0.4}')),
+    )
+    r = t.classify(b"img", "q", ["yes", "no"])
+    assert r.status == "low_confidence"
+    assert r.confirmed is False
+
+
+def test_at_minimum_confidence_confirms(monkeypatch):
+    t = make_teacher(min_confidence=0.5)
+    monkeypatch.setattr(
+        httpx, "post",
+        lambda *a, **k: _Resp(200, _envelope('{"label": "yes", "confidence": 0.5}')),
+    )
+    r = t.classify(b"img", "q", ["yes", "no"])
+    assert r.status == "ok"
+    assert r.confirmed is True
+
+
+# -- M2-003: one overall deadline bounds queue, attempts and backoff ----------
+
+def test_backoff_bounded_by_deadline(monkeypatch):
+    # Two read timeouts with a tiny overall deadline must not sleep the full
+    # fixed backoff: the whole call stays near the deadline, not 0.5s+.
+    t = make_teacher(overall_timeout=0.1, max_retries=1)
+
+    def boom(*a, **k):
+        raise httpx.TimeoutException("slow")
+
+    monkeypatch.setattr(httpx, "post", boom)  # real time.sleep left in place
+    start = time.perf_counter()
+    r = t.classify(b"img", "q", ["yes", "no"])
+    elapsed = time.perf_counter() - start
+    assert r.status == "timeout"
+    assert elapsed < 0.35, elapsed  # would be ~0.5s+ without a deadline-bounded backoff
+
+
+def test_semaphore_acquire_bounded_by_deadline():
+    # If the single concurrency slot is held, acquisition is bounded by the
+    # overall deadline and returns a timeout instead of waiting indefinitely.
+    t = make_teacher(max_concurrency=1, overall_timeout=0.1)
+    assert t._semaphore.acquire()
+    try:
+        start = time.perf_counter()
+        r = t.classify(b"img", "q", ["yes", "no"])
+        elapsed = time.perf_counter() - start
+        assert r.status == "timeout"
+        assert elapsed < 0.5, elapsed
+    finally:
+        t._semaphore.release()
 
 
 def test_oversize_image_rejected():

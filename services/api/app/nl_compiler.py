@@ -40,7 +40,42 @@ _EXIT_WORDS = ("exit", "exits", "leaves", "leave", "departs", "drives out", "pul
 _DWELL_WORDS = ("stays", "stay", "remains", "remain", "dwell", "parked", "idles", "waits")
 _COUNT_WORDS = ("more than", "at least", "exceed", "exceeds", "count", "number of")
 
-_VISUAL_TRIGGERS = ("verify", "check whether", "check if", "confirm that", "confirm whether")
+# Supported visual conditions (whitelist). A visual condition is a question the
+# geometric rule cannot answer; only these recognised conditions are preserved as
+# a structured, non-executable predicate. An unrecognised condition is REJECTED
+# (never silently dropped). The prompt/labels are fixed server vocabulary.
+_VISUAL_CONDITIONS: tuple[tuple[re.Pattern, str], ...] = (
+    (re.compile(r"\b(?:hood|bonnet)\b.*\b(?:open|up|raised|popped)\b|\b(?:open|raised|popped)\s+(?:hood|bonnet)\b"),
+     "the vehicle hood is open"),
+    (re.compile(r"\b(?:trunk|boot|tailgate)\b.*\bopen\b|\bopen\s+(?:trunk|boot|tailgate)\b"),
+     "the vehicle trunk is open"),
+    (re.compile(r"\bdoor\b.*\bopen\b|\bopen\s+door\b"),
+     "a vehicle door is open"),
+    (re.compile(r"\b(?:head)?lights?\b.*\b(?:on|flashing|lit)\b"),
+     "the vehicle lights are on"),
+)
+
+# Connectives that introduce a condition clause. Their presence means the user
+# asked for an extra check; if it is not a recognised visual condition the
+# request is rejected rather than compiled without it (M2-AC1).
+_CONDITION_MARKERS = (
+    "verify", "check whether", "check if", "check that",
+    "confirm that", "confirm whether",
+    "with its", "with their", "with the", "while its", "while the",
+    "whose", "having its", "having their", "that has", "that is",
+)
+
+
+def _match_visual_condition(text: str) -> dict | None:
+    for pat, desc in _VISUAL_CONDITIONS:
+        if pat.search(text):
+            return {
+                "prompt": f"Does the image clearly show that {desc}?",
+                "labels": ["yes", "no"],
+                "expected_label": "yes",
+                "description": desc,
+            }
+    return None
 
 
 @dataclass
@@ -52,19 +87,32 @@ class CompileResult:
     explanation: str = ""
 
 
-def _find_class(text: str) -> tuple[str | None, list[str]]:
+def _find_class(text: str) -> tuple[str | None, list[str], list[str]]:
+    """Return (object_class, warnings, errors).
+
+    Rejects the ambiguous word 'vehicle' and rejects requests that name more than
+    one supported class (e.g. "car or truck") rather than silently picking one.
+    """
     warnings: list[str] = []
     # "vehicle" is ambiguous across car/truck/bus; ask the user instead of guessing.
     if re.search(r"\bvehicles?\b", text) and not any(
         re.search(rf"\b{re.escape(w)}\b", text) for w in _CLASS_SYNONYMS
     ):
-        return None, [
+        return None, [], [
             "the word 'vehicle' is ambiguous — specify car, truck, bus, motorcycle or bicycle"
         ]
+    found: list[str] = []
     for word, canon in _CLASS_SYNONYMS.items():
-        if re.search(rf"\b{re.escape(word)}\b", text):
-            return canon, warnings
-    return None, warnings
+        if re.search(rf"\b{re.escape(word)}\b", text) and canon not in found:
+            found.append(canon)
+    if not found:
+        return None, warnings, []
+    if len(found) > 1:
+        return None, [], [
+            "more than one object class was requested "
+            f"({', '.join(sorted(found))}); specify exactly one supported class"
+        ]
+    return found[0], warnings, []
 
 
 def _find_trigger(text: str) -> str | None:
@@ -118,22 +166,18 @@ def _match_zone(text: str, zones: list[dict]) -> tuple[int | None, list[str], li
     return None, [], [f"zone is ambiguous — name one of: {names}"]
 
 
-def _detect_visual_predicate(text: str) -> dict | None:
-    for marker in _VISUAL_TRIGGERS:
-        idx = text.find(marker)
-        if idx >= 0:
-            clause = text[idx + len(marker):].strip(" .,:;")
-            # trim trailing action phrasing
-            clause = re.split(r"\b(then|and (create|send|alert|notify))\b", clause)[0].strip()
-            if not clause:
-                continue
-            return {
-                "prompt": f"Is it true that {clause}?",
-                "labels": ["yes", "no"],
-                "expected_label": "yes",
-                "description": clause,
-            }
-    return None
+def _detect_visual_predicate(text: str) -> tuple[dict | None, bool]:
+    """Return (predicate, had_condition_marker).
+
+    ``predicate`` is a structured visual predicate when the text references a
+    supported visual condition (via a verify/check verb or a ``with its ...``
+    style connective). ``had_condition_marker`` is True when a condition clause
+    was requested at all; a marker with no recognised condition
+    (``had_condition_marker and predicate is None``) must be rejected by the
+    caller so an unsupported condition is never silently dropped."""
+    predicate = _match_visual_condition(text)
+    had_marker = any(m in text for m in _CONDITION_MARKERS)
+    return predicate, had_marker
 
 
 def compile_text(text: str, source_id: int, zones: list[dict]) -> CompileResult:
@@ -151,15 +195,14 @@ def compile_text(text: str, source_id: int, zones: list[dict]) -> CompileResult:
     errors: list[str] = []
     warnings: list[str] = []
 
-    object_class, cls_warn = _find_class(low)
+    object_class, cls_warn, cls_err = _find_class(low)
     warnings += cls_warn
-    if object_class is None and not cls_warn:
+    errors += cls_err
+    if object_class is None and not cls_err:
         errors.append(
             "could not identify a supported object class "
             f"(one of {sorted(SUPPORTED_CLASSES)})"
         )
-    elif object_class is None:
-        errors.append("ambiguous object class")
 
     trigger_type = _find_trigger(low)
     if trigger_type is None:
@@ -183,14 +226,30 @@ def compile_text(text: str, source_id: int, zones: list[dict]) -> CompileResult:
         if threshold is None:
             errors.append("count rule needs a threshold, e.g. 'more than 3 cars'")
 
-    visual_predicate = _detect_visual_predicate(low)
-
-    # Action: only create_notification is supported; mentions of external
-    # delivery are rejected rather than silently downgraded.
-    if re.search(r"\b(webhook|http|post to|call the api|slack|telegram)\b", low):
+    visual_predicate, had_condition_marker = _detect_visual_predicate(low)
+    # A requested condition clause that is not a supported visual condition is
+    # rejected rather than silently dropped (M2-AC1).
+    if had_condition_marker and visual_predicate is None:
         errors.append(
-            "external delivery (webhook/HTTP/Slack/Telegram) is not available; "
-            "only in-app notifications are supported"
+            "an unsupported or unrecognized visual condition was requested; "
+            "supported visual conditions: hood/trunk/door open, lights on"
+        )
+
+    # Action: only in-app create_notification is supported. External delivery or
+    # code/command execution is rejected rather than silently downgraded to a
+    # local notification.
+    if re.search(r"\b(webhook|https?|post to|call the api|slack|telegram|e-?mails?|sms|text message|phone|call the)\b", low):
+        errors.append(
+            "external delivery (webhook/HTTP/email/SMS/phone/Slack/Telegram) is "
+            "not available; only in-app notifications are supported"
+        )
+    if (
+        re.search(r"\b(python|javascript|shell|bash|source code|exec|eval)\b", low)
+        or (re.search(r"\b(run|execute|invoke)\b", low)
+            and re.search(r"\b(code|script|command|program)\b", low))
+    ):
+        errors.append(
+            "executing code, scripts, or shell commands is not supported"
         )
 
     if errors:

@@ -96,7 +96,12 @@ class VersionedTTLCache:
 
 @dataclass
 class Counters:
-    calls: int = 0           # real Teacher invocations
+    # The four distinct quantities the review (M2-004) asked to separate:
+    adapter_invocations: int = 0  # times the adapter was invoked after admission
+    outbound_attempts: int = 0    # actual outbound HTTP attempts (incl. retries)
+    completed: int = 0            # adapter invocations that reached the provider
+    unavailable: int = 0          # adapter invocations that made NO request
+    calls: int = 0           # alias of ``completed`` (kept for API/UI compat)
     cache_hits: int = 0
     cache_misses: int = 0
     deduped: int = 0         # shared an in-flight identical call
@@ -110,6 +115,10 @@ class Counters:
 
     def snapshot(self) -> dict:
         return {
+            "adapter_invocations": self.adapter_invocations,
+            "outbound_attempts": self.outbound_attempts,
+            "completed": self.completed,
+            "unavailable": self.unavailable,
             "calls": self.calls,
             "cache_hits": self.cache_hits,
             "cache_misses": self.cache_misses,
@@ -208,43 +217,47 @@ class VlmRouter:
 
         with self._lock:
             self.counters.cache_misses += 1
-            # 2) Budget
-            used = self._budget_used.get(task_key, 0)
-            if used >= budget:
-                self.counters.suppressed_budget += 1
-                self._bump_status("suppressed_budget")
-                return RouteDecision(
-                    "suppressed_budget", None, key, digest,
-                    f"task budget exhausted ({used}/{budget})",
-                )
-            # 3) Sampling (min interval between real calls for this task)
-            last = self._last_call_at.get(task_key)
-            if last is not None and (now - last) < sample_interval_s:
-                self.counters.suppressed_sampling += 1
-                self._bump_status("suppressed_sampling")
-                return RouteDecision(
-                    "suppressed_sampling", None, key, digest,
-                    f"within sampling interval ({sample_interval_s}s)",
-                )
-            # 4) Cooldown (per scope)
-            cd = self._cooldown_until.get(scope)
-            if cd is not None and now < cd:
-                self.counters.suppressed_cooldown += 1
-                self._bump_status("suppressed_cooldown")
-                return RouteDecision(
-                    "suppressed_cooldown", None, key, digest,
-                    f"scope in cooldown for {cd - now:.1f}s",
-                )
-            # 5) In-flight dedup: if another thread is already computing this key
+            # 2) In-flight dedup FIRST (M2-AC4): an identical ROI already being
+            # computed is shared without passing it through the budget, sampling
+            # and cooldown gates again (which the owner already paid), and
+            # without reserving a second slot.
             event = self._inflight.get(key)
             if event is not None:
                 dedup_wait = event
             else:
                 dedup_wait = None
+                # 3) Budget: is there ANY budget left to start a call? Per-attempt
+                # consumption happens at the transport boundary (``_attempt_guard``).
+                used = self._budget_used.get(task_key, 0)
+                if used >= budget:
+                    self.counters.suppressed_budget += 1
+                    self._bump_status("suppressed_budget")
+                    return RouteDecision(
+                        "suppressed_budget", None, key, digest,
+                        f"task budget exhausted ({used}/{budget})",
+                    )
+                # 4) Sampling (min interval between real calls for this task)
+                last = self._last_call_at.get(task_key)
+                if last is not None and (now - last) < sample_interval_s:
+                    self.counters.suppressed_sampling += 1
+                    self._bump_status("suppressed_sampling")
+                    return RouteDecision(
+                        "suppressed_sampling", None, key, digest,
+                        f"within sampling interval ({sample_interval_s}s)",
+                    )
+                # 5) Cooldown (per scope)
+                cd = self._cooldown_until.get(scope)
+                if cd is not None and now < cd:
+                    self.counters.suppressed_cooldown += 1
+                    self._bump_status("suppressed_cooldown")
+                    return RouteDecision(
+                        "suppressed_cooldown", None, key, digest,
+                        f"scope in cooldown for {cd - now:.1f}s",
+                    )
+                # Commit: reserve the in-flight slot + sampling + cooldown now that
+                # we will call. Budget is consumed per outbound attempt below.
                 own_event = threading.Event()
                 self._inflight[key] = own_event
-                # reserve budget/sampling/cooldown now that we commit to a call
-                self._budget_used[task_key] = used + 1
                 self._last_call_at[task_key] = now
                 self._cooldown_until[scope] = now + cooldown_s
 
@@ -261,17 +274,44 @@ class VlmRouter:
                 "deduped", None, key, digest, "in-flight owner produced no result"
             )
 
-        # 6) Real Teacher call (we own the in-flight slot for this key)
+        # 6) Real Teacher call (we own the in-flight slot for this key).
+        # The attempt guard enforces and accounts the shared per-task budget at
+        # the transport boundary: every outbound attempt (including retries)
+        # consumes one unit and is counted; when the budget is gone the guard
+        # returns False so the adapter stops before sending (M2-AC4).
+        guard_state = {"invoked": False, "granted": 0}
+
+        def _attempt_guard() -> bool:
+            with self._lock:
+                guard_state["invoked"] = True
+                used_now = self._budget_used.get(task_key, 0)
+                if used_now >= budget:
+                    return False
+                self._budget_used[task_key] = used_now + 1
+                self.counters.outbound_attempts += 1
+                guard_state["granted"] += 1
+            return True
+
         try:
-            result = teacher.classify(image_bytes, prompt, labels)
+            result = teacher.classify(image_bytes, prompt, labels, on_attempt=_attempt_guard)
         except Exception as exc:  # noqa: BLE001 — never propagate into the pipeline
             result = TeacherResult(status="error", model=model, error=f"adapter raised: {exc}"[:500])
-        finally:
-            pass
 
         with self._lock:
-            self.counters.calls += 1
+            self.counters.adapter_invocations += 1
             self._bump_status(result.status)
+            if result.status == "missing_credentials":
+                # Unavailable provider: no request was made, no budget consumed.
+                self.counters.unavailable += 1
+            else:
+                self.counters.completed += 1
+                self.counters.calls += 1
+                # Adapters that do not report attempts via the guard (e.g. test
+                # stubs) count as a single outbound attempt that consumes one
+                # budget unit, so the shared budget still bounds them.
+                if not guard_state["invoked"]:
+                    self._budget_used[task_key] = self._budget_used.get(task_key, 0) + 1
+                    self.counters.outbound_attempts += 1
             if result.confirmed:
                 self.counters.confirmed += 1
             elif result.status == "unknown":
@@ -279,7 +319,8 @@ class VlmRouter:
             elif result.status != "ok":
                 self.counters.failed += 1
             # Only cache deterministic, non-transient outcomes. Transient
-            # failures (timeout/error) are not cached so a later candidate retries.
+            # failures (timeout/error) and soft non-confirmations
+            # (low_confidence) are not cached so a later candidate retries.
             if result.status in ("ok", "unknown"):
                 self.cache.put(key, result, now)
             self._inflight_result[key] = result

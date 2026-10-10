@@ -275,13 +275,20 @@ def _route_visual(session, wf: Workflow, event: TrackEvent, frame, objects) -> b
     labels = [str(l) for l in vp["labels"]]
     expected = str(vp["expected_label"]).strip().lower()
     task_key = f"src{event.source_id}-wf{wf.id}"
+    # Cooldown scope is stable per (source, workflow) so repeated candidates for
+    # the same rule are throttled across distinct events (M2-AC4). The per-event
+    # ``dedupe_key`` is unique and never repeats, so keying cooldown on it would
+    # silently disable cooldown entirely (the reviewed defect). Keeping it at the
+    # task/source level means the documented cooldown actually suppresses the
+    # next eligible candidate of the same workflow within the window.
+    scope = task_key
     router = get_router()
 
     try:
         image_bytes = _encode_roi(frame, objects, event)
         decision = router.route(
             task_key=task_key,
-            scope=event.dedupe_key,
+            scope=scope,
             prompt=vp["prompt"],
             labels=labels,
             image_bytes=image_bytes,

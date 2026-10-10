@@ -118,3 +118,15 @@ continues without interruption or additional calls for this experiment.
 The CVPR 2025 paper is research motivation, not VisionFlow measurement.
 ROI-only crops discard scene context and are not labeled foveated. Pixel
 reduction is never assumed to scale linearly with tokens or monetary cost.
+
+## M2 review fixes (2026-10-10)
+
+Addresses the five reproduced P1 defects from the frozen M2 review target.
+
+| ID | Defect | Fix | Evidence |
+| --- | --- | --- | --- |
+| M2-001 | NL compiler accepted unconsumed condition/action clauses and multiple classes; a visual condition was silently dropped | `app/nl_compiler.py`: reject >1 object class, reject unsupported actions (email/SMS/phone/code execution), reject unrecognised condition clauses, and preserve a whitelist of supported visual conditions (hood/trunk/door open, lights on) | `tests/unit/test_nl_compiler.py::test_with_condition_preserves_visual_predicate`, `test_unsupported_visual_condition_rejected`, `test_email_action_rejected`, `test_code_execution_rejected`, `test_multiple_classes_rejected` |
+| M2-002 | Positive Teacher response could confirm with missing or zero confidence | `app/teacher.py`: classified label requires confidence (else `invalid_response`); below `VLM_MIN_CONFIDENCE` → new non-confirming `low_confidence` status (distinct from `unknown`) | `tests/unit/test_teacher.py::test_missing_confidence_on_positive_rejected`, `test_zero_confidence_not_confirmed`, `test_below_minimum_confidence_not_confirmed`, `test_at_minimum_confidence_confirms` |
+| M2-003 | Retry/backoff and semaphore acquisition ignored the overall timeout | `app/teacher.py`: one monotonic deadline bounds semaphore acquisition, each attempt's phase timeouts, and every backoff | `tests/unit/test_teacher.py::test_backoff_bounded_by_deadline`, `test_semaphore_acquire_bounded_by_deadline` |
+| M2-004 | Budget counted adapter invocations not outbound attempts; unavailable provider incremented calls | `app/vlm_router.py`: per-attempt budget guard at the transport boundary; new counters `adapter_invocations`/`outbound_attempts`/`completed`/`unavailable`; unavailable provider makes zero requests | `tests/unit/test_vlm_router.py::test_budget_consumes_every_outbound_attempt`, `test_budget_allows_retry_within_budget`, `test_unavailable_contributes_zero_requests` |
+| M2-005 | Cooldown keyed on the unique per-event dedupe_key never suppressed; concurrent duplicate hit the sampling gate instead of sharing | `app/pipeline.py` cooldown scope = stable `(source, workflow)`; `app/vlm_router.py` in-flight dedup moved ahead of the budget/sampling/cooldown gates | `tests/unit/test_vlm_router.py::test_inflight_duplicate_shares_before_sampling_gate`; cooldown scope exercised via existing `test_cooldown_suppresses_same_scope` |
