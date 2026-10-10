@@ -13,6 +13,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    UniqueConstraint,
     create_engine,
     event,
 )
@@ -205,6 +206,9 @@ class ModelVersion(Base):
     """A fitted, saved Student artifact plus its exact training provenance."""
 
     __tablename__ = "autolearn_model_versions"
+    # One version number per task; concurrent trains cannot both claim v1 and
+    # overwrite the same artifact path (C-008).
+    __table_args__ = (UniqueConstraint("task_id", "version", name="uq_autolearn_mv_task_version"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     task_id: Mapped[int] = mapped_column(ForeignKey("autolearn_tasks.id"))
@@ -292,6 +296,61 @@ class LabelingAudit(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
+class LabelingReservation(Base):
+    """Durable BEFORE-send Teacher-attempt admission record (C-005/C-006).
+
+    Committed on its own connection independently of the labeling/classify job so
+    concurrent requests and separate Uvicorn worker processes share ONE
+    authoritative per-task budget. The ``slot`` integer is unique per task; an
+    atomic ``UNIQUE(task_id, slot)`` insert (with recount-on-collision) is the
+    cross-process serialization primitive — no reliance on a single process.
+
+    Lifecycle:
+      reserved -> sent      an outbound POST was actually initiated; this is an
+                            ACTUAL attempt and durably consumes budget. A later
+                            malformed response or DB/sample-commit fault CANNOT
+                            erase it (it was already committed here).
+      reserved -> released  a local-config/input failure or an admission timeout
+                            occurred BEFORE any outbound byte; consumes NO budget.
+
+    Budget consumed by a task == rows with status in (reserved, sent). Only
+    ``sent`` rows are reported as actual attempts."""
+
+    __tablename__ = "autolearn_labeling_reservations"
+    __table_args__ = (UniqueConstraint("task_id", "slot", name="uq_autolearn_resv_task_slot"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    task_id: Mapped[int] = mapped_column(Integer)
+    slot: Mapped[int] = mapped_column(Integer)
+    dedupe_key: Mapped[str] = mapped_column(String(64))
+    image_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    status: Mapped[str] = mapped_column(String(16), default="reserved")
+    # reserved | sent | released
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class LabelingCache(Base):
+    """Bounded, persistent Teacher result cache (C-005).
+
+    An identical fresh classify-fallback input (same task, image content, prompt
+    and configured model) reuses a prior labeled result rather than re-contacting
+    the provider. Bounded per task (oldest entries evicted) so it can never grow
+    unbounded."""
+
+    __tablename__ = "autolearn_labeling_cache"
+    __table_args__ = (UniqueConstraint("task_id", "cache_key", name="uq_autolearn_cache_task_key"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    task_id: Mapped[int] = mapped_column(Integer)
+    cache_key: Mapped[str] = mapped_column(String(64))
+    image_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    status: Mapped[str] = mapped_column(String(16))
+    label: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    model: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
 class Notification(Base):
     __tablename__ = "notifications"
 
@@ -353,6 +412,19 @@ def _migrate_additive(engine) -> None:
                     conn.exec_driver_sql(
                         f"ALTER TABLE {table} ADD COLUMN {name} {decl}"
                     )
+        # Enforce one version number per task even on databases created before the
+        # UniqueConstraint existed (C-008). Additive and honest: this fails loudly
+        # if pre-existing rows already violate it rather than silently inferring.
+        mv_cols = {
+            row[1] for row in conn.exec_driver_sql(
+                "PRAGMA table_info(autolearn_model_versions)"
+            )
+        }
+        if mv_cols:
+            conn.exec_driver_sql(
+                "CREATE UNIQUE INDEX IF NOT EXISTS uq_autolearn_mv_task_version "
+                "ON autolearn_model_versions(task_id, version)"
+            )
 
 
 def get_session():

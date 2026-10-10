@@ -84,6 +84,13 @@ def _get_owned_loop() -> asyncio.AbstractEventLoop:
         return _owned_loop
 
 
+# Allowlisted labeling methods (C-007). ``chat_json`` is generated-JSON chat
+# completion; ``two_candidate_likelihood`` is image-conditioned candidate
+# likelihood scoring (two forward passes, serialized JSON). A provider-reported
+# method outside this set is ignored (never trusted into storage).
+_ALLOWED_METHODS = {"chat_json", "two_candidate_likelihood"}
+
+
 @dataclass
 class LabelCandidate:
     status: str  # labeled | unavailable | invalid_response | timeout | error | cancelled
@@ -94,11 +101,24 @@ class LabelCandidate:
     provider_host: str | None = None
     detail: str | None = None
     # Labeling method provenance (C-007): "chat_json" for generated-JSON chat
-    # completions; a likelihood-scoring provider would report its own method.
+    # completions; a likelihood-scoring provider reports "two_candidate_likelihood".
     method: str | None = None
+    # Actual provider model/revision reported in the envelope, distinct from the
+    # configured alias in ``config.VLM_MODEL`` (C-007). None when the provider did
+    # not report one (an "unknown actual model", never faked from the alias).
+    model_revision: str | None = None
+    # Validated candidate likelihood scores and forward-pass count for a scoring
+    # provider (C-007); None for generated JSON.
+    candidate_scores: dict | None = None
+    forward_passes: int | None = None
     # Whether ``confidence`` is calibrated. Generated self-reported confidence is
     # NOT calibrated; likelihood scores are explicitly uncalibrated too.
     confidence_calibrated: bool = False
+    # Whether an outbound POST was ACTUALLY initiated (C-005). Admission timeouts
+    # and local-config/input rejections never start a request -> False, so they
+    # consume no durable budget. Any received response (labeled/invalid_response/
+    # HTTP error) or a transport-level timeout/cancel after send -> True.
+    attempted: bool = False
     raw: dict | None = field(default=None)
 
 
@@ -198,32 +218,44 @@ async def classify(
         read=config.AUTOLEARN_LABEL_READ_TIMEOUT,
     )
     t0 = time.perf_counter()
+    # ``outbound["started"]`` flips True only once an actual POST is initiated, so
+    # the caller can tell an admission-queue timeout (no attempt) from a transport
+    # timeout after the request was sent (an actual, uncertain attempt) (C-005).
+    outbound = {"started": False}
     try:
         # Admission is INSIDE the overall deadline: a caller queued behind the
         # single in-flight request cannot wait past the absolute timeout. On
         # cancellation the ``async with`` releases capacity only after the
         # transport unwinds, so no abandoned worker holds the slot.
         result = await asyncio.wait_for(
-            _admit_and_post(url, body, headers, timeout),
+            _admit_and_post(url, body, headers, timeout, outbound),
             timeout=config.AUTOLEARN_LABEL_OVERALL_TIMEOUT,
         )
     except asyncio.TimeoutError:
-        return LabelCandidate(status="timeout", provider_host=host, detail="overall timeout exceeded")
+        # attempted reflects whether we got past admission into an actual POST.
+        return LabelCandidate(status="timeout", provider_host=host,
+                              attempted=outbound["started"], detail="overall timeout exceeded")
     except asyncio.CancelledError:
-        return LabelCandidate(status="cancelled", provider_host=host, detail="request cancelled")
+        return LabelCandidate(status="cancelled", provider_host=host,
+                              attempted=outbound["started"], detail="request cancelled")
     except httpx.TimeoutException:
-        return LabelCandidate(status="timeout", provider_host=host, detail="transport timeout")
+        return LabelCandidate(status="timeout", provider_host=host,
+                              attempted=True, detail="transport timeout")
     except _ResponseTooLarge as exc:
-        return LabelCandidate(status="error", provider_host=host, detail=str(exc))
+        return LabelCandidate(status="error", provider_host=host, attempted=True, detail=str(exc))
     except httpx.HTTPError as exc:
-        return LabelCandidate(status="error", provider_host=host, detail=f"transport error: {type(exc).__name__}")
+        return LabelCandidate(status="error", provider_host=host, attempted=True,
+                              detail=f"transport error: {type(exc).__name__}")
     latency_ms = (time.perf_counter() - t0) * 1000.0
 
     status_code, payload = result
+    # A response was received: this is unambiguously an actual attempt.
     if status_code == 401 or status_code == 403:
-        return LabelCandidate(status="error", provider_host=host, latency_ms=latency_ms, detail="authentication failed")
+        return LabelCandidate(status="error", provider_host=host, latency_ms=latency_ms,
+                              attempted=True, detail="authentication failed")
     if status_code >= 400:
-        return LabelCandidate(status="error", provider_host=host, latency_ms=latency_ms, detail=f"HTTP {status_code}")
+        return LabelCandidate(status="error", provider_host=host, latency_ms=latency_ms,
+                              attempted=True, detail=f"HTTP {status_code}")
     try:
         data = json.loads(payload)
         content = data["choices"][0]["message"]["content"]
@@ -234,47 +266,115 @@ async def classify(
     except Exception:  # noqa: BLE001
         return LabelCandidate(
             status="invalid_response", provider_host=host, latency_ms=latency_ms,
-            detail="missing choices/message/content",
+            attempted=True, detail="missing choices/message/content",
+        )
+    # Validate provider-controlled envelope metadata as a bounded optional string
+    # BEFORE it can reach a String DB column (C-006). A dict/bool/number ``model``
+    # is a malformed envelope -> invalid_response (still an actual attempt).
+    raw_model = data.get("model") if isinstance(data, dict) else None
+    if raw_model is not None and not isinstance(raw_model, str):
+        return LabelCandidate(
+            status="invalid_response", provider_host=host, latency_ms=latency_ms,
+            attempted=True, detail=f"envelope model is not a string (got {type(raw_model).__name__})",
         )
     label, conf, err = _parse_strict(content, labels)
     if err:
         return LabelCandidate(
-            status="invalid_response", provider_host=host, latency_ms=latency_ms, detail=err,
+            status="invalid_response", provider_host=host, latency_ms=latency_ms,
+            attempted=True, detail=err,
         )
     # Provenance (C-007): record the model/revision the provider actually
-    # reported (distinct from the configured alias), the labeling method, and a
-    # bounded raw snippet + usage counts. Never store API keys or raw image bytes.
-    actual_model = data.get("model") if isinstance(data, dict) else None
+    # reported (distinct from the configured alias), the labeling method, a bounded
+    # raw snippet + usage counts, and, when present, validated candidate-likelihood
+    # scoring metadata. Never store API keys or raw image bytes.
+    actual_model = _bounded_str(raw_model, 128)
     usage = data.get("usage") if isinstance(data, dict) else None
+    if not isinstance(usage, dict):
+        usage = None
     content_preview = content[:256] if isinstance(content, str) else None
+    method, revision, scores, forwards = _scoring_provenance(data)
     return LabelCandidate(
         status="labeled",
         label=label,
         confidence=conf,
-        model=actual_model or config.VLM_MODEL,
+        model=actual_model,  # None (unknown actual model) is never faked from the alias
+        model_revision=revision or actual_model,
+        candidate_scores=scores,
+        forward_passes=forwards,
         latency_ms=latency_ms,
         provider_host=host,
-        method="chat_json",
-        confidence_calibrated=False,  # self-reported confidence is not calibrated
+        method=method,
+        confidence_calibrated=False,  # neither self-report nor likelihood is calibrated
+        attempted=True,
         raw={
-            "method": "chat_json",
+            "method": method,
             "configured_alias": config.VLM_MODEL,
             "response_model": actual_model,
+            "model_revision": revision,
+            "candidate_scores": scores,
+            "forward_passes": forwards,
+            "confidence_calibrated": False,
             "usage": usage,
             "content_preview": content_preview,
         },
     )
 
 
+def _bounded_str(value, max_len: int) -> str | None:
+    """Return ``value`` only if it is a reasonably bounded string, else None."""
+    if isinstance(value, str) and 0 < len(value) <= max_len:
+        return value
+    return None
+
+
+def _scoring_provenance(data) -> tuple[str, str | None, dict | None, int | None]:
+    """Extract validated, allowlisted labeling-method provenance (C-007).
+
+    Honours an optional image-conditioned likelihood-scoring block
+    (``providerexperimental_classification``) emitted by a scoring provider: two
+    candidate forward passes + serialized JSON. Never hardcodes ``chat_json`` when
+    the provider reports a valid scoring method; untrusted/malformed metadata is
+    dropped (method falls back to the default generated-JSON label)."""
+    default = ("chat_json", None, None, None)
+    if not isinstance(data, dict):
+        return default
+    block = data.get("providerexperimental_classification")
+    if not isinstance(block, dict):
+        return default
+    method = block.get("method")
+    if not isinstance(method, str) or method not in _ALLOWED_METHODS:
+        return default
+    revision = _bounded_str(block.get("model_revision"), 128)
+    scores = None
+    raw_scores = block.get("candidate_scores")
+    if isinstance(raw_scores, dict):
+        clean = {
+            str(k)[:64]: float(v)
+            for k, v in raw_scores.items()
+            if isinstance(k, str) and isinstance(v, (int, float))
+            and not isinstance(v, bool) and math.isfinite(float(v))
+        }
+        scores = clean or None
+    forwards = block.get("forward_passes")
+    if not (isinstance(forwards, int) and not isinstance(forwards, bool) and 0 < forwards <= 8):
+        forwards = None
+    return method, revision, scores, forwards
+
+
 class _ResponseTooLarge(RuntimeError):
     pass
 
 
-async def _admit_and_post(url, body, headers, timeout) -> tuple[int, bytes]:
+async def _admit_and_post(url, body, headers, timeout, outbound) -> tuple[int, bytes]:
     """Acquire the per-loop admission slot, then POST+read. Wrapped by the
     caller's overall ``wait_for`` so both admission and transport share one
-    absolute deadline, and the slot is freed on cancellation unwind."""
+    absolute deadline, and the slot is freed on cancellation unwind.
+
+    ``outbound["started"]`` is set the instant admission succeeds and an actual
+    POST begins, so a timeout waiting for admission is distinguishable from a
+    timeout after the request was already sent (C-005)."""
     async with _loop_semaphore():
+        outbound["started"] = True
         return await _post_and_read(url, body, headers, timeout)
 
 
@@ -317,7 +417,11 @@ def classify_sync(image_bytes: bytes, *, prompt: str, labels: list[str]) -> Labe
         return future.result(timeout=budget)
     except FuturesTimeoutError:
         future.cancel()  # request cancellation on the owned loop; frees the slot
+        # The owned loop is wedged past even the absolute deadline: conservatively
+        # treat this as an actual (uncertain) attempt so budget is not refunded for
+        # work that may have reached the provider (C-005).
         return LabelCandidate(
             status="timeout",
+            attempted=True,
             detail="owned-loop safety budget exceeded",
         )
