@@ -1,0 +1,77 @@
+{
+  "probes": [
+    {
+      "probe": "invalid max_tokens True",
+      "expected": 400,
+      "actual": 400,
+      "passed": true
+    },
+    {
+      "probe": "invalid max_tokens 0",
+      "expected": 400,
+      "actual": 400,
+      "passed": true
+    },
+    {
+      "probe": "invalid max_tokens 129",
+      "expected": 400,
+      "actual": 400,
+      "passed": true
+    },
+    {
+      "probe": "invalid max_tokens '64'",
+      "expected": 400,
+      "actual": 400,
+      "passed": true
+    },
+    {
+      "probe": "external image URL forbidden",
+      "expected": 400,
+      "actual": 400,
+      "passed": true
+    },
+    {
+      "probe": "three images rejected",
+      "expected": 400,
+      "actual": 400,
+      "passed": true
+    },
+    {
+      "probe": "unknown model rejected",
+      "expected": 400,
+      "actual": 400,
+      "passed": true
+    },
+    {
+      "probe": "streaming rejected",
+      "expected": 400,
+      "actual": 400,
+      "passed": true
+    },
+    {
+      "probe": "invalid encoded image rejected",
+      "expected": 400,
+      "actual": 400,
+      "passed": true
+    },
+    {
+      "probe": "body byte limit",
+      "expected": 413,
+      "actual": 413,
+      "passed": true
+    },
+    {
+      "probe": "cancelled HTTP caller retains actual GPU capacity",
+      "active_request": "local-a764531fbcca4c6caf982ecaf8c30d25",
+      "active_request_after_cancel": "local-a764531fbcca4c6caf982ecaf8c30d25",
+      "expected": 429,
+      "actual": 429,
+      "passed": true
+    },
+    {
+      "probe": "capacity restored only after actual generation completion",
+      "passed": true
+    }
+  ],
+  "all_passed": true
+}

@@ -1,0 +1,83 @@
+{
+  "model": {
+    "object": "list",
+    "data": [
+      {
+        "id": "HuggingFaceTB/SmolVLM-500M-Instruct",
+        "object": "model",
+        "owned_by": "local-experiment",
+        "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47"
+      }
+    ],
+    "experimental": {
+      "active_request": null,
+      "max_concurrency": 1
+    }
+  },
+  "prompt": "Is the main visible vehicle a bus? Reply only with a JSON object with exactly label and confidence. Allowed labels: [\"bus\", \"not_bus\", \"unknown\"]. Confidence must be a numeric value from0 to1, your own estimate. Example format: {\"label\":\"unknown\",\"confidence\":0.0}. Do not explain.",
+  "allowed_labels": [
+    "bus",
+    "not_bus",
+    "unknown"
+  ],
+  "records": [
+    {
+      "image": "video_frame_126.jpg",
+      "image_sha256": "32ed4c4b9608b87ec77282c2da6d208bdb164c50ea3e233ba660dd88872008da",
+      "http_status": 200,
+      "wall_seconds": 0.18189209700358333,
+      "actual_content": " \"cero emisions\".",
+      "usage": {
+        "prompt_tokens": 144,
+        "completion_tokens": 7,
+        "total_tokens": 151
+      },
+      "metrics": {
+        "request_id": "local-cb0e959c88e64adea45e0c9d84421dfe",
+        "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+        "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+        "image_count": 1,
+        "input_tokens": 144,
+        "output_tokens": 7,
+        "inference_seconds": 0.172740704001626,
+        "gpu_peak_allocated_bytes": 1049995264,
+        "gpu_peak_reserved_bytes": 1067450368,
+        "deadline_reached": false
+      },
+      "strict_schema_valid": false,
+      "parsed_teacher_label": null,
+      "human_verified": false
+    },
+    {
+      "image": "video_frame_156.jpg",
+      "image_sha256": "fba8f016034ddc03bf2a0c02c6e9b884885c23aeed9ff6b6b47033e882a642bc",
+      "http_status": 200,
+      "wall_seconds": 0.17632088699610904,
+      "actual_content": " \"cero_emissions\".",
+      "usage": {
+        "prompt_tokens": 144,
+        "completion_tokens": 8,
+        "total_tokens": 152
+      },
+      "metrics": {
+        "request_id": "local-4c335c8b636946a8af354b698a0f76d9",
+        "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+        "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+        "image_count": 1,
+        "input_tokens": 144,
+        "output_tokens": 8,
+        "inference_seconds": 0.16846655400149757,
+        "gpu_peak_allocated_bytes": 1049995264,
+        "gpu_peak_reserved_bytes": 1067450368,
+        "deadline_reached": false
+      },
+      "strict_schema_valid": false,
+      "parsed_teacher_label": null,
+      "human_verified": false
+    }
+  ],
+  "accuracy": "UNVERIFIED: no human-verified held-out labels",
+  "rental_cost": "no rented GPU; no external paid inference",
+  "local_electricity_cost": "UNVERIFIED; not measured",
+  "teacher_workflow_actions": "disabled"
+}
