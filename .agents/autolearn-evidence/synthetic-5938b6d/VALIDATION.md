@@ -2,7 +2,8 @@
 
 Experimental snapshot: `5938b6d1f1396c1513d52ee9d9c3cdb377dc43a4`.
 This is an execution record, **not M3 acceptance or permission to activate**.
-Independent QA is pending. Historical M2 remains BLOCKED; Teacher-backed
+Independent QA returned CHANGES_REQUIRED; the final bounded correction is in
+progress and this snapshot is not accepted. Historical M2 remains BLOCKED; Teacher-backed
 workflow actions stay disabled. Active model is null; shadow actions are `none`.
 
 ## Inputs and protocol
@@ -99,3 +100,23 @@ can differ from elapsed wall time. The original HTTP latency record is unchanged
 Vast GPU inference and kernel time remain UNVERIFIED; no rental cost per event
 is inferred. PyTorch's [profiler documentation](https://docs.pytorch.org/docs/2.14/profiler.html)
 describes CPU/CUDA activity collection. Actual profiler runtime was Torch2.7.1+cu118.
+
+## Reproduced input bytes
+
+The archived QA generator reproduced **all 24 approved image SHA256s and the
+exact review-sheet SHA256** in a fresh owned directory. `input-reproduction.json`
+records Python/Pillow versions, the resolved font hash and generator hash.
+Run from the delivery repository with an empty output directory:
+
+```sh
+services/api/.venv/bin/python scripts/experiments/generate_synthetic_occupancy.py \
+  --out /tmp/visionflow-occupancy-reproduction \
+  --font /usr/share/fonts/TTF/DejaVuSans.ttf
+```
+
+The executed environment used Pillow 12.3.0. On another system, pass the same
+DejaVu font bytes and compare outputs against `human-groundtruth-approval.json`.
+Regenerated manifest paths differ, so its manifest hash is not the original
+approval hash. The generator leaves `human_verified` false and emits proposed
+labels/splits; the actual training split is the preregistered amendment above.
+This reproduction performs no Teacher inference, training or activation.

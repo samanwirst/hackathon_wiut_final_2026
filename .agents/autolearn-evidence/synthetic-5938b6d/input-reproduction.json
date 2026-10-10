@@ -1,0 +1,135 @@
+{
+  "checked_at_utc": "2026-10-10T23:24:40.129488+00:00",
+  "generator": "scripts/experiments/generate_synthetic_occupancy.py",
+  "generator_sha256": "54a89807e3d620ea072651f70086186bd5acabaaf0ab875396d4c2fb2671ff26",
+  "original_runtime_generator_sha256": "f4d8a87069cd69f7d82fe545f32ddfefaeb0ea30c65ec34078be2963efc28bbe",
+  "python_version": "3.14.7",
+  "pillow_version": "12.3.0",
+  "resolved_font_path": "/usr/share/fonts/TTF/DejaVuSans.ttf",
+  "font_sha256": "6038a160b491e121c1f12c7bccb4a9c8730296e3adc1086a059404ed84b7451c",
+  "matching_images": 24,
+  "review_sheet_sha256": "144a5f3892725415bdcaa2a0f9716181d81e87a76b668d51e9674000c0d9e2a4",
+  "images": [
+    {
+      "sample_id": "s00-f00",
+      "expected_sha256": "8a0206495f5cb56aa9508c092f87f6ab2c7597b6f9fbec9d5560969d78417dbc",
+      "reproduced_sha256": "8a0206495f5cb56aa9508c092f87f6ab2c7597b6f9fbec9d5560969d78417dbc"
+    },
+    {
+      "sample_id": "s00-f01",
+      "expected_sha256": "ba8f3169ac956dc5dbf9e7294b053dab673fd6f21961679c7ab433ebdca1d65b",
+      "reproduced_sha256": "ba8f3169ac956dc5dbf9e7294b053dab673fd6f21961679c7ab433ebdca1d65b"
+    },
+    {
+      "sample_id": "s01-f00",
+      "expected_sha256": "ec0dbaccb7268b1e19f933146184cc28f684b619e0c7e9f0bcf86bac449dc6fa",
+      "reproduced_sha256": "ec0dbaccb7268b1e19f933146184cc28f684b619e0c7e9f0bcf86bac449dc6fa"
+    },
+    {
+      "sample_id": "s01-f01",
+      "expected_sha256": "d8596c956bbe136e5f4dade6e66f6415bf0b824041d82657719ebd2aadaccc72",
+      "reproduced_sha256": "d8596c956bbe136e5f4dade6e66f6415bf0b824041d82657719ebd2aadaccc72"
+    },
+    {
+      "sample_id": "s02-f00",
+      "expected_sha256": "46517d26b26a21d6ec55d814c6fe73fc94ec4c2d6522914630fd8a4c4ed673b5",
+      "reproduced_sha256": "46517d26b26a21d6ec55d814c6fe73fc94ec4c2d6522914630fd8a4c4ed673b5"
+    },
+    {
+      "sample_id": "s02-f01",
+      "expected_sha256": "11537071fae26e1d9e23479b0cb2b7f034e3dca8157877d78d9eb35f0d098da0",
+      "reproduced_sha256": "11537071fae26e1d9e23479b0cb2b7f034e3dca8157877d78d9eb35f0d098da0"
+    },
+    {
+      "sample_id": "s03-f00",
+      "expected_sha256": "f0a52c53876397b1ccd92d2e65314d69faf1b262eadbdb48cb4b2d94aeb75494",
+      "reproduced_sha256": "f0a52c53876397b1ccd92d2e65314d69faf1b262eadbdb48cb4b2d94aeb75494"
+    },
+    {
+      "sample_id": "s03-f01",
+      "expected_sha256": "b778080203c1b40ecbf1f5224d3fa041dfcf24ffac3a21ea83776bd30867d560",
+      "reproduced_sha256": "b778080203c1b40ecbf1f5224d3fa041dfcf24ffac3a21ea83776bd30867d560"
+    },
+    {
+      "sample_id": "s04-f00",
+      "expected_sha256": "a5160f5b1bd2eb05602458981fcedfda4d3834f502ecc1b9ed345d6b1aac6989",
+      "reproduced_sha256": "a5160f5b1bd2eb05602458981fcedfda4d3834f502ecc1b9ed345d6b1aac6989"
+    },
+    {
+      "sample_id": "s04-f01",
+      "expected_sha256": "e8e5e4dbc9eeea5f417b4538950abf06c80880054bac0f7c8d91fa90bf6384b7",
+      "reproduced_sha256": "e8e5e4dbc9eeea5f417b4538950abf06c80880054bac0f7c8d91fa90bf6384b7"
+    },
+    {
+      "sample_id": "s05-f00",
+      "expected_sha256": "e8573f952c40882c4148408d9ba774ba849406fd4661ffcbf4d3707e07e970a8",
+      "reproduced_sha256": "e8573f952c40882c4148408d9ba774ba849406fd4661ffcbf4d3707e07e970a8"
+    },
+    {
+      "sample_id": "s05-f01",
+      "expected_sha256": "4ec62beab20753bebb74117571bace05e1052ec3989365558cee15e725e6cba9",
+      "reproduced_sha256": "4ec62beab20753bebb74117571bace05e1052ec3989365558cee15e725e6cba9"
+    },
+    {
+      "sample_id": "s06-f00",
+      "expected_sha256": "4bb6a5baafcd702d4e8fee6e0f5052f3557dc1e1d73c41600c64e7579e7c6e28",
+      "reproduced_sha256": "4bb6a5baafcd702d4e8fee6e0f5052f3557dc1e1d73c41600c64e7579e7c6e28"
+    },
+    {
+      "sample_id": "s06-f01",
+      "expected_sha256": "f5b86637d254afc8d165383232a6b6ee5f75b27aadf1cb31a21662ca6d24d622",
+      "reproduced_sha256": "f5b86637d254afc8d165383232a6b6ee5f75b27aadf1cb31a21662ca6d24d622"
+    },
+    {
+      "sample_id": "s07-f00",
+      "expected_sha256": "e18fea284b68970a59650b24d5cce3ac6e1d76dfb80eb770a196bd2d597824b2",
+      "reproduced_sha256": "e18fea284b68970a59650b24d5cce3ac6e1d76dfb80eb770a196bd2d597824b2"
+    },
+    {
+      "sample_id": "s07-f01",
+      "expected_sha256": "8209024222b92aba6ab0498b3e873d31b4adcdaae3beb6374649cea93c11e38b",
+      "reproduced_sha256": "8209024222b92aba6ab0498b3e873d31b4adcdaae3beb6374649cea93c11e38b"
+    },
+    {
+      "sample_id": "s08-f00",
+      "expected_sha256": "0e5c871a6dfe0782bab88c6445e1f2d41e76f42b9d612ad54721784946c300b0",
+      "reproduced_sha256": "0e5c871a6dfe0782bab88c6445e1f2d41e76f42b9d612ad54721784946c300b0"
+    },
+    {
+      "sample_id": "s08-f01",
+      "expected_sha256": "a28228276cce09d07a7ff90d61fe20f48f1344d266ad3c0360c832f119304bf3",
+      "reproduced_sha256": "a28228276cce09d07a7ff90d61fe20f48f1344d266ad3c0360c832f119304bf3"
+    },
+    {
+      "sample_id": "s09-f00",
+      "expected_sha256": "8b9a55be723c493965d72192353dccaf5dde0ca2afedb86de2fb5f275ab70ef8",
+      "reproduced_sha256": "8b9a55be723c493965d72192353dccaf5dde0ca2afedb86de2fb5f275ab70ef8"
+    },
+    {
+      "sample_id": "s09-f01",
+      "expected_sha256": "3adc892f737a7bc955dfec29526bf662e6a7714a4a06a20570419a17ca808ade",
+      "reproduced_sha256": "3adc892f737a7bc955dfec29526bf662e6a7714a4a06a20570419a17ca808ade"
+    },
+    {
+      "sample_id": "s10-f00",
+      "expected_sha256": "d5f2f2c04f03a098b25bc31f9a9d19cd46989e2f79da298f4d7694906c0c66c4",
+      "reproduced_sha256": "d5f2f2c04f03a098b25bc31f9a9d19cd46989e2f79da298f4d7694906c0c66c4"
+    },
+    {
+      "sample_id": "s10-f01",
+      "expected_sha256": "45a8657b138ddb71b6b5de16fd43a4098ac92f3ecee677e2184cf16e14d70397",
+      "reproduced_sha256": "45a8657b138ddb71b6b5de16fd43a4098ac92f3ecee677e2184cf16e14d70397"
+    },
+    {
+      "sample_id": "s11-f00",
+      "expected_sha256": "b6da660387d56a31feb95ccce77b57ab310a542df5b216e24c03e99ff4d31d84",
+      "reproduced_sha256": "b6da660387d56a31feb95ccce77b57ab310a542df5b216e24c03e99ff4d31d84"
+    },
+    {
+      "sample_id": "s11-f01",
+      "expected_sha256": "da565c26891fbf3559fc2dc110750e24bed78cee567f9d26e7dbf7fe74de0a2c",
+      "reproduced_sha256": "da565c26891fbf3559fc2dc110750e24bed78cee567f9d26e7dbf7fe74de0a2c"
+    }
+  ],
+  "scope": "Exact original bytes reproduced. Generated manifest contains proposed labels, not new human verification. Static proposed split is superseded by experiment-preregistration-v2.json. Absolute output paths make regenerated manifest hash differ."
+}
