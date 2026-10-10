@@ -174,6 +174,28 @@ AUTOLEARN_LABEL_MAX_TOKENS = int(os.environ.get("AUTOLEARN_LABEL_MAX_TOKENS", "2
 # Bounded concurrency for the offline job (serial by requirement).
 AUTOLEARN_LABEL_CONCURRENCY = 1
 
+# --- Teacher call budgets (M3-AC5 / C-005) ---------------------------------
+# Expensive offline Teacher calls are bounded by an explicit, durable budget so
+# repeated/concurrent jobs and low-margin classify fallbacks cannot run the
+# provider unbounded. "Attempts" are counted from the durable labeling audit:
+# only outcomes that actually contacted the provider (labeled / invalid_response
+# / timeout / error) consume budget. A missing provider (unavailable) or a cache
+# hit / duplicate-suppressed call consumes ZERO attempts.
+AUTOLEARN_LABEL_BUDGET_PER_TASK = int(os.environ.get("AUTOLEARN_LABEL_BUDGET_PER_TASK", "200"))
+# Hard cap on real calls admitted by a single labeling job invocation.
+AUTOLEARN_LABEL_JOB_MAX = int(os.environ.get("AUTOLEARN_LABEL_JOB_MAX", "50"))
+
+# --- Near-duplicate leakage protection (M3-AC2 / C-003) --------------------
+# Two images in different session/source groups whose decoded pixels (compared at
+# a normalized 32x32 RGB resolution) differ by a mean-absolute pixel difference
+# below this value are treated as the same content — a decode/re-encode duplicate
+# — and refused so they cannot straddle the train/val/test split. Decoded-pixel
+# MAD keeps the global tint that perceptual (average) hashing normalizes away, so
+# it flags re-encodes (MAD ~0-1.5 across JPEG/PNG re-saves) without flagging
+# genuinely independent scenes (MAD >> this). Deliberately small and FIXED — the
+# threshold is NEVER tuned against held-out outcomes.
+AUTOLEARN_NEAR_DUP_MAX_MAD = float(os.environ.get("AUTOLEARN_NEAR_DUP_MAX_MAD", "5.0"))
+
 
 def ensure_dirs() -> None:
     for d in (UPLOAD_DIR, SNAPSHOT_DIR, EVIDENCE_DIR, AUTOLEARN_IMAGE_DIR, AUTOLEARN_MODEL_DIR):

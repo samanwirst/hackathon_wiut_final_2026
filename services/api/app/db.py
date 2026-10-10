@@ -228,6 +228,28 @@ class ModelVersion(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
+class ModelVersionSample(Base):
+    """Immutable per-version dataset membership snapshot (M3-AC2 / C-002).
+
+    When a Student version is trained, the exact rows, their verified labels,
+    content hashes and split assignment are frozen here. Held-out evaluation,
+    shadow mode and the activation gate read THIS manifest, never the mutable
+    task-wide ``TrainingSample.split`` (which a later retrain reshuffles). If a
+    manifest row's current sample is missing or its content hash changed,
+    evaluation fails closed rather than inferring a new accuracy."""
+
+    __tablename__ = "autolearn_model_version_samples"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    model_version_id: Mapped[int] = mapped_column(
+        ForeignKey("autolearn_model_versions.id")
+    )
+    sample_id: Mapped[int] = mapped_column(Integer)
+    image_hash: Mapped[str] = mapped_column(String(64))
+    verified_label: Mapped[str] = mapped_column(String(64))
+    split: Mapped[str] = mapped_column(String(16))  # train | val | test
+
+
 class ActivationEvent(Base):
     """Immutable audit of every Student activation / rollback / rejection."""
 
@@ -261,6 +283,12 @@ class LabelingAudit(Base):
     session_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
     status: Mapped[str] = mapped_column(String(32))
     latency_ms: Mapped[float | None] = mapped_column(Float, nullable=True)
+    # Actual provider provenance (C-007): the model/revision reported by the
+    # provider (distinct from the configured alias) and the labeling method
+    # (e.g. generated JSON vs conditional-likelihood scoring). Nullable so older
+    # rows and non-contacting outcomes (unavailable/cache) stay valid.
+    response_model: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    method: Mapped[str | None] = mapped_column(String(48), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
@@ -295,7 +323,36 @@ def init_db(db_path: str | None = None) -> None:
         cur.close()
 
     Base.metadata.create_all(_engine)
+    _migrate_additive(_engine)
     SessionLocal = sessionmaker(bind=_engine, expire_on_commit=False)
+
+
+def _migrate_additive(engine) -> None:
+    """Add new nullable columns to pre-existing tables without dropping data.
+
+    ``create_all`` creates missing tables but never alters an existing one, so a
+    database created before a new nullable column was introduced would be missing
+    it. Only additive ``ADD COLUMN`` of nullable columns is performed here, which
+    SQLite applies in place; existing image hashes and human verifications are
+    preserved. No column is ever dropped or retyped."""
+    additive = {
+        "autolearn_labeling_audit": {
+            "response_model": "VARCHAR(128)",
+            "method": "VARCHAR(48)",
+        },
+    }
+    with engine.begin() as conn:
+        for table, columns in additive.items():
+            existing = {
+                row[1] for row in conn.exec_driver_sql(f"PRAGMA table_info({table})")
+            }
+            if not existing:
+                continue  # table absent entirely (fresh create_all handled it)
+            for name, decl in columns.items():
+                if name not in existing:
+                    conn.exec_driver_sql(
+                        f"ALTER TABLE {table} ADD COLUMN {name} {decl}"
+                    )
 
 
 def get_session():

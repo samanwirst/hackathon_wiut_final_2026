@@ -22,7 +22,10 @@ import asyncio
 import base64
 import json
 import math
+import threading
 import time
+import weakref
+from concurrent.futures import TimeoutError as FuturesTimeoutError
 from dataclasses import dataclass, field
 from urllib.parse import urlparse
 
@@ -30,8 +33,55 @@ import httpx
 
 from app import config
 
-# Serial by requirement: one offline labeling request in flight at a time.
-_semaphore = asyncio.Semaphore(config.AUTOLEARN_LABEL_CONCURRENCY)
+# --- Bounded, cancellable, cross-thread transport (C-001) -------------------
+# A single asyncio.Semaphore bound to one event loop cannot be reused across the
+# fresh loops that ``asyncio.run`` creates per sync call (it raises "bound to a
+# different event loop"). Instead admission is a per-running-loop semaphore, and
+# all SYNC callers are funnelled onto one owned persistent loop/thread so they
+# genuinely share bounded, cancellable transport. Admission is acquired INSIDE
+# the overall deadline so a queued caller cannot wait past it, and capacity is
+# only released after transport cancellation unwinds (the ``async with`` exit).
+_sem_lock = threading.Lock()
+_loop_semaphores: "weakref.WeakKeyDictionary[asyncio.AbstractEventLoop, asyncio.Semaphore]" = (
+    weakref.WeakKeyDictionary()
+)
+
+_owned_loop: asyncio.AbstractEventLoop | None = None
+_owned_loop_lock = threading.Lock()
+
+
+def _loop_semaphore() -> asyncio.Semaphore:
+    """Admission semaphore bound to the *currently running* loop.
+
+    Each event loop gets its own semaphore so it is never used from a loop it was
+    not created on. Concurrency is capped at ``AUTOLEARN_LABEL_CONCURRENCY`` (1)
+    so at most one real request is in flight per loop."""
+    loop = asyncio.get_running_loop()
+    with _sem_lock:
+        sem = _loop_semaphores.get(loop)
+        if sem is None:
+            sem = asyncio.Semaphore(config.AUTOLEARN_LABEL_CONCURRENCY)
+            _loop_semaphores[loop] = sem
+        return sem
+
+
+def _run_owned_loop(loop: asyncio.AbstractEventLoop) -> None:
+    asyncio.set_event_loop(loop)
+    loop.run_forever()
+
+
+def _get_owned_loop() -> asyncio.AbstractEventLoop:
+    """Lazily start one daemon-thread event loop shared by all sync callers."""
+    global _owned_loop
+    with _owned_loop_lock:
+        if _owned_loop is None or _owned_loop.is_closed():
+            loop = asyncio.new_event_loop()
+            threading.Thread(
+                target=_run_owned_loop, args=(loop,),
+                name="autolearn-labeling-loop", daemon=True,
+            ).start()
+            _owned_loop = loop
+        return _owned_loop
 
 
 @dataclass
@@ -43,6 +93,12 @@ class LabelCandidate:
     latency_ms: float | None = None
     provider_host: str | None = None
     detail: str | None = None
+    # Labeling method provenance (C-007): "chat_json" for generated-JSON chat
+    # completions; a likelihood-scoring provider would report its own method.
+    method: str | None = None
+    # Whether ``confidence`` is calibrated. Generated self-reported confidence is
+    # NOT calibrated; likelihood scores are explicitly uncalibrated too.
+    confidence_calibrated: bool = False
     raw: dict | None = field(default=None)
 
 
@@ -59,9 +115,15 @@ def _provider_host() -> str | None:
         return None
 
 
-def _parse_strict(content: str, labels: list[str]) -> tuple[str | None, float | None, str]:
+def _parse_strict(content, labels: list[str]) -> tuple[str | None, float | None, str]:
     """Strictly parse the model text into (label, confidence, error)."""
-    text = (content or "").strip()
+    # Content must be text. A numeric/boolean/object content (e.g. a provider
+    # returning ``"content": 42``) is a malformed envelope, not a label (C-006).
+    if content is None:
+        return None, None, "response content is empty"
+    if not isinstance(content, str):
+        return None, None, f"response content is not a string (got {type(content).__name__})"
+    text = content.strip()
     # Tolerate a single fenced code block, nothing more exotic.
     if text.startswith("```"):
         text = text.strip("`")
@@ -137,11 +199,14 @@ async def classify(
     )
     t0 = time.perf_counter()
     try:
-        async with _semaphore:
-            result = await asyncio.wait_for(
-                _post_and_read(url, body, headers, timeout),
-                timeout=config.AUTOLEARN_LABEL_OVERALL_TIMEOUT,
-            )
+        # Admission is INSIDE the overall deadline: a caller queued behind the
+        # single in-flight request cannot wait past the absolute timeout. On
+        # cancellation the ``async with`` releases capacity only after the
+        # transport unwinds, so no abandoned worker holds the slot.
+        result = await asyncio.wait_for(
+            _admit_and_post(url, body, headers, timeout),
+            timeout=config.AUTOLEARN_LABEL_OVERALL_TIMEOUT,
+        )
     except asyncio.TimeoutError:
         return LabelCandidate(status="timeout", provider_host=host, detail="overall timeout exceeded")
     except asyncio.CancelledError:
@@ -163,7 +228,9 @@ async def classify(
         data = json.loads(payload)
         content = data["choices"][0]["message"]["content"]
         if isinstance(content, list):  # some servers return content parts
-            content = "".join(part.get("text", "") for part in content if isinstance(part, dict))
+            content = "".join(
+                part.get("text", "") for part in content if isinstance(part, dict)
+            )
     except Exception:  # noqa: BLE001
         return LabelCandidate(
             status="invalid_response", provider_host=host, latency_ms=latency_ms,
@@ -174,20 +241,41 @@ async def classify(
         return LabelCandidate(
             status="invalid_response", provider_host=host, latency_ms=latency_ms, detail=err,
         )
+    # Provenance (C-007): record the model/revision the provider actually
+    # reported (distinct from the configured alias), the labeling method, and a
+    # bounded raw snippet + usage counts. Never store API keys or raw image bytes.
+    actual_model = data.get("model") if isinstance(data, dict) else None
     usage = data.get("usage") if isinstance(data, dict) else None
+    content_preview = content[:256] if isinstance(content, str) else None
     return LabelCandidate(
         status="labeled",
         label=label,
         confidence=conf,
-        model=config.VLM_MODEL,
+        model=actual_model or config.VLM_MODEL,
         latency_ms=latency_ms,
         provider_host=host,
-        raw={"usage": usage},
+        method="chat_json",
+        confidence_calibrated=False,  # self-reported confidence is not calibrated
+        raw={
+            "method": "chat_json",
+            "configured_alias": config.VLM_MODEL,
+            "response_model": actual_model,
+            "usage": usage,
+            "content_preview": content_preview,
+        },
     )
 
 
 class _ResponseTooLarge(RuntimeError):
     pass
+
+
+async def _admit_and_post(url, body, headers, timeout) -> tuple[int, bytes]:
+    """Acquire the per-loop admission slot, then POST+read. Wrapped by the
+    caller's overall ``wait_for`` so both admission and transport share one
+    absolute deadline, and the slot is freed on cancellation unwind."""
+    async with _loop_semaphore():
+        return await _post_and_read(url, body, headers, timeout)
 
 
 async def _post_and_read(url, body, headers, timeout) -> tuple[int, bytes]:
@@ -206,5 +294,30 @@ async def _post_and_read(url, body, headers, timeout) -> tuple[int, bytes]:
 
 
 def classify_sync(image_bytes: bytes, *, prompt: str, labels: list[str]) -> LabelCandidate:
-    """Synchronous wrapper for use from the background worker / sync endpoints."""
-    return asyncio.run(classify(image_bytes, prompt=prompt, labels=labels))
+    """Synchronous wrapper for sync endpoints / the background labeling worker.
+
+    All sync callers (possibly on different threads) are funnelled onto one owned
+    persistent event loop so they share the same bounded, cancellable transport
+    and admission — never a per-call ``asyncio.run`` loop that would make a shared
+    semaphore illegal and let an abandoned worker hang (C-001). ``classify``
+    enforces the absolute overall deadline itself; a hard outer budget guarantees
+    a wedged transport can never block the calling thread indefinitely."""
+    loop = _get_owned_loop()
+    future = asyncio.run_coroutine_threadsafe(
+        classify(image_bytes, prompt=prompt, labels=labels), loop
+    )
+    # Outer safety budget: the coroutine already returns a ``timeout`` candidate
+    # at the overall deadline, so this only fires if the loop itself is wedged.
+    budget = (
+        config.AUTOLEARN_LABEL_OVERALL_TIMEOUT
+        + config.AUTOLEARN_LABEL_CONNECT_TIMEOUT
+        + 5.0
+    )
+    try:
+        return future.result(timeout=budget)
+    except FuturesTimeoutError:
+        future.cancel()  # request cancellation on the owned loop; frees the slot
+        return LabelCandidate(
+            status="timeout",
+            detail="owned-loop safety budget exceeded",
+        )
