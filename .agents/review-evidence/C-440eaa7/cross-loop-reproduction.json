@@ -1,0 +1,21 @@
+{
+  "target_sha": "440eaa72d32874779eae447f94ea46dcca695a17",
+  "probe": "Two simultaneous sync API workers call classify_sync with separate asyncio.run loops against a real owned loopback HTTP server.",
+  "provider": "QA_ONLY response, not real Teacher inference",
+  "configured_overall_timeout_seconds": 0.25,
+  "states": {
+    "first": {
+      "started": 8.864000119501725e-05,
+      "returned": 0.15047920600045472,
+      "status": "labeled"
+    },
+    "second": {
+      "started": 0.06884769800672075
+    }
+  },
+  "first_alive": false,
+  "second_alive": true,
+  "actual_http_posts": 1,
+  "observed_seconds": 1.1506682720064418,
+  "bug_reproduced": true
+}

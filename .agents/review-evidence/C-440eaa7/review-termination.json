@@ -1,0 +1,7 @@
+{
+  "target_sha": "440eaa72d32874779eae447f94ea46dcca695a17",
+  "cli_review_status": "INCONCLUSIVE",
+  "exit_code": 130,
+  "observed_at_utc": "2026-10-10T22:11:29Z",
+  "cause": "Parent signal handler exits130 for SIGINT/SIGTERM. No final JSON or timeout metadata exists. Exact signal/sender unavailable; this was before the configured1500s timeout. Verified command observations retained, not synthesized into an agent verdict."
+}

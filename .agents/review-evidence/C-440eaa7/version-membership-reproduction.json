@@ -1,0 +1,22 @@
+{
+  "target_sha": "440eaa72d32874779eae447f94ea46dcca695a17",
+  "fixture": "QA_ONLY data structures; no real images, Teacher labels, human verification or training metrics",
+  "probe": "Build first four-group split, add12 independent groups ordered after old groups, rebuildsplit. Earlier trained samples now carry test membership. service.train overwrites TrainingSample.split globally; service.evaluate and shadow read that current field for every version.",
+  "old_counts": {
+    "train": 4,
+    "val": 2,
+    "test": 2
+  },
+  "new_counts": {
+    "train": 20,
+    "val": 4,
+    "test": 8
+  },
+  "old_train_ids_now_test": [
+    5,
+    6,
+    7,
+    8
+  ],
+  "required": "Store immutable per-version train/validation/test membership; evaluate each artifact on its original heldout rows."
+}
