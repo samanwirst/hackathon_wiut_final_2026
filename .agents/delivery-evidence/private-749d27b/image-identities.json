@@ -1,0 +1,25 @@
+[
+  {
+    "id": "sha256:8bed7ca102449cd6f4a23b872adc908481d1411edfbc1d4c66d70bb6ac7f562b",
+    "digests": [],
+    "tags": [
+      "visionflow-private-demo-api:latest"
+    ]
+  },
+  {
+    "id": "sha256:21af1857f06182a177f3d14a78fb0eeeb22377d6854f0606f8c7603cf1cf94b7",
+    "digests": [],
+    "tags": [
+      "visionflow-private-demo-web:latest"
+    ]
+  },
+  {
+    "id": "sha256:dc73b49f5124cf2ee538dfbdfbd121f0b4ccdcb20fea30f3a81bd477c02e2bb5",
+    "digests": [
+      "nginx@sha256:a8b39bd9cf0f83869a2162827a0caf6137ddf759d50a171451b335cecc87d236"
+    ],
+    "tags": [
+      "nginx:1.28-alpine"
+    ]
+  }
+]

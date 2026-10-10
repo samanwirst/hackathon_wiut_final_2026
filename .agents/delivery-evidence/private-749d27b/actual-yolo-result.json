@@ -1,0 +1,93 @@
+{
+  "actual_container_inference": true,
+  "health": {
+    "status": "ok",
+    "service": "visionflow-api",
+    "version": "0.1.0",
+    "demo_safe": true
+  },
+  "source": {
+    "id": 3,
+    "type": "upload",
+    "name": "Container smoke.mp4",
+    "status": "processed",
+    "error": null,
+    "width": 960,
+    "height": 540,
+    "fps": 30.0,
+    "frame_count": 180,
+    "frames_processed": 30,
+    "avg_inference_ms": 71.18410853242192,
+    "created_at": "2026-10-10T22:30:26.276058"
+  },
+  "workflow": {
+    "id": 2,
+    "source_id": 3,
+    "name": "Container bus entry",
+    "dsl": {
+      "name": "Container bus entry",
+      "source_id": 3,
+      "object_class": "bus",
+      "trigger": {
+        "type": "object_entered_zone",
+        "zone_id": 3,
+        "duration_seconds": null,
+        "threshold": null
+      },
+      "action": {
+        "type": "create_notification",
+        "config": {
+          "title": "Bus entered container bay"
+        }
+      },
+      "visual_predicate": null,
+      "cooldown_seconds": 10.0,
+      "requires_approval": true
+    },
+    "enabled": false,
+    "created_at": "2026-10-10T22:30:26.304091Z"
+  },
+  "event": {
+    "id": 1,
+    "source_id": 3,
+    "workflow_id": 2,
+    "track_id": 1,
+    "type": "object_entered_zone",
+    "class_name": "bus",
+    "video_timestamp": 4.2,
+    "confidence": 0.9663913249969482,
+    "detail": "bus #1 entered Container bay",
+    "evidence_url": "/media/evidence/event_src3-wf2_object_entered_zone_1_visit1.jpg",
+    "action_status": "done",
+    "visual_status": null,
+    "visual_label": null,
+    "visual_confidence": null,
+    "visual_routing": null,
+    "created_at": "2026-10-10T22:30:29.898983"
+  },
+  "actions": [
+    {
+      "id": 1,
+      "event_id": 1,
+      "action_type": "create_notification",
+      "status": "success",
+      "attempt_count": 1,
+      "error": null,
+      "executed_at": "2026-10-10T22:30:29.944035"
+    }
+  ],
+  "evidence_sha256": "09fa54103409b6385d3edc0d97a38ea79d41a5242bcbdcd79a3cc4aa67a63000",
+  "video_sha256": "3521fe25192c35a201bdf75682c9a351ff1a259aff961df40ea0e26b1fdfcf37",
+  "teacher_stats": {
+    "live": {
+      "status": "disabled_demo_safe",
+      "teacher_provider": "disabled",
+      "teacher_available": false,
+      "reason": "Teacher-routed visual-predicate workflows are disabled in demo-safe mode. Only the real geometric detector / tracker / zone rules run in this demo."
+    },
+    "persisted_by_route_status": {},
+    "persisted_by_teacher_status": {},
+    "total_decisions": 0
+  },
+  "limits": "Private accepted fallback application; actual bus-photo motion clip, not natural-video quality or cost savings."
+}

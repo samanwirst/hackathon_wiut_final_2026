@@ -1,0 +1,27 @@
+{
+  "private_gateway_only": true,
+  "checks": [
+    {
+      "path": "/",
+      "without_auth": 401,
+      "with_auth": 200
+    },
+    {
+      "path": "/api/health",
+      "without_auth": 401,
+      "with_auth": 200
+    },
+    {
+      "path": "/api/sources",
+      "without_auth": 401,
+      "with_auth": 200
+    },
+    {
+      "path": "/media/evidence/does-not-exist.jpg",
+      "without_auth": 401,
+      "with_auth": 404
+    }
+  ],
+  "api_base": "same-origin dot path",
+  "public_tunnel_started": false
+}

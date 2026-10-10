@@ -1,0 +1,143 @@
+{
+  "target_sha": "d4526df1e8700017ebd5edb9e738a767fb62a1b7",
+  "steps": [
+    {
+      "step": "Workspace loads with verified safe backend"
+    },
+    {
+      "step": "Upload selects actual MP4",
+      "source_id": 1
+    },
+    {
+      "step": "Polygon persisted",
+      "polygon": [
+        [
+          0.5996425836099055,
+          0.01888076975445922
+        ],
+        [
+          0.9787081950472301,
+          0.01888076975445922
+        ],
+        [
+          0.9787081950472301,
+          0.977442926519312
+        ],
+        [
+          0.5996425836099055,
+          0.977442926519312
+        ]
+      ]
+    },
+    {
+      "step": "Analysis unavailable until an approved rule exists"
+    },
+    {
+      "step": "Canonical JSON shown; draft disabled",
+      "workflow_id": 1
+    },
+    {
+      "step": "New-draft approval reset after field edit"
+    },
+    {
+      "step": "Explicit human approval activates saved JSON",
+      "workflow_id": 2
+    },
+    {
+      "step": "Real YOLO -> event -> JPEG -> one local action",
+      "frames": 30,
+      "avg_inference_ms": 148.46630453297016,
+      "event_id": 1,
+      "timestamp": 4.2,
+      "confidence": 0.9663913249969482
+    },
+    {
+      "step": "Disable and reviewed re-enable work"
+    },
+    {
+      "step": "Re-enabled replay preserves local action deduplication"
+    },
+    {
+      "step": "Edit disables original; new reviewed version preserves old evidence",
+      "old_id": 2,
+      "new_id": 3
+    },
+    {
+      "step": "Edited dwell rule works with real YOLO",
+      "event_id": 2,
+      "timestamp": 5.2
+    },
+    {
+      "step": "Accepted fallback journey recorded; experimental paths unavailable"
+    }
+  ],
+  "probes": [],
+  "console_errors": [],
+  "request_failures": [],
+  "source_id": 1,
+  "zone_id": 1,
+  "first_workflow_id": 1,
+  "active_workflow_id": 2,
+  "source": {
+    "id": 1,
+    "type": "upload",
+    "name": "demo_bus_private_crop.mp4",
+    "status": "processed",
+    "error": null,
+    "width": 960,
+    "height": 540,
+    "fps": 30,
+    "frame_count": 180,
+    "frames_processed": 30,
+    "avg_inference_ms": 148.46630453297016,
+    "created_at": "2026-10-10T22:16:33.587732"
+  },
+  "event": {
+    "id": 1,
+    "source_id": 1,
+    "workflow_id": 2,
+    "track_id": 1,
+    "type": "object_entered_zone",
+    "class_name": "bus",
+    "video_timestamp": 4.2,
+    "confidence": 0.9663913249969482,
+    "detail": "bus #1 entered QA Service Bay",
+    "evidence_url": "/media/evidence/event_src1-wf2_object_entered_zone_1_visit1.jpg",
+    "action_status": "done",
+    "visual_status": null,
+    "visual_label": null,
+    "visual_confidence": null,
+    "visual_routing": null,
+    "created_at": "2026-10-10T22:16:41.085222"
+  },
+  "actions": [
+    {
+      "id": 1,
+      "event_id": 1,
+      "action_type": "create_notification",
+      "status": "success",
+      "attempt_count": 1,
+      "error": null,
+      "executed_at": "2026-10-10T22:16:41.127948"
+    }
+  ],
+  "replacement_workflow_id": 3,
+  "edited_event": {
+    "id": 2,
+    "source_id": 1,
+    "workflow_id": 3,
+    "track_id": 1,
+    "type": "dwell_in_zone",
+    "class_name": "bus",
+    "video_timestamp": 5.2,
+    "confidence": 0.969801664352417,
+    "detail": "bus #1 stayed in QA Service Bay >= 1s",
+    "evidence_url": "/media/evidence/event_src1-wf3_dwell_in_zone_1_visit1.jpg",
+    "action_status": "done",
+    "visual_status": null,
+    "visual_label": null,
+    "visual_confidence": null,
+    "visual_routing": null,
+    "created_at": "2026-10-10T22:16:52.304296"
+  }
+}
