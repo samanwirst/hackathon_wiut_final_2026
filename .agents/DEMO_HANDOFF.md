@@ -4,8 +4,10 @@
 - **Branch:** `feature/demo-safe`
 - **Base:** `088b17aded860bd5d926600573184c883919d20e`
 - **Initial implementation SHA:** `fcf48d67b6f5598b49a5693c0ae6b96270c9cc5c`
-- **DEMO correction SHA (code/tests/docs — the exact target for QA):**
+- **DEMO correction SHA (first correction pass):**
   `dd7a2b930f1be51ad5914e76a24f5b05a49fe4b3`
+- **DEMO source-boundary correction SHA (second/last pass — the exact code
+  target for QA):** `7f3b5ebe459eab07dca68ee27b31f655cb3189cb`
 - **This handoff commit:** recorded separately on top of the correction SHA.
 - **Previous handoff base:** `8611cbdb79511e852f25aa113370f7ffa6c02c2d`.
 - **Milestone status (unchanged):** M1 accepted; **M2 BLOCKED**. No M2 defect
@@ -114,6 +116,67 @@ algorithms) are unchanged.
    reordered to upload → zone → rule → JSON → approve → one run → evidence →
    edit, with exact 7-minute timing and a concrete three-month pilot proposal.
 
+## DEMO source-boundary correction (SHA `7f3b5eb`, on top of `68ef63e`)
+
+The last correction within the demo's two bounded fix passes. **Not** an M2
+cycle, new milestone, or M3. Frontend-only (`apps/web/app/page.tsx`); the nine
+protected hashes are unchanged (verified: `git status` shows only `page.tsx`
+modified). This fixes one **reproduced** (not speculative) source-boundary
+defect captured by the controller's probe (`selected_source_id=2`,
+`run_disabled=false`, `old_rule_visible=true`, `old_event_visible=true`): after
+uploading source 2 while its `GET /api/workflows?source_id=2` response was held,
+source 1's approved rule stayed visible, its event appeared under the source 2
+timeline, and Run stayed enabled — inheriting another recording's approval.
+
+1. **Source-scoped render + eligibility.** New `scopeReady` flag is false until
+   the currently selected source's zones/workflows/events finish loading, and
+   derived `scopedZones` / `scopedWorkflows` / `scopedEvents` additionally
+   require `record.source_id == selectedSource`. All rendering (overlay polygons,
+   zone chips, zone picker, rule table, event timeline, and the notifications
+   derived from those events) and `approvedGeometric` / Run now use the scoped
+   views, so no previous recording's data can appear under — or arm — the new
+   source while requests are in flight. Even the single transient render right
+   after a switch is covered by the `source_id` filter.
+2. **Clear on switch + drop stale callbacks.** Switching source resets
+   `scopeReady` and clears the scoped arrays, the pending review, the edit note,
+   and the evidence + read-only JSON modals; loading scopes show honest loading
+   states instead of old lists. The in-flight refresh guard now also sets
+   `scopeReady` only for the still-selected source, so stale/null-source
+   callbacks are dropped rather than installing another source's data.
+3. **Source-bound async form lifecycle. `ReviewTarget` carries `sourceId`.**
+   Save-draft / approve / edit / re-arm all re-check the source binding **after**
+   their awaited responses; a delayed save or enable can no longer install an
+   old-source review or approval into a new source. The review panel only renders
+   for `review.sourceId == selectedSource`.
+4. **Builder locked during transitions.** A new `formPending` flag marks the
+   save/approve/edit window and disables every builder field + the save/approve/
+   arm/edit/Run controls during it (Disable stays available), so an instant edit
+   can no longer be clobbered by the late server copy — the dwell selector no
+   longer disappears mid-fill. The edit note is shown before the awaited reload.
+5. **Frames clarity.** The single `Frames` column (`30 / ~180`) is split into
+   `Samples analyzed` (real sampled YOLO count) and `Clip frames` (container
+   metadata), each with an explanatory tooltip; it is sampled progress, not a
+   completion percentage. Indeterminate progress and real counters are kept; no
+   invented values. (The backend smoke log confirms the wording:
+   `30 frames analyzed (180 decoded)`.)
+
+No backend/algorithm/compiler/Teacher/router/action changes; no new libraries,
+infrastructure, redesign, or source-string/mirror tests. No frontend unit-test
+harness exists in the repo, so no JS tests were added; the controller's Chromium
+regression `journey.mjs` (which holds source responses to exercise this exact
+race) is their QA evidence, committed separately.
+
+### Commands executed and ACTUAL results (correction SHA `7f3b5eb`)
+
+- `make check` (structure + full pytest + frontend build) → **passed**:
+  `Repository scaffold: OK`, **195 passed, 4 warnings** in 16.22s, Next.js build
+  compiled + type-checked + linted clean (route `/` 8.74 kB, 111 kB first load).
+- `make smoke` (real YOLO, own server, isolated temp data dir) → **SMOKE PASS**:
+  `30 frames analyzed (180 decoded)`, avg inference **63.0 ms**,
+  `bus #1 entered Service Bay A` at **t=4.2s conf=0.76**, evidence JPEG + local
+  notification persisted. Synthetic motion of a real photo; not held-out
+  accuracy.
+
 ## Commands executed and ACTUAL results (correction SHA `dd7a2b9`)
 
 Using `services/api/.venv` and installed `apps/web/node_modules`.
@@ -159,9 +222,16 @@ plus the detector / tracker / event / zone engine and the controller.
 
 ## For the controller
 
-- Independent test target: the exact correction SHA `dd7a2b9` (code) — run
-  `make check`, `make smoke`, and
+- Independent test target: the exact source-boundary correction SHA `7f3b5eb`
+  (code) — run `make check`, `make smoke`, and
   `pytest tests/unit/test_config_demo_safe.py tests/integration/test_demo_safe.py`.
+- Source-boundary browser QA focus (the controller's `journey.mjs` holds the
+  `workflows?source_id=*` response to force the race): upload a second source
+  while source 1 has an approved active geometric rule + a real event; confirm
+  Run is **disabled**, source 1's rule/event/polygons are **not** shown under
+  source 2 while loading, the loading state is visible, and a delayed
+  save/approve/edit never installs an old-source review. Confirm the builder
+  fields are locked during an Edit transition (dwell field persists).
 - Generate the demo-safe fixture with
   `scripts/make_demo_safe_video.py data/demo/demo_bus_private_crop.mp4`.
 - Browser QA focus (upload → zone → rule → **review JSON** → Approve → one Run →
