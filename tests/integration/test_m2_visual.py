@@ -418,14 +418,17 @@ def test_disable_cannot_interleave_during_transport_admission(client, video_path
 
     posts = []
 
-    def mock_post(url, **kwargs):
+    def mock_handler(request):
         posts.append(time.monotonic())
         return httpx.Response(
             200,
             json={"choices": [{"message": {"content": '{"label":"yes","confidence":0.9}'}}]},
         )
 
-    monkeypatch.setattr(httpx, "post", mock_post)
+    # Transport seam (M2-003): the cancellable streaming client is driven over an
+    # injected MockTransport; an outbound request reaches ``mock_handler`` only
+    # once the admission boundary has granted it.
+    teacher._transport = httpx.MockTransport(mock_handler)
 
     at_guard = threading.Event()
     release = threading.Event()
@@ -516,12 +519,11 @@ def test_boolean_confidence_cannot_fire_action(client, video_path, monkeypatch):
     teacher = OpenAICompatibleTeacher(
         "https://qa.invalid/v1", "", "qa-vlm", "v1", max_retries=0
     )
-    monkeypatch.setattr(
-        httpx, "post",
-        lambda *a, **k: httpx.Response(
+    teacher._transport = httpx.MockTransport(
+        lambda req: httpx.Response(
             200,
             json={"choices": [{"message": {"content": '{"label":"yes","confidence":true}'}}]},
-        ),
+        )
     )
     set_router(VlmRouter(teacher_provider=lambda: teacher, sample_interval_s=0, cooldown_s=0))
 

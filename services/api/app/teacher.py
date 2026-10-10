@@ -116,22 +116,28 @@ class _ProviderResponse(BaseModel):
 AttemptGuard = Callable[[], bool]
 
 
+class _AttemptNotAdmitted(Exception):
+    """Raised at the transport boundary when the router guard denies an attempt
+    (shared budget exhausted or the workflow was disabled). No connection is
+    opened; ``classify`` maps this to a non-confirming result without a provider
+    request (M2-007)."""
+
+
 class _ConcurrencySlot:
     """A single-owner handle on one bounded-semaphore permit (M2-003).
 
-    The permit is released exactly once. When an outbound request is abandoned
-    at the wall-clock deadline while its transport worker is still active, the
-    slot is *deferred*: ``classify`` must NOT release it, and a reaper releases
-    it only once the worker has truly finished. This keeps the number of active
-    transport workers/body-reads bounded by ``max_concurrency`` even across
-    timeouts — a returned ``timeout`` never frees capacity while its request is
-    still in flight."""
+    The permit is released exactly once. Because the streaming transport is
+    cancelled in-thread at the wall-clock deadline (no background worker survives
+    the call), ``classify`` always releases the permit in its ``finally`` once the
+    request — completed or cancelled — has returned. Capacity is therefore never
+    held by an in-flight body read, so the bounded semaphore genuinely caps the
+    number of concurrent transport requests (the earlier abandoned-worker design
+    that deferred release to a reaper is gone)."""
 
     def __init__(self, semaphore: "threading.BoundedSemaphore") -> None:
         self._semaphore = semaphore
         self._lock = threading.Lock()
         self._released = False
-        self._deferred = False
 
     def release(self) -> None:
         with self._lock:
@@ -139,14 +145,11 @@ class _ConcurrencySlot:
                 self._released = True
                 self._semaphore.release()
 
-    def defer(self) -> None:
-        with self._lock:
-            self._deferred = True
-
     @property
     def deferred(self) -> bool:
-        with self._lock:
-            return self._deferred
+        # Retained for call-site compatibility; cancellation is now in-thread so a
+        # slot is never deferred.
+        return False
 
 
 class TeacherAdapter(ABC):
@@ -238,6 +241,7 @@ class OpenAICompatibleTeacher(TeacherAdapter):
         max_retries: int = 1,
         max_concurrency: int = 1,
         max_image_bytes: int = 4 * 1024 * 1024,
+        max_response_bytes: int = 2 * 1024 * 1024,
         max_tokens: int = 200,
         min_confidence: float = 0.5,
     ) -> None:
@@ -250,11 +254,19 @@ class OpenAICompatibleTeacher(TeacherAdapter):
         self.overall_timeout = overall_timeout
         self.max_retries = max(0, max_retries)
         self.max_image_bytes = max_image_bytes
+        # Cap the bytes we will read from a provider response so an endless or
+        # oversized body cannot accumulate unboundedly even before the deadline
+        # fires (M2-003).
+        self.max_response_bytes = max_response_bytes
         self.max_tokens = max_tokens
         self.min_confidence = min_confidence
         # Bounded concurrency so a burst of candidates cannot overwhelm the
         # self-hosted server (AC3a semaphore/queue limit).
         self._semaphore = threading.BoundedSemaphore(max(1, max_concurrency))
+        # Transport seam: production uses httpx's default networking; tests inject
+        # an ``httpx.MockTransport`` here to exercise the real streaming/cancel
+        # path over a mock server without opening a socket.
+        self._transport = None
 
     def _build_messages(self, image_bytes: bytes, prompt: str, labels: Sequence[str]) -> list:
         b64 = base64.b64encode(image_bytes).decode("ascii")
@@ -348,15 +360,6 @@ class OpenAICompatibleTeacher(TeacherAdapter):
                         error=f"overall deadline exceeded before attempt {attempt + 1}",
                     )
                     break
-                # Budget guard at the transport boundary: a retry that would
-                # exceed the shared per-task budget is never sent (M2-AC4).
-                if on_attempt is not None and not on_attempt():
-                    last = last or TeacherResult(
-                        status="error", model=self.model,
-                        prompt_version=self.prompt_version, latency_ms=_elapsed_ms(),
-                        error=f"request budget exhausted before attempt {attempt + 1}",
-                    )
-                    break
                 # Clamp each phase timeout to the remaining deadline.
                 attempt_timeout = httpx.Timeout(
                     min(self.overall_timeout, remaining),
@@ -364,10 +367,22 @@ class OpenAICompatibleTeacher(TeacherAdapter):
                     read=min(self.read_timeout, remaining),
                 )
                 try:
+                    # The budget/approval guard is consulted INSIDE the transport
+                    # method, immediately before the connection is opened, so the
+                    # authoritative admission and the actual transport start are one
+                    # boundary (M2-007). A guard denial raises _AttemptNotAdmitted
+                    # and no request is sent.
                     resp = self._post_with_deadline(
                         f"{self.api_base}/chat/completions",
-                        payload, headers, attempt_timeout, deadline, slot,
+                        payload, headers, attempt_timeout, deadline, slot, on_attempt,
                     )
+                except _AttemptNotAdmitted as exc:
+                    last = last or TeacherResult(
+                        status="error", model=self.model,
+                        prompt_version=self.prompt_version, latency_ms=_elapsed_ms(),
+                        error=str(exc)[:500],
+                    )
+                    break
                 except httpx.TimeoutException as exc:
                     last = TeacherResult(
                         status="timeout", model=self.model,
@@ -411,9 +426,10 @@ class OpenAICompatibleTeacher(TeacherAdapter):
                     if backoff > 0:
                         time.sleep(backoff)
         finally:
-            # Release the concurrency slot — UNLESS an abandoned worker is still
-            # active (M2-003): its reaper owns the release so capacity is not
-            # freed while a transport request is still in flight.
+            # The streaming transport is cancelled in-thread at the deadline, so no
+            # abandoned worker outlives this call: the concurrency permit is always
+            # released here once the (possibly cancelled) request has returned, and
+            # capacity is never held by an in-flight body read (M2-003).
             if not slot.deferred:
                 slot.release()
         return last or TeacherResult(
@@ -421,70 +437,77 @@ class OpenAICompatibleTeacher(TeacherAdapter):
             error="no response",
         )
 
-    def _post_with_deadline(self, url, payload, headers, attempt_timeout, deadline, slot):
-        """Execute one POST bounded by the overall wall-clock ``deadline`` (M2-003).
+    def _post_with_deadline(self, url, payload, headers, attempt_timeout, deadline, slot, on_attempt=None):
+        """Execute one POST on an OWNED, cancellable streaming transport bounded by
+        the overall wall-clock ``deadline`` (M2-003), with the final approval/budget
+        admission check at the transport boundary (M2-007).
 
         httpx's phase timeouts reset per read, so a provider that trickles small
-        chunks within each read timeout can run far past the overall deadline. We
-        run the (blocking) request — connection, transfer and full-body read — in
-        a daemon worker and wait only until the remaining wall-clock budget. If it
-        has not finished by the deadline the request is abandoned and a late
-        response is rejected (raised as a timeout), never consumed.
+        chunks within each read timeout can run far past the overall deadline. The
+        previous implementation ran a blocking ``httpx.post`` in a daemon worker
+        and, at the deadline, abandoned the worker while it kept reading the full
+        body — the reviewed defect (an endless/trickling stream accumulated
+        megabytes and held capacity). Here we instead drive the body read in THIS
+        thread via ``client.stream`` and check the wall-clock deadline between
+        chunks: when the deadline passes (or the byte cap is hit) we raise, and
+        exiting the ``with`` block closes the response and its connection. The
+        request is therefore genuinely cancelled — no background worker survives —
+        so ``classify`` can release the concurrency permit normally and capacity is
+        never held by an in-flight read.
 
-        Crucially, when the worker is abandoned it is STILL ACTIVE. We must not
-        free the concurrency slot yet, or a burst of callers would each start a
-        fresh worker while the previous ones keep reading bodies — exceeding the
-        configured ``max_concurrency`` (the reviewed defect). Instead we ``defer``
-        the slot and hand its release to a small reaper that joins the worker (so
-        the body read finishes or its connection/read-timeout fires), drops the
-        response to bound retention, and only then releases the permit. The
-        bounded semaphore therefore caps the number of outstanding transport
-        workers and in-flight body reads even across timeouts. Retries/backoff in
-        :meth:`classify` are preserved; a deadline hit leaves no remaining budget,
-        so no retry starts another worker behind an abandoned one."""
+        M2-007: ``on_attempt`` (the router guard) rechecks the authoritative
+        workflow-enabled state and grants one budget unit under the shared dispatch
+        admission lock, immediately BEFORE a connection is opened. A disable that
+        committed (and returned 200) before this call reads enabled=False here, so
+        no new HTTP request ever starts after a successful disable. A denial raises
+        :class:`_AttemptNotAdmitted` without opening any connection."""
         import httpx
 
-        box: dict = {}
-
-        def _call() -> None:
-            try:
-                box["resp"] = httpx.post(
-                    url, json=payload, headers=headers, timeout=attempt_timeout
+        # One enforceable boundary: admission (approval recheck + budget grant)
+        # then the actual transport start, with nothing sendable in between. The
+        # remaining wall-clock budget bounds admission too (M2-003): the guard will
+        # not wait for a contended admission lock past the overall deadline, so a
+        # late request is never sent after expiry.
+        if on_attempt is not None:
+            remaining = deadline - time.perf_counter()
+            if remaining <= 0 or not on_attempt(remaining):
+                raise _AttemptNotAdmitted(
+                    "attempt not admitted before transport start (request budget "
+                    "exhausted, workflow disabled, or admission deadline exceeded)"
                 )
-            except BaseException as exc:  # noqa: BLE001 — surfaced to the caller
-                box["exc"] = exc
 
-        worker = threading.Thread(target=_call, daemon=True)
-        worker.start()
-        remaining = deadline - time.perf_counter()
-        worker.join(timeout=max(0.0, remaining))
-        if worker.is_alive():
-            # Deadline hit while the request/body was still in flight. Keep the
-            # concurrency slot occupied until the worker truly finishes: a reaper
-            # joins it, discards any late response (never consumed), and releases
-            # the permit. This bounds active workers/body-reads to max_concurrency.
-            slot.defer()
-
-            def _reap() -> None:
-                try:
-                    worker.join()
-                finally:
-                    resp = box.get("resp")
-                    close = getattr(resp, "close", None)
-                    if callable(close):
-                        try:
-                            close()
-                        except Exception:  # noqa: BLE001
-                            pass
-                    slot.release()
-
-            threading.Thread(target=_reap, daemon=True).start()
-            raise httpx.TimeoutException(
-                "overall wall-clock deadline exceeded during request/response"
-            )
-        if "exc" in box:
-            raise box["exc"]
-        return box["resp"]
+        client = httpx.Client(timeout=attempt_timeout, transport=self._transport)
+        try:
+            with client.stream("POST", url, json=payload, headers=headers) as resp:
+                if time.perf_counter() >= deadline:
+                    raise httpx.TimeoutException(
+                        "overall wall-clock deadline exceeded after response headers"
+                    )
+                chunks: list[bytes] = []
+                total = 0
+                for chunk in resp.iter_bytes():
+                    total += len(chunk)
+                    if total > self.max_response_bytes:
+                        raise httpx.HTTPError(
+                            f"provider response exceeded max_response_bytes "
+                            f"{self.max_response_bytes}"
+                        )
+                    chunks.append(chunk)
+                    if time.perf_counter() >= deadline:
+                        raise httpx.TimeoutException(
+                            "overall wall-clock deadline exceeded during body read"
+                        )
+                body = b"".join(chunks)
+                # Fully read within the deadline; hand a complete response to the
+                # parser. The connection is released when the ``with`` block exits.
+                return httpx.Response(
+                    status_code=resp.status_code,
+                    headers=resp.headers,
+                    content=body,
+                    request=resp.request,
+                )
+        finally:
+            client.close()
 
     def _parse(self, resp, labels: Sequence[str], latency_ms: float) -> TeacherResult:
         try:
@@ -619,6 +642,7 @@ def get_teacher() -> TeacherAdapter:
             max_retries=config.VLM_MAX_RETRIES,
             max_concurrency=config.VLM_MAX_CONCURRENCY,
             max_image_bytes=config.VLM_MAX_IMAGE_BYTES,
+            max_response_bytes=getattr(config, "VLM_MAX_RESPONSE_BYTES", 2 * 1024 * 1024),
             max_tokens=config.VLM_MAX_TOKENS,
             min_confidence=config.VLM_MIN_CONFIDENCE,
         )

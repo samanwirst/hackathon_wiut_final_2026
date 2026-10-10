@@ -41,18 +41,35 @@ _ENTER_WORDS = ("enter", "enters", "arrive", "arrives", "comes into", "pulls int
 _EXIT_WORDS = ("exit", "exits", "leaves", "leave", "departs", "drives out", "pulls out")
 _DWELL_WORDS = ("stays", "stay", "remains", "remain", "dwell", "parked", "idles", "waits")
 
+# Only these small scaffolding words may sit between a vehicle part and its state
+# word in a recognised visual condition ("hood is open", "trunk still open"). The
+# gap deliberately does NOT allow arbitrary nouns/verbs, so a clause that smuggles
+# unsupported semantics between them ("hood emitting smoke and open") no longer
+# matches and is rejected rather than silently reduced to the part/state the
+# greedy ``.*`` used to span (M2-001).
+_COND_GAP = (
+    r"(?:\s+(?:is|are|was|were|be|been|being|still|currently|now|fully|partially"
+    r"|slightly|wide|all|left|the|a|an|its|their|appears?|seems?|looks?))*"
+)
+
 # Supported visual conditions (whitelist). A visual condition is a question the
 # geometric rule cannot answer; only these recognised conditions are preserved as
 # a structured, non-executable predicate. An unrecognised condition is REJECTED
 # (never silently dropped). The prompt/labels are fixed server vocabulary.
+#
+# The "<state> <part>" alternative requires strict adjacency ("open hood") so that
+# an imperative actuation with a determiner ("open its hood") is NOT mistaken for
+# a state condition — that form is handled as an unsupported action below.
 _VISUAL_CONDITIONS: tuple[tuple[re.Pattern, str], ...] = (
-    (re.compile(r"\b(?:hood|bonnet)\b.*\b(?:open|up|raised|popped)\b|\b(?:open|raised|popped)\s+(?:hood|bonnet)\b"),
+    (re.compile(rf"\b(?:hood|bonnet)\b{_COND_GAP}\s+(?:open|up|raised|popped)\b"
+                r"|\b(?:open|raised|popped)\s+(?:hood|bonnet)\b"),
      "the vehicle hood is open"),
-    (re.compile(r"\b(?:trunk|boot|tailgate)\b.*\bopen\b|\bopen\s+(?:trunk|boot|tailgate)\b"),
+    (re.compile(rf"\b(?:trunk|boot|tailgate)\b{_COND_GAP}\s+open\b"
+                r"|\bopen\s+(?:trunk|boot|tailgate)\b"),
      "the vehicle trunk is open"),
-    (re.compile(r"\bdoor\b.*\bopen\b|\bopen\s+door\b"),
+    (re.compile(rf"\bdoor\b{_COND_GAP}\s+open\b|\bopen\s+door\b"),
      "a vehicle door is open"),
-    (re.compile(r"\b(?:head)?lights?\b.*\b(?:on|flashing|lit)\b"),
+    (re.compile(rf"\b(?:head)?lights?\b{_COND_GAP}\s+(?:on|flashing|lit)\b"),
      "the vehicle lights are on"),
 )
 
@@ -98,6 +115,18 @@ _UNSUPPORTED_ACTION = re.compile(
     r"turn\s+(?:on|off)|switch\s+(?:on|off)|"
     r"move\s+the\s+(?:robot|arm)|start\s+the\s+(?:engine|robot|motor)|"
     r"stop\s+the\s+(?:engine|robot|motor))\b"
+)
+
+# Imperative actuation of a vehicle part ("open its hood", "pop the trunk",
+# "close the door"). This is a physical action the product cannot perform and
+# must be rejected rather than silently downgraded to a notification (M2-001). The
+# determiner between the verb and the part ("its"/"the"/...) distinguishes this
+# from the state condition "hood open", which the whitelist above matches.
+_PART_ACTUATION = re.compile(
+    r"\b(?:open|close|re-?open|re-?close|raise|lower|shut|pop|slam|lift|unlatch|"
+    r"latch|release)\s+(?:its|their|the|a|an)\s+"
+    r"(?:hood|bonnet|trunk|boot|tailgate|door|doors|window|windows|engine|"
+    r"light|lights|headlights?|wiper|wipers|horn|roof|sunroof)\b"
 )
 
 # External delivery / code execution (kept from the prior pass).
@@ -169,7 +198,7 @@ _FILLER = {
     "may", "must",
     "it", "its", "their", "them", "they",
     "create", "creates", "make", "makes", "raise", "raises", "generate",
-    "send", "sends", "give", "show", "display", "log", "logs",
+    "send", "sends", "give", "show", "display",
     "alert", "alerts", "alerting", "notify", "notifies", "notification",
     "notifications", "warn", "warns", "warning",
     "flag", "flags", "tell", "tells", "let", "know", "report", "reports",
@@ -330,7 +359,15 @@ def _parse_count(text: str) -> tuple[int | None, list[str], list[str]]:
     - "at least N" / "N or more"              -> threshold = N-1 (inclusive)
     - "at most N" / "fewer than N" / ...       -> REJECTED (no upper bound)
     An inclusive bound of 1 ("at least 1") cannot be expressed (threshold must be
-    >= 1) and is rejected explicitly (M2-001)."""
+    >= 1) and is rejected explicitly (M2-001).
+
+    A fractional count ("more than 5.5 cars") is not meaningful and is rejected
+    rather than silently truncated to the integer part (M2-001)."""
+    if re.search(rf"\b{_COMPARATORS}\s+\d+\.\d+", text):
+        return None, [], [
+            "a fractional object count is not meaningful; use a whole number "
+            "(e.g. 'more than 5 cars')"
+        ]
     if re.search(r"\b(at most|no more than|fewer than|less than|up to|maximum of)\s+\d+", text):
         return None, [], [
             "only a lower-bound count is supported (e.g. 'more than N' or "
@@ -462,6 +499,32 @@ def compile_text(text: str, source_id: int, zones: list[dict]) -> CompileResult:
         if threshold is None and not count_err:
             errors.append("count rule needs a threshold, e.g. 'more than 3 cars'")
 
+    # Duration placement (M2-001). A duration ("for N minutes") is only meaningful
+    # for a dwell rule. On an enter/exit/count trigger the engine has no field for
+    # it, so the request must be rejected rather than compiled with the duration
+    # silently dropped (the "enters ... for 5 minutes" / "count ... for 10 min"
+    # reproductions).
+    if (
+        trigger_type is not None
+        and trigger_type != "dwell_in_zone"
+        and _parse_duration_seconds(low) is not None
+    ):
+        errors.append(
+            "a duration ('for N minutes') only applies to a dwell rule "
+            "('stays for N minutes'); an enter/exit/count trigger cannot take a "
+            "duration"
+        )
+    # Ambiguous multiple durations ("5 minutes or 10 minutes") cannot be
+    # represented by the single-threshold dwell engine and are rejected rather
+    # than silently using the first value (M2-001).
+    _durations = re.findall(rf"\d+(?:\.\d+)?\s*{_TIME_UNITS}", low)
+    if len(_durations) > 1:
+        errors.append(
+            "more than one duration was specified "
+            f"({', '.join(d.strip() for d in _durations)}); specify a single "
+            "duration"
+        )
+
     # Visual condition handling (M2-001): preserve a single positive recognised
     # condition; reject negation, multiple conditions, and unrecognised clauses.
     conditions = _match_visual_conditions(low)
@@ -505,7 +568,7 @@ def compile_text(text: str, source_id: int, zones: list[dict]) -> CompileResult:
             "external delivery (webhook/HTTP/email/SMS/phone/Slack/Telegram) is "
             "not available; only in-app notifications are supported"
         )
-    if _UNSUPPORTED_ACTION.search(low):
+    if _UNSUPPORTED_ACTION.search(low) or _PART_ACTUATION.search(low):
         errors.append(
             "that action is not available (physical actuation / external dispatch); "
             "only in-app notifications are supported"

@@ -285,9 +285,9 @@ class VlmRouter:
         # the transport boundary: every outbound attempt (including retries)
         # consumes one unit and is counted; when the budget is gone the guard
         # returns False so the adapter stops before sending (M2-AC4).
-        guard_state = {"invoked": False, "granted": 0, "revoked": False}
+        guard_state = {"invoked": False, "granted": 0, "revoked": False, "deadline": False}
 
-        def _attempt_guard() -> bool:
+        def _attempt_guard(remaining: float | None = None) -> bool:
             # M2-007: the authoritative approval recheck and the admission of an
             # outbound attempt must be ONE atomic boundary, serialized with a
             # workflow disable. The API disable handler commits ``enabled=False``
@@ -299,9 +299,23 @@ class VlmRouter:
             # commit and return 200 between the read and the grant, then still
             # admit one HTTP POST (the reviewed race). The lock is NOT held during
             # the actual inference/transport, only across this decision.
+            #
+            # M2-003: admission is itself bounded by the caller's overall deadline.
+            # ``remaining`` (supplied by the real adapter) caps how long we wait for
+            # the admission lock; if contention holds it past the deadline we give
+            # up WITHOUT sending, instead of blocking indefinitely and then posting
+            # a late request past expiry (the reviewed ~152ms repro).
             from app.pipeline import dispatch_admission_lock  # lazy: avoids cycle
 
-            with dispatch_admission_lock:
+            if remaining is None:
+                acquired = dispatch_admission_lock.acquire()
+            else:
+                acquired = dispatch_admission_lock.acquire(timeout=max(0.0, remaining))
+            if not acquired:
+                guard_state["invoked"] = True
+                guard_state["deadline"] = True
+                return False
+            try:
                 if admit is not None and not admit():
                     guard_state["invoked"] = True
                     guard_state["revoked"] = True
@@ -314,6 +328,8 @@ class VlmRouter:
                     self._budget_used[task_key] = used_now + 1
                     self.counters.outbound_attempts += 1
                     guard_state["granted"] += 1
+            finally:
+                dispatch_admission_lock.release()
             return True
 
         try:

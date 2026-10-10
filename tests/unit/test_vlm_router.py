@@ -279,7 +279,7 @@ def test_inflight_duplicate_shares_before_sampling_gate():
 
 # -- M2-004 (re-opened): real-adapter preflight consumes no attempt/budget -----
 
-def test_real_adapter_preflight_consumes_no_budget(monkeypatch):
+def test_real_adapter_preflight_consumes_no_budget():
     import json as _json
 
     import httpx
@@ -288,15 +288,19 @@ def test_real_adapter_preflight_consumes_no_budget(monkeypatch):
 
     http = {"n": 0}
 
-    def forbidden_post(*a, **k):
+    def forbidden(request):
         http["n"] += 1
         raise AssertionError("oversize preflight must make no outbound request")
 
-    monkeypatch.setattr(httpx, "post", forbidden_post)
     teacher = OpenAICompatibleTeacher(
         api_base="https://p/v1", api_key="k", model="vlm", prompt_version="v1",
         max_image_bytes=2,
     )
+    # Transport seam (M2-003): the adapter owns a cancellable streaming client;
+    # tests inject a MockTransport instead of patching httpx.post. The handler is
+    # only reached for an ACTUAL outbound request, so an oversize image rejected
+    # in preflight never touches it.
+    teacher._transport = httpx.MockTransport(forbidden)
     r = make_router(teacher, budget_per_task=1, sample_interval_s=0, cooldown_s=0)
 
     d1 = route(r, roi=b"oversized")  # 9 bytes > max_image_bytes=2 -> local reject
@@ -309,23 +313,19 @@ def test_real_adapter_preflight_consumes_no_budget(monkeypatch):
 
     # Budget was NOT consumed by the preflight rejection: an admissible image now
     # routes and actually calls out, consuming exactly one unit.
-    class _R:
-        status_code = 200
-        text = ""
-
-        def json(self):
-            return {
+    def ok(request):
+        http["n"] += 1
+        return httpx.Response(
+            200,
+            json={
                 "choices": [
                     {"message": {"content": _json.dumps({"label": "yes", "confidence": 0.9})}}
                 ],
                 "usage": {"total_tokens": 7},
-            }
+            },
+        )
 
-    def ok_post(*a, **k):
-        http["n"] += 1
-        return _R()
-
-    monkeypatch.setattr(httpx, "post", ok_post)
+    teacher._transport = httpx.MockTransport(ok)
     d2 = route(r, roi=b"x")  # 1 byte <= max_image_bytes=2
     assert http["n"] == 1
     assert d2.result.status == "ok"
@@ -336,21 +336,21 @@ def test_real_adapter_preflight_consumes_no_budget(monkeypatch):
 
 # -- M2-007 (re-opened): admission revoked at the transport boundary -----------
 
-def test_admit_false_cancels_without_outbound(monkeypatch):
+def test_admit_false_cancels_without_outbound():
     import httpx
 
     from app.teacher import OpenAICompatibleTeacher
 
     http = {"n": 0}
 
-    def forbidden_post(*a, **k):
+    def forbidden(request):
         http["n"] += 1
         raise AssertionError("no outbound request when admission is revoked")
 
-    monkeypatch.setattr(httpx, "post", forbidden_post)
     teacher = OpenAICompatibleTeacher(
         api_base="https://p/v1", api_key="k", model="vlm", prompt_version="v1",
     )
+    teacher._transport = httpx.MockTransport(forbidden)
     r = make_router(teacher, budget_per_task=5, sample_interval_s=0, cooldown_s=0)
 
     d = r.route(
@@ -364,3 +364,59 @@ def test_admit_false_cancels_without_outbound(monkeypatch):
     assert r.counters.completed == 0
     assert r.counters.calls == 0
     assert r.counters.by_status.get("cancelled") == 1
+
+
+# -- M2-003: admission is bounded by the overall deadline. If the admission lock
+# is held past the deadline, the route gives up WITHOUT sending a late request,
+# instead of blocking indefinitely and then posting past expiry. ---------------
+
+def test_admission_blocked_past_deadline_sends_nothing():
+    import time
+
+    import httpx
+
+    from app import pipeline
+    from app.teacher import OpenAICompatibleTeacher
+
+    http = {"n": 0}
+
+    def handler(request):
+        http["n"] += 1
+        return httpx.Response(
+            200,
+            json={"choices": [{"message": {"content": '{"label":"yes","confidence":0.9}'}}]},
+        )
+
+    teacher = OpenAICompatibleTeacher(
+        "https://qa.invalid/v1", "", "qa-vlm", "v1", overall_timeout=0.05, max_retries=0,
+    )
+    teacher._transport = httpx.MockTransport(handler)
+    r = make_router(teacher, budget_per_task=5, sample_interval_s=0, cooldown_s=0)
+
+    out = {}
+
+    def work():
+        start = time.monotonic()
+        d = r.route(
+            task_key="lock-wait", scope="lock-wait", prompt="q",
+            labels=["yes", "no"], image_bytes=b"img",
+        )
+        out["status"] = d.result.status
+        out["elapsed"] = time.monotonic() - start
+
+    pipeline.dispatch_admission_lock.acquire()
+    th = threading.Thread(target=work)
+    try:
+        th.start()
+        time.sleep(0.15)  # hold the admission lock well past the 0.05s deadline
+        assert th.is_alive() is False or out, "route should have returned by the deadline"
+    finally:
+        pipeline.dispatch_admission_lock.release()
+    th.join(2)
+    assert not th.is_alive()
+    # No request was ever sent; the route returned a non-confirming result bounded
+    # near the deadline rather than at ~0.15s+.
+    assert http["n"] == 0, http
+    assert out["status"] != "ok"
+    assert out["elapsed"] < 0.14, out
+    assert r.counters.outbound_attempts == 0

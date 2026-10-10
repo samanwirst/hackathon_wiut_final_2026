@@ -1,15 +1,17 @@
-"""Teacher transport wall-clock deadline tests (M2-003).
+"""Teacher transport wall-clock deadline + cancellation tests (M2-003).
 
-These use genuine httpx + httpcore execution over a ``MockTransport`` whose
-response body is delivered in small chunks (each within the per-read timeout) but
-whose *total* transfer exceeds the overall deadline. Without a wall-clock
-deadline across the active transport and body consumption, httpx's per-read
-timeouts reset on every chunk and the request runs far past the configured
-``overall_timeout``. The adapter must stop at the deadline and return a
-non-confirming ``timeout`` instead of consuming a late response.
+These use genuine httpx + httpcore execution over a ``MockTransport`` injected via
+the adapter's ``_transport`` seam, so the real streaming/body-read/cancel path is
+exercised rather than a fake response object (no socket is opened).
 
-This does NOT verify real visual inference — the provider is mocked — but it does
-exercise the real streaming/body-read path rather than a fake response object."""
+The adapter owns a *cancellable* streaming transport: it drives the body read in
+its own thread and checks the wall-clock deadline between chunks, so a trickling
+or endless body is cancelled by closing the response/connection at the deadline —
+there is no abandoned background worker that keeps reading. The assertions below
+measure that stronger invariant (true in-thread cancellation + bounded bytes),
+which supersedes the previous "abandoned worker keeps capacity" reproduction.
+
+This does NOT verify real visual inference — the provider is mocked."""
 
 import json
 import threading
@@ -40,6 +42,7 @@ class _TrickleStream(httpx.SyncByteStream):
         size = max(1, (len(body) + n_chunks - 1) // n_chunks)
         self._chunks = [body[i : i + size] for i in range(0, len(body), size)]
         self._delay = delay
+        self.closed = False
 
     def __iter__(self):
         for c in self._chunks:
@@ -47,10 +50,10 @@ class _TrickleStream(httpx.SyncByteStream):
             yield c
 
     def close(self) -> None:
-        pass
+        self.closed = True
 
 
-def _make_fake_post(done_box, *, delay: float, n_chunks: int):
+def _trickle_transport(*, delay: float, n_chunks: int):
     body = _envelope_bytes()
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -60,30 +63,17 @@ def _make_fake_post(done_box, *, delay: float, n_chunks: int):
             stream=_TrickleStream(body, n_chunks, delay),
         )
 
-    def fake_post(url, json=None, headers=None, timeout=None):
-        # Real httpx client over a mock transport: client.post reads the full body
-        # synchronously, incurring the trickle delay — exactly what the adapter's
-        # deadline guard must bound.
-        client = httpx.Client(transport=httpx.MockTransport(handler), timeout=timeout)
-        try:
-            resp = client.post(url, json=json, headers=headers)
-            done_box["n"] += 1
-            return resp
-        finally:
-            client.close()
-
-    return fake_post
+    return httpx.MockTransport(handler)
 
 
-def test_phase_compliant_trickle_exceeds_overall_deadline(monkeypatch):
-    done_box = {"n": 0}
+def test_phase_compliant_trickle_exceeds_overall_deadline():
     # 18 chunks * 25 ms ~= 0.45 s total transfer; each gap < the 50 ms read timeout.
-    monkeypatch.setattr(httpx, "post", _make_fake_post(done_box, delay=0.025, n_chunks=18))
     t = OpenAICompatibleTeacher(
         api_base="https://provider.example/v1", api_key="k", model="vlm",
         prompt_version="v1", overall_timeout=0.1, read_timeout=0.05,
         connect_timeout=0.05, max_retries=0,
     )
+    t._transport = _trickle_transport(delay=0.025, n_chunks=18)
     start = time.perf_counter()
     r = t.classify(b"img", "is the hood open?", ["yes", "no"])
     elapsed = time.perf_counter() - start
@@ -93,76 +83,66 @@ def test_phase_compliant_trickle_exceeds_overall_deadline(monkeypatch):
     assert elapsed < 0.35, elapsed
 
 
-def test_fast_streamed_response_still_confirms(monkeypatch):
+def test_fast_streamed_response_still_confirms():
     # Control: when the streamed body fits inside the deadline, the same genuine
     # path reads the full response and confirms.
-    done_box = {"n": 0}
-    monkeypatch.setattr(httpx, "post", _make_fake_post(done_box, delay=0.001, n_chunks=4))
     t = OpenAICompatibleTeacher(
         api_base="https://provider.example/v1", api_key="k", model="vlm",
         prompt_version="v1", overall_timeout=2.0, max_retries=0,
     )
+    t._transport = _trickle_transport(delay=0.001, n_chunks=4)
     r = t.classify(b"img", "q", ["yes", "no"])
     assert r.status == "ok"
     assert r.confirmed is True
-    assert done_box["n"] == 1
 
 
-# -- M2-003: a returned timeout must not free capacity while the request is
-# still in flight. At concurrency 1, four sequential trickling requests must
-# never produce more than ONE active transport worker/body-read. --------------
+# -- M2-003: an endless/trickling body is CANCELLED at the deadline (the active
+# transport is closed in-thread), so sequential callers at concurrency 1 never
+# overlap and no abandoned worker keeps reading. ------------------------------
 
-def test_timeout_does_not_free_capacity_for_concurrent_workers(monkeypatch):
-    lock = threading.Lock()
+def test_timeout_cancels_transport_and_never_overlaps():
     release = threading.Event()
-    state = {"active": 0, "peak": 0, "started": 0}
-    body = json.dumps(
-        {"choices": [{"message": {"content": '{"label":"yes","confidence":0.9}'}}]}
-    ).encode()
+    state = {"active": 0, "peak": 0, "started": 0, "chunks": 0}
 
     class Stream(httpx.SyncByteStream):
         def __iter__(self):
-            with lock:
-                state["active"] += 1
-                state["started"] += 1
-                state["peak"] = max(state["peak"], state["active"])
+            state["active"] += 1
+            state["started"] += 1
+            state["peak"] = max(state["peak"], state["active"])
             try:
-                for byte in body:
-                    if release.wait(0.02):
-                        yield body
-                        break
-                    yield bytes([byte])
+                while not release.wait(0.005):
+                    state["chunks"] += 1
+                    yield b" " * 65536
             finally:
-                with lock:
-                    state["active"] -= 1
+                state["active"] -= 1
 
         def close(self):
             pass
 
-    def post(url, **kwargs):
-        with httpx.Client(
-            transport=httpx.MockTransport(lambda req: httpx.Response(200, stream=Stream())),
-            timeout=kwargs.pop("timeout"),
-        ) as client:
-            return client.post(url, **kwargs)
-
-    monkeypatch.setattr(httpx, "post", post)
     teacher = OpenAICompatibleTeacher(
         "https://qa.invalid/v1", "", "qa-vlm", "v1",
         overall_timeout=0.06, read_timeout=0.05, max_retries=0, max_concurrency=1,
+        max_response_bytes=8 * 1024 * 1024,
     )
+    teacher._transport = httpx.MockTransport(lambda req: httpx.Response(200, stream=Stream()))
     try:
         statuses = [
             teacher.classify(b"img", "hood open?", ["yes", "no"]).status
             for _ in range(4)
         ]
-        # All four deadline out (non-confirming), but capacity was never freed
-        # while a worker remained in flight: at most one active/started worker.
+        # All four deadline out (non-confirming). Each request truly started AND
+        # was cancelled in-thread, so the next could start — but two never overlap,
+        # and no body read lingers after its caller returned.
         assert statuses == ["timeout"] * 4
-        assert state["peak"] <= 1, state
-        assert state["started"] <= 1, state
+        assert state["peak"] == 1, state
+        assert state["started"] == 4, state
+        # The single permit is free again: cancellation released it (no deferred
+        # reaper holding capacity behind an abandoned reader).
+        assert teacher._semaphore.acquire(blocking=False)
+        teacher._semaphore.release()
     finally:
         release.set()
         deadline = time.monotonic() + 2
         while state["active"] and time.monotonic() < deadline:
             time.sleep(0.005)
+        assert state["active"] == 0, state

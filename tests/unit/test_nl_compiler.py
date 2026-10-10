@@ -301,3 +301,90 @@ def test_longer_than_dwell_still_ok():
     assert r.ok, r.errors
     assert r.draft["trigger"]["type"] == "dwell_in_zone"
     assert r.draft["trigger"]["duration_seconds"] == 300.0
+
+
+# -- M2-001 (ten-hour recovery): semantics never silently dropped --------------
+# Each of these reproduced as an HTTP 200 ok=true draft at frozen snapshot
+# 088b17a; the desired behaviour is a rejection with NO draft, verified against
+# unseen phrasings rather than a phrase blacklist.
+
+
+def test_part_actuation_action_rejected():
+    # "open its hood" is a physical actuation, not the state condition "hood open":
+    # it must be rejected, not silently downgraded to a create_notification.
+    r = compile_text("When a car enters Service Bay A, open its hood", 1, ZONES)
+    assert not r.ok and r.draft is None
+    assert any("action is not available" in e for e in r.errors)
+
+
+def test_part_actuation_variants_rejected():
+    for text in (
+        "When a car enters Service Bay A, pop the trunk",
+        "When a car enters Service Bay A, close its door",
+        "When a car enters Service Bay A, raise the hood",
+    ):
+        r = compile_text(text, 1, ZONES)
+        assert not r.ok and r.draft is None, text
+
+
+def test_condition_with_unsupported_noun_rejected():
+    # The greedy visual regex used to span "emitting smoke and" and keep only
+    # "hood ... open"; the bounded grammar now rejects the smuggled clause.
+    r = compile_text(
+        "When a car enters Service Bay A with its hood emitting smoke and open, "
+        "create an alert",
+        1, ZONES,
+    )
+    assert not r.ok and r.draft is None
+    assert any("condition" in e.lower() for e in r.errors)
+
+
+def test_duration_on_enter_trigger_rejected():
+    # "enters ... for 5 minutes" has no field on an entry trigger; the duration
+    # must not be silently dropped.
+    r = compile_text(
+        "When a car enters Service Bay A for 5 minutes, create an alert", 1, ZONES
+    )
+    assert not r.ok and r.draft is None
+    assert any("duration" in e.lower() and "dwell" in e.lower() for e in r.errors)
+
+
+def test_duration_on_exit_trigger_rejected():
+    r = compile_text(
+        "When a car exits Service Bay A for 2 minutes, create an alert", 1, ZONES
+    )
+    assert not r.ok and r.draft is None
+
+
+def test_ambiguous_dual_duration_rejected():
+    # "5 minutes or 10 minutes" used to accept 300s silently.
+    r = compile_text(
+        "When a car stays in Service Bay A for 5 minutes or 10 minutes, create an alert",
+        1, ZONES,
+    )
+    assert not r.ok and r.draft is None
+    assert any("one duration" in e.lower() for e in r.errors)
+
+
+def test_log_it_action_rejected():
+    # "log it" invented a create_notification; "log" is not a supported action verb.
+    r = compile_text("When a car enters Service Bay A, log it", 1, ZONES)
+    assert not r.ok and r.draft is None
+
+
+def test_fractional_count_rejected():
+    # "more than 5.5 cars" used to truncate silently to threshold 5.
+    r = compile_text(
+        "When more than 5.5 cars are in Service Bay A, create an alert", 1, ZONES
+    )
+    assert not r.ok and r.draft is None
+    assert any("fractional" in e.lower() for e in r.errors)
+
+
+def test_count_with_duration_rejected():
+    # A count trigger with a dwell-style duration names two incompatible triggers.
+    r = compile_text(
+        "When more than 3 cars are in Service Bay A for 10 minutes, create an alert",
+        1, ZONES,
+    )
+    assert not r.ok and r.draft is None
