@@ -1,0 +1,979 @@
+{
+  "target_sha": "25bccee269bde978745c168852a716670b7f999b",
+  "results": [
+    {
+      "name": "slow_headers",
+      "result": {
+        "status": "timeout",
+        "label": null,
+        "confidence": null,
+        "model": "owned-qa-fixture",
+        "prompt_version": "v1",
+        "latency_ms": 200.88958999986062,
+        "usage": {},
+        "error": "provider timeout (attempt 1): overall wall-clock deadline exceeded while reading response"
+      },
+      "elapsed": 0.2016585470046266,
+      "deadline": 0.2,
+      "tcp_closed_before_next": true,
+      "permit_free": true,
+      "subsequent_status": "ok",
+      "requests": 2
+    },
+    {
+      "name": "header_then_stall",
+      "result": {
+        "status": "timeout",
+        "label": null,
+        "confidence": null,
+        "model": "owned-qa-fixture",
+        "prompt_version": "v1",
+        "latency_ms": 201.3152449944755,
+        "usage": {},
+        "error": "provider timeout (attempt 1): overall wall-clock deadline exceeded while reading response"
+      },
+      "elapsed": 0.20148847399832448,
+      "deadline": 0.2,
+      "tcp_closed_before_next": true,
+      "permit_free": true,
+      "subsequent_status": "ok",
+      "requests": 2
+    },
+    {
+      "name": "trickle",
+      "result": {
+        "status": "timeout",
+        "label": null,
+        "confidence": null,
+        "model": "owned-qa-fixture",
+        "prompt_version": "v1",
+        "latency_ms": 200.51208699442213,
+        "usage": {},
+        "error": "provider timeout (attempt 1): overall wall-clock deadline exceeded while reading response"
+      },
+      "elapsed": 0.20069734899880132,
+      "deadline": 0.2,
+      "tcp_closed_before_next": true,
+      "permit_free": true,
+      "subsequent_status": "ok",
+      "requests": 2
+    },
+    {
+      "name": "slow_production_admission",
+      "elapsed": 0.25101753700437257,
+      "deadline": 0.1,
+      "result": {
+        "status": "timeout",
+        "label": null,
+        "confidence": null,
+        "model": "owned-qa-fixture",
+        "prompt_version": "v1",
+        "latency_ms": 250.66572999639902,
+        "usage": {},
+        "error": "provider timeout (attempt 1): overall deadline exceeded before sending request"
+      },
+      "requests": 0,
+      "attempts": 0
+    },
+    {
+      "name": "slow_connect",
+      "result": {
+        "status": "timeout",
+        "label": null,
+        "confidence": null,
+        "model": "owned-qa-fixture",
+        "prompt_version": "v1",
+        "latency_ms": 251.26526500389446,
+        "usage": {},
+        "error": "provider timeout (attempt 1): overall deadline exceeded before sending request"
+      },
+      "elapsed": 0.25144594500306994,
+      "deadline": 0.1,
+      "requests": 0
+    },
+    {
+      "name": "dns_deadline",
+      "result": {
+        "status": "timeout",
+        "label": null,
+        "confidence": null,
+        "model": "owned-qa-fixture",
+        "prompt_version": "v1",
+        "latency_ms": 250.71744400338503,
+        "usage": {},
+        "error": "provider timeout (attempt 1): overall deadline exceeded before sending request"
+      },
+      "elapsed": 0.2509085450001294,
+      "deadline": 0.1,
+      "dns_fixture_delay": 0.25,
+      "requests": 0,
+      "connections": 0
+    },
+    {
+      "name": "dns_tls_deadline",
+      "result": {
+        "raised": "TimeoutError",
+        "error": "_ssl.c:1064: The handshake operation timed out"
+      },
+      "elapsed": 0.36993442899984075,
+      "deadline": 0.2,
+      "dns_fixture_delay": 0.16,
+      "requests": 0,
+      "connections": 1
+    },
+    {
+      "name": "read_timeout_configuration",
+      "result": {
+        "status": "timeout",
+        "label": null,
+        "confidence": null,
+        "model": "owned-qa-fixture",
+        "prompt_version": "v1",
+        "latency_ms": 500.48649000382284,
+        "usage": {},
+        "error": "provider timeout (attempt 1): overall wall-clock deadline exceeded while reading response"
+      },
+      "elapsed": 0.500661015001242,
+      "read_timeout": 0.04,
+      "overall_timeout": 0.5
+    },
+    {
+      "name": "retry_cache_budget",
+      "first_status": "ok",
+      "cached": "cache_hit",
+      "exhausted": "suppressed_budget",
+      "requests": 2,
+      "counters": {
+        "adapter_invocations": 1,
+        "outbound_attempts": 2,
+        "completed": 1,
+        "unavailable": 0,
+        "calls": 1,
+        "cache_hits": 1,
+        "cache_misses": 2,
+        "deduped": 0,
+        "suppressed_budget": 1,
+        "suppressed_cooldown": 0,
+        "suppressed_sampling": 0,
+        "failed": 0,
+        "confirmed": 1,
+        "unknown": 0,
+        "by_status": {
+          "ok": 1,
+          "cache_hit": 1,
+          "suppressed_budget": 1
+        },
+        "teacher_provider": "openai_compatible",
+        "teacher_available": true,
+        "cache_size": 1,
+        "cache_evictions": 0,
+        "sample_interval_s": 0,
+        "cooldown_s": 0,
+        "budget_per_task": 2
+      }
+    },
+    {
+      "name": "nonretry_error",
+      "http_status": 401,
+      "result": {
+        "status": "error",
+        "label": null,
+        "confidence": null,
+        "model": "owned-qa-fixture",
+        "prompt_version": "v1",
+        "latency_ms": 1.4802939986111596,
+        "usage": {},
+        "error": "provider auth failed HTTP 401"
+      },
+      "requests": 1
+    },
+    {
+      "name": "nonretry_error",
+      "http_status": 403,
+      "result": {
+        "status": "error",
+        "label": null,
+        "confidence": null,
+        "model": "owned-qa-fixture",
+        "prompt_version": "v1",
+        "latency_ms": 1.5296040000976063,
+        "usage": {},
+        "error": "provider auth failed HTTP 403"
+      },
+      "requests": 1
+    },
+    {
+      "name": "nonretry_error",
+      "http_status": 422,
+      "result": {
+        "status": "error",
+        "label": null,
+        "confidence": null,
+        "model": "owned-qa-fixture",
+        "prompt_version": "v1",
+        "latency_ms": 1.337631001661066,
+        "usage": {},
+        "error": "provider HTTP 422: {\"choices\": [{\"message\": {\"content\": \"{\\\"label\\\": \\\"yes\\\", \\\"confidence\\\": 0.9}\"}}], \"usage\": {\"total_tokens\": 7}}"
+      },
+      "requests": 1
+    },
+    {
+      "name": "response_cap",
+      "result": {
+        "status": "error",
+        "label": null,
+        "confidence": null,
+        "model": "owned-qa-fixture",
+        "prompt_version": "v1",
+        "latency_ms": 1.1186139963683672,
+        "usage": {},
+        "error": "transport error (attempt 1): provider response headers exceeded max_response_bytes 512"
+      },
+      "requests": 1,
+      "confirmed": false
+    },
+    {
+      "name": "partial_send_budget",
+      "results": [
+        {
+          "route_status": "called",
+          "result": {
+            "status": "error",
+            "label": null,
+            "confidence": null,
+            "model": "owned-qa-fixture",
+            "prompt_version": "v1",
+            "latency_ms": 0.0,
+            "usage": {},
+            "error": "adapter raised: timed out"
+          }
+        },
+        {
+          "route_status": "called",
+          "result": {
+            "status": "error",
+            "label": null,
+            "confidence": null,
+            "model": "owned-qa-fixture",
+            "prompt_version": "v1",
+            "latency_ms": 0.0,
+            "usage": {},
+            "error": "adapter raised: timed out"
+          }
+        },
+        {
+          "route_status": "called",
+          "result": {
+            "status": "error",
+            "label": null,
+            "confidence": null,
+            "model": "owned-qa-fixture",
+            "prompt_version": "v1",
+            "latency_ms": 0.0,
+            "usage": {},
+            "error": "adapter raised: timed out"
+          }
+        }
+      ],
+      "received_connections": 3,
+      "received_bytes": [
+        8192,
+        8192,
+        8192
+      ],
+      "complete_requests": 0,
+      "counters": {
+        "adapter_invocations": 3,
+        "outbound_attempts": 0,
+        "completed": 0,
+        "unavailable": 0,
+        "calls": 0,
+        "cache_hits": 0,
+        "cache_misses": 3,
+        "deduped": 0,
+        "suppressed_budget": 0,
+        "suppressed_cooldown": 0,
+        "suppressed_sampling": 0,
+        "failed": 3,
+        "confirmed": 0,
+        "unknown": 0,
+        "by_status": {
+          "error": 3
+        },
+        "teacher_provider": "openai_compatible",
+        "teacher_available": true,
+        "cache_size": 0,
+        "cache_evictions": 0,
+        "sample_interval_s": 0,
+        "cooldown_s": 0,
+        "budget_per_task": 1
+      },
+      "budget_used": {}
+    },
+    {
+      "name": "connection_refused",
+      "result": {
+        "raised": "ConnectionRefusedError",
+        "error": "[Errno 111] Connection refused"
+      },
+      "elapsed": 0.0005159740030649118
+    },
+    {
+      "name": "compile_api",
+      "text": "When a car enters Service Bay A, then open hood",
+      "http_status": 200,
+      "result": {
+        "ok": false,
+        "draft": null,
+        "errors": [
+          "that action is not available (physical actuation / external dispatch); only in-app notifications are supported"
+        ],
+        "warnings": [],
+        "explanation": "Could not compile a complete, unambiguous workflow."
+      }
+    },
+    {
+      "name": "compile_api",
+      "text": "When a car enters Service Bay A with hood open and trunk up, create an alert",
+      "http_status": 200,
+      "result": {
+        "ok": false,
+        "draft": null,
+        "errors": [
+          "more than one visual condition was requested; specify a single visual condition (supported: hood/trunk/door open, lights on)"
+        ],
+        "warnings": [],
+        "explanation": "Could not compile a complete, unambiguous workflow."
+      }
+    },
+    {
+      "name": "compile_api",
+      "text": "When a car stays in Service Bay A for .5 minutes, create an alert",
+      "http_status": 200,
+      "result": {
+        "ok": false,
+        "draft": null,
+        "errors": [
+          "could not parse the dwell duration; use a whole or decimal number of seconds/minutes/hours (e.g. 'for 5 minutes'), not a fractional '.5' or a negative value"
+        ],
+        "warnings": [],
+        "explanation": "Could not compile a complete, unambiguous workflow."
+      }
+    },
+    {
+      "name": "compile_api",
+      "text": "When a car stays in Service Bay A for -5 minutes, create an alert",
+      "http_status": 200,
+      "result": {
+        "ok": false,
+        "draft": null,
+        "errors": [
+          "could not parse the dwell duration; use a whole or decimal number of seconds/minutes/hours (e.g. 'for 5 minutes'), not a fractional '.5' or a negative value"
+        ],
+        "warnings": [],
+        "explanation": "Could not compile a complete, unambiguous workflow."
+      }
+    },
+    {
+      "name": "compile_api",
+      "text": "When more than 3 or more than 5 cars are in Service Bay A, create an alert",
+      "http_status": 200,
+      "result": {
+        "ok": false,
+        "draft": null,
+        "errors": [
+          "more than one count comparison was specified (more than 3, more than 5); specify a single count threshold"
+        ],
+        "warnings": [],
+        "explanation": "Could not compile a complete, unambiguous workflow."
+      }
+    },
+    {
+      "name": "compile_api",
+      "text": "When a car stays in Service Bay A, create an alert for 5 minutes",
+      "http_status": 200,
+      "result": {
+        "ok": false,
+        "draft": null,
+        "errors": [
+          "unsupported content in the action clause: '5', 'minutes'; the only supported action is an in-app alert/notification",
+          "dwell rule needs a duration, e.g. 'for 10 minutes'"
+        ],
+        "warnings": [],
+        "explanation": "Could not compile a complete, unambiguous workflow."
+      }
+    },
+    {
+      "name": "compile_api",
+      "text": "Create an alert for 5 minutes when a car stays in Service Bay A",
+      "http_status": 200,
+      "result": {
+        "ok": true,
+        "draft": {
+          "name": "car dwell in zone",
+          "source_id": 1,
+          "object_class": "car",
+          "trigger": {
+            "type": "dwell_in_zone",
+            "zone_id": 1,
+            "duration_seconds": 300.0,
+            "threshold": null
+          },
+          "action": {
+            "type": "create_notification",
+            "config": {
+              "title": "car dwell in zone"
+            }
+          },
+          "visual_predicate": null,
+          "cooldown_seconds": 10.0,
+          "requires_approval": true
+        },
+        "errors": [],
+        "warnings": [],
+        "explanation": "car \u00b7 dwell_in_zone \u2265300s \u2192 create_notification (draft, disabled until you approve)"
+      }
+    },
+    {
+      "name": "compile_api",
+      "text": "When a car enters Service Bay A with hood and trunk open, create an alert",
+      "http_status": 200,
+      "result": {
+        "ok": true,
+        "draft": {
+          "name": "car entered zone + verify the vehicle trunk is open",
+          "source_id": 1,
+          "object_class": "car",
+          "trigger": {
+            "type": "object_entered_zone",
+            "zone_id": 1,
+            "duration_seconds": null,
+            "threshold": null
+          },
+          "action": {
+            "type": "create_notification",
+            "config": {
+              "title": "car entered zone + verify the vehicle trunk is open"
+            }
+          },
+          "visual_predicate": {
+            "prompt": "Does the image clearly show that the vehicle trunk is open?",
+            "labels": [
+              "yes",
+              "no"
+            ],
+            "expected_label": "yes",
+            "description": "the vehicle trunk is open",
+            "sample_interval_seconds": null,
+            "cooldown_seconds": null,
+            "budget": null
+          },
+          "cooldown_seconds": 10.0,
+          "requires_approval": true
+        },
+        "errors": [],
+        "warnings": [
+          "a visual predicate was detected; it requires a configured Teacher VLM at runtime and is checked only on candidate events"
+        ],
+        "explanation": "car \u00b7 object_entered_zone \u00b7 visual: the vehicle trunk is open \u2192 create_notification (draft, disabled until you approve)"
+      }
+    },
+    {
+      "name": "compile_api",
+      "text": "When a car enters Service Bay A with hood open and lights, create an alert",
+      "http_status": 200,
+      "result": {
+        "ok": true,
+        "draft": {
+          "name": "car entered zone + verify the vehicle hood is open",
+          "source_id": 1,
+          "object_class": "car",
+          "trigger": {
+            "type": "object_entered_zone",
+            "zone_id": 1,
+            "duration_seconds": null,
+            "threshold": null
+          },
+          "action": {
+            "type": "create_notification",
+            "config": {
+              "title": "car entered zone + verify the vehicle hood is open"
+            }
+          },
+          "visual_predicate": {
+            "prompt": "Does the image clearly show that the vehicle hood is open?",
+            "labels": [
+              "yes",
+              "no"
+            ],
+            "expected_label": "yes",
+            "description": "the vehicle hood is open",
+            "sample_interval_seconds": null,
+            "cooldown_seconds": null,
+            "budget": null
+          },
+          "cooldown_seconds": 10.0,
+          "requires_approval": true
+        },
+        "errors": [],
+        "warnings": [
+          "a visual predicate was detected; it requires a configured Teacher VLM at runtime and is checked only on candidate events"
+        ],
+        "explanation": "car \u00b7 object_entered_zone \u00b7 visual: the vehicle hood is open \u2192 create_notification (draft, disabled until you approve)"
+      }
+    },
+    {
+      "name": "compile_api",
+      "text": "When a car enters Service Bay A with hood, create an alert",
+      "http_status": 200,
+      "result": {
+        "ok": true,
+        "draft": {
+          "name": "car entered zone",
+          "source_id": 1,
+          "object_class": "car",
+          "trigger": {
+            "type": "object_entered_zone",
+            "zone_id": 1,
+            "duration_seconds": null,
+            "threshold": null
+          },
+          "action": {
+            "type": "create_notification",
+            "config": {
+              "title": "car entered zone"
+            }
+          },
+          "visual_predicate": null,
+          "cooldown_seconds": 10.0,
+          "requires_approval": true
+        },
+        "errors": [],
+        "warnings": [],
+        "explanation": "car \u00b7 object_entered_zone \u2192 create_notification (draft, disabled until you approve)"
+      }
+    },
+    {
+      "name": "compile_api",
+      "text": "When a car enters Service Bay A with lights off, create an alert",
+      "http_status": 200,
+      "result": {
+        "ok": false,
+        "draft": null,
+        "errors": [
+          "negated visual conditions (e.g. 'hood not open') are not supported; state the positive condition to verify"
+        ],
+        "warnings": [],
+        "explanation": "Could not compile a complete, unambiguous workflow."
+      }
+    },
+    {
+      "name": "compile_api",
+      "text": "When a car enters Service Bay A with hood not open, create an alert",
+      "http_status": 200,
+      "result": {
+        "ok": false,
+        "draft": null,
+        "errors": [
+          "unsupported or unrecognized phrasing: 'not'; rephrase using the supported grammar (class, enter/exit/dwell/count, zone, optional single visual condition)"
+        ],
+        "warnings": [],
+        "explanation": "Could not compile a complete, unambiguous workflow."
+      }
+    },
+    {
+      "name": "compile_api",
+      "text": "When a car does not enter Service Bay A, create an alert",
+      "http_status": 200,
+      "result": {
+        "ok": false,
+        "draft": null,
+        "errors": [
+          "a negated trigger (e.g. 'does not enter') is not supported; describe the positive event to detect (enter, exit, dwell, or count)",
+          "unsupported or unrecognized phrasing: 'not'; rephrase using the supported grammar (class, enter/exit/dwell/count, zone, optional single visual condition)"
+        ],
+        "warnings": [],
+        "explanation": "Could not compile a complete, unambiguous workflow."
+      }
+    },
+    {
+      "name": "compile_api",
+      "text": "When a car enters or exits Service Bay A, create an alert",
+      "http_status": 200,
+      "result": {
+        "ok": false,
+        "draft": null,
+        "errors": [
+          "more than one trigger type was requested (object_entered_zone, object_exited_zone); specify a single trigger (enter, exit, dwell, or count)"
+        ],
+        "warnings": [],
+        "explanation": "Could not compile a complete, unambiguous workflow."
+      }
+    },
+    {
+      "name": "compile_api",
+      "text": "When fewer than 3 cars are in Service Bay A, create an alert",
+      "http_status": 200,
+      "result": {
+        "ok": false,
+        "draft": null,
+        "errors": [
+          "only a lower-bound count is supported (e.g. 'more than N' or 'at least N'), not an upper bound"
+        ],
+        "warnings": [],
+        "explanation": "Could not compile a complete, unambiguous workflow."
+      }
+    },
+    {
+      "name": "compile_api",
+      "text": "When a car stays in Service Bay A for less than 5 minutes, create an alert",
+      "http_status": 200,
+      "result": {
+        "ok": false,
+        "draft": null,
+        "errors": [
+          "only a minimum dwell duration is supported (e.g. 'for 10 minutes' or 'longer than 10 minutes'), not an upper bound"
+        ],
+        "warnings": [],
+        "explanation": "Could not compile a complete, unambiguous workflow."
+      }
+    },
+    {
+      "name": "compile_api",
+      "text": "When a car enters Service Bay A, delete the video",
+      "http_status": 200,
+      "result": {
+        "ok": false,
+        "draft": null,
+        "errors": [
+          "deleting or modifying stored videos, recordings or evidence is not a supported action; only in-app notifications are supported",
+          "unsupported or unrecognized phrasing: 'delete', 'video'; rephrase using the supported grammar (class, enter/exit/dwell/count, zone, optional single visual condition)"
+        ],
+        "warnings": [],
+        "explanation": "Could not compile a complete, unambiguous workflow."
+      }
+    },
+    {
+      "name": "compile_api",
+      "text": "When a car enters Service Bay A, send a webhook",
+      "http_status": 200,
+      "result": {
+        "ok": false,
+        "draft": null,
+        "errors": [
+          "external delivery (webhook/HTTP/email/SMS/phone/Slack/Telegram) is not available; only in-app notifications are supported",
+          "unsupported or unrecognized phrasing: 'webhook'; rephrase using the supported grammar (class, enter/exit/dwell/count, zone, optional single visual condition)"
+        ],
+        "warnings": [],
+        "explanation": "Could not compile a complete, unambiguous workflow."
+      }
+    },
+    {
+      "name": "compile_api",
+      "text": "When a car enters Service Bay A, execute a shell script",
+      "http_status": 200,
+      "result": {
+        "ok": false,
+        "draft": null,
+        "errors": [
+          "executing code, scripts, or shell commands is not supported",
+          "unsupported or unrecognized phrasing: 'execute', 'shell', 'script'; rephrase using the supported grammar (class, enter/exit/dwell/count, zone, optional single visual condition)"
+        ],
+        "warnings": [],
+        "explanation": "Could not compile a complete, unambiguous workflow."
+      }
+    },
+    {
+      "name": "compile_api",
+      "text": "When 3 or more or 5 or more cars are in Service Bay A, create an alert",
+      "http_status": 200,
+      "result": {
+        "ok": true,
+        "draft": {
+          "name": "car count exceeded",
+          "source_id": 1,
+          "object_class": "car",
+          "trigger": {
+            "type": "object_count_exceeded",
+            "zone_id": 1,
+            "duration_seconds": null,
+            "threshold": 2
+          },
+          "action": {
+            "type": "create_notification",
+            "config": {
+              "title": "car count exceeded"
+            }
+          },
+          "visual_predicate": null,
+          "cooldown_seconds": 10.0,
+          "requires_approval": true
+        },
+        "errors": [],
+        "warnings": [
+          "interpreting 'at least 3' as more than 2 (inclusive lower bound)"
+        ],
+        "explanation": "car \u00b7 object_count_exceeded >2 \u2192 create_notification (draft, disabled until you approve)"
+      }
+    },
+    {
+      "name": "compile_api",
+      "text": "Notify me for 5 minutes when a car stays in Service Bay A",
+      "http_status": 200,
+      "result": {
+        "ok": true,
+        "draft": {
+          "name": "car dwell in zone",
+          "source_id": 1,
+          "object_class": "car",
+          "trigger": {
+            "type": "dwell_in_zone",
+            "zone_id": 1,
+            "duration_seconds": 300.0,
+            "threshold": null
+          },
+          "action": {
+            "type": "create_notification",
+            "config": {
+              "title": "car dwell in zone"
+            }
+          },
+          "visual_predicate": null,
+          "cooldown_seconds": 10.0,
+          "requires_approval": true
+        },
+        "errors": [],
+        "warnings": [],
+        "explanation": "car \u00b7 dwell_in_zone \u2265300s \u2192 create_notification (draft, disabled until you approve)"
+      }
+    },
+    {
+      "name": "compile_api",
+      "text": "When a car stays in Service Bay A for more than 2.5 minutes, create an alert",
+      "http_status": 200,
+      "result": {
+        "ok": false,
+        "draft": null,
+        "errors": [
+          "more than one trigger type was requested (dwell_in_zone, object_count_exceeded); specify a single trigger (enter, exit, dwell, or count)"
+        ],
+        "warnings": [],
+        "explanation": "Could not compile a complete, unambiguous workflow."
+      }
+    },
+    {
+      "name": "compile_api",
+      "text": "When a car stays in Service Bay A for 5 minutes with hood open for 10 seconds, create an alert",
+      "http_status": 200,
+      "result": {
+        "ok": false,
+        "draft": null,
+        "errors": [
+          "more than one duration was specified (5 minutes, 10 seconds); specify a single duration"
+        ],
+        "warnings": [],
+        "explanation": "Could not compile a complete, unambiguous workflow."
+      }
+    },
+    {
+      "name": "explicit_approval",
+      "created_enabled": false,
+      "enabled_after_approval": true
+    },
+    {
+      "name": "confidence_action",
+      "confidence": "{'confidence': True}",
+      "requests": 1,
+      "routed": false,
+      "visual_status": "invalid_response",
+      "action_status": "skipped_visual",
+      "notifications": 0
+    },
+    {
+      "name": "confidence_action",
+      "confidence": "{'confidence': False}",
+      "requests": 1,
+      "routed": false,
+      "visual_status": "invalid_response",
+      "action_status": "skipped_visual",
+      "notifications": 0
+    },
+    {
+      "name": "confidence_action",
+      "confidence": "{'confidence': None}",
+      "requests": 1,
+      "routed": false,
+      "visual_status": "invalid_response",
+      "action_status": "skipped_visual",
+      "notifications": 0
+    },
+    {
+      "name": "confidence_action",
+      "confidence": "{'confidence': '0.9'}",
+      "requests": 1,
+      "routed": false,
+      "visual_status": "invalid_response",
+      "action_status": "skipped_visual",
+      "notifications": 0
+    },
+    {
+      "name": "confidence_action",
+      "confidence": "{'confidence': nan}",
+      "requests": 1,
+      "routed": false,
+      "visual_status": "invalid_response",
+      "action_status": "skipped_visual",
+      "notifications": 0
+    },
+    {
+      "name": "confidence_action",
+      "confidence": "{'confidence': inf}",
+      "requests": 1,
+      "routed": false,
+      "visual_status": "invalid_response",
+      "action_status": "skipped_visual",
+      "notifications": 0
+    },
+    {
+      "name": "confidence_action",
+      "confidence": "{'confidence': -inf}",
+      "requests": 1,
+      "routed": false,
+      "visual_status": "invalid_response",
+      "action_status": "skipped_visual",
+      "notifications": 0
+    },
+    {
+      "name": "confidence_action",
+      "confidence": "{'confidence': -0.1}",
+      "requests": 1,
+      "routed": false,
+      "visual_status": "invalid_response",
+      "action_status": "skipped_visual",
+      "notifications": 0
+    },
+    {
+      "name": "confidence_action",
+      "confidence": "{'confidence': 1.1}",
+      "requests": 1,
+      "routed": false,
+      "visual_status": "invalid_response",
+      "action_status": "skipped_visual",
+      "notifications": 0
+    },
+    {
+      "name": "confidence_action",
+      "confidence": "{'confidence': []}",
+      "requests": 1,
+      "routed": false,
+      "visual_status": "invalid_response",
+      "action_status": "skipped_visual",
+      "notifications": 0
+    },
+    {
+      "name": "confidence_action",
+      "confidence": "{'confidence': {}}",
+      "requests": 1,
+      "routed": false,
+      "visual_status": "invalid_response",
+      "action_status": "skipped_visual",
+      "notifications": 0
+    },
+    {
+      "name": "confidence_action",
+      "confidence": "{'missing_confidence': True}",
+      "requests": 1,
+      "routed": false,
+      "visual_status": "invalid_response",
+      "action_status": "skipped_visual",
+      "notifications": 0
+    },
+    {
+      "name": "confidence_action",
+      "confidence": "{'confidence': 0.1}",
+      "requests": 1,
+      "routed": false,
+      "visual_status": "low_confidence",
+      "action_status": "skipped_visual",
+      "notifications": 0
+    },
+    {
+      "name": "confidence_action",
+      "confidence": "{'confidence': 0.9}",
+      "requests": 1,
+      "routed": true,
+      "visual_status": "ok",
+      "action_status": "done",
+      "notifications": 1
+    },
+    {
+      "name": "confidence_action",
+      "confidence": "{'confidence': 1}",
+      "requests": 1,
+      "routed": true,
+      "visual_status": "ok",
+      "action_status": "done",
+      "notifications": 1
+    },
+    {
+      "name": "framing_action",
+      "mode": "chunked_fast",
+      "requests": 1,
+      "routed": true,
+      "visual_status": "ok",
+      "action_status": "done",
+      "notifications": 1
+    },
+    {
+      "name": "framing_action",
+      "mode": "truncated_length",
+      "requests": 1,
+      "routed": true,
+      "visual_status": "ok",
+      "action_status": "done",
+      "notifications": 1
+    },
+    {
+      "name": "framing_action",
+      "mode": "truncated_chunked",
+      "requests": 1,
+      "routed": true,
+      "visual_status": "ok",
+      "action_status": "done",
+      "notifications": 1
+    },
+    {
+      "name": "framing_action",
+      "mode": "bad_length",
+      "requests": 1,
+      "routed": true,
+      "visual_status": "ok",
+      "action_status": "done",
+      "notifications": 1
+    },
+    {
+      "name": "disable_connection_race",
+      "disable_http": 200,
+      "disable_elapsed": 0.0034444339980836958,
+      "requests_before_ack": 0,
+      "requests": 0,
+      "attempts": 0,
+      "routed": false,
+      "visual_status": "cancelled",
+      "action_status": "cancelled",
+      "notifications": 0
+    },
+    {
+      "name": "disable_actual_send_race",
+      "disable_blocked_during_unsent_write": true,
+      "requests_before_release": 0,
+      "requests": 1,
+      "disable_http": 200,
+      "attempts": 1,
+      "routed": true,
+      "visual_status": "ok",
+      "action_status": "cancelled",
+      "notifications": 0
+    }
+  ]
+}

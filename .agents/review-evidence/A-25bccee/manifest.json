@@ -1,0 +1,15 @@
+{
+  "target_sha": "25bccee269bde978745c168852a716670b7f999b",
+  "base_sha": "9d69f6891ebd514876f2b9bff0aa6ab041516c6d",
+  "provider": "owned loopback non-model fixtures only",
+  "files": {
+    "grammar_probe.py": "ba6d90cb2d7c4d8e96037a900da6fd953138f1fd82254219afd8791215847183",
+    "grammar-results.json": "93e9c74bc6b6cfc4087c588846c27ae5c782935116bdafe3e9fb06d71cd9d585",
+    "network_probe.py": "1860ea5f36d02af666ef439b492ef812a22627a11c7e1907e06696042ea44c2e",
+    "network-results.json": "01cc5ad99f3649b0b81e6dd1bcd6fe49a01678741dd400b39eb019ddda8a3c95",
+    "focused-pytest.log": "1ed0e14d969e50284eedb2b56467b951e2f95257d09dda9f508bf3fea9986495",
+    "test_acceptance.py": "fa62b564dceb4eeb451bc6bd9dbcceae24984624c5ad421bdf5e40e0d7af267c",
+    "acceptance.log": "1527642b31dbf19af1f1eec42842c52f7d578616eff574997a6f652b6bd6ff13",
+    "M2-TEN-HOUR-FINAL.md": "3b273fd47a7e6bb18069b555fa9bb4dac9c0fb512854320b5836c2b638dbce70"
+  }
+}

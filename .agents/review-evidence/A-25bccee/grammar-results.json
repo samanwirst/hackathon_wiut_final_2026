@@ -1,0 +1,400 @@
+{
+  "target_sha": "25bccee269bde978745c168852a716670b7f999b",
+  "supported_count": 240,
+  "supported_correct": 240,
+  "control_failures": [],
+  "probes": [
+    {
+      "text": "When a car enters Service Bay A, then open hood",
+      "result": {
+        "ok": false,
+        "draft": null,
+        "errors": [
+          "that action is not available (physical actuation / external dispatch); only in-app notifications are supported"
+        ],
+        "warnings": [],
+        "explanation": "Could not compile a complete, unambiguous workflow."
+      }
+    },
+    {
+      "text": "When a car enters Service Bay A with hood open and trunk up, create an alert",
+      "result": {
+        "ok": false,
+        "draft": null,
+        "errors": [
+          "more than one visual condition was requested; specify a single visual condition (supported: hood/trunk/door open, lights on)"
+        ],
+        "warnings": [],
+        "explanation": "Could not compile a complete, unambiguous workflow."
+      }
+    },
+    {
+      "text": "When a car stays in Service Bay A for .5 minutes, create an alert",
+      "result": {
+        "ok": false,
+        "draft": null,
+        "errors": [
+          "could not parse the dwell duration; use a whole or decimal number of seconds/minutes/hours (e.g. 'for 5 minutes'), not a fractional '.5' or a negative value"
+        ],
+        "warnings": [],
+        "explanation": "Could not compile a complete, unambiguous workflow."
+      }
+    },
+    {
+      "text": "When a car stays in Service Bay A for -5 minutes, create an alert",
+      "result": {
+        "ok": false,
+        "draft": null,
+        "errors": [
+          "could not parse the dwell duration; use a whole or decimal number of seconds/minutes/hours (e.g. 'for 5 minutes'), not a fractional '.5' or a negative value"
+        ],
+        "warnings": [],
+        "explanation": "Could not compile a complete, unambiguous workflow."
+      }
+    },
+    {
+      "text": "When more than 3 or more than 5 cars are in Service Bay A, create an alert",
+      "result": {
+        "ok": false,
+        "draft": null,
+        "errors": [
+          "more than one count comparison was specified (more than 3, more than 5); specify a single count threshold"
+        ],
+        "warnings": [],
+        "explanation": "Could not compile a complete, unambiguous workflow."
+      }
+    },
+    {
+      "text": "When a car stays in Service Bay A, create an alert for 5 minutes",
+      "result": {
+        "ok": false,
+        "draft": null,
+        "errors": [
+          "unsupported content in the action clause: '5', 'minutes'; the only supported action is an in-app alert/notification",
+          "dwell rule needs a duration, e.g. 'for 10 minutes'"
+        ],
+        "warnings": [],
+        "explanation": "Could not compile a complete, unambiguous workflow."
+      }
+    },
+    {
+      "text": "Create an alert for 5 minutes when a car stays in Service Bay A",
+      "result": {
+        "ok": true,
+        "draft": {
+          "name": "car dwell in zone",
+          "source_id": 1,
+          "object_class": "car",
+          "trigger": {
+            "type": "dwell_in_zone",
+            "zone_id": 7,
+            "duration_seconds": 300.0
+          },
+          "action": {
+            "type": "create_notification",
+            "config": {
+              "title": "car dwell in zone"
+            }
+          },
+          "cooldown_seconds": 10.0,
+          "requires_approval": true
+        },
+        "errors": [],
+        "warnings": [],
+        "explanation": "car \u00b7 dwell_in_zone \u2265300s \u2192 create_notification (draft, disabled until you approve)"
+      }
+    },
+    {
+      "text": "When a car enters Service Bay A with hood and trunk open, create an alert",
+      "result": {
+        "ok": true,
+        "draft": {
+          "name": "car entered zone + verify the vehicle trunk is open",
+          "source_id": 1,
+          "object_class": "car",
+          "trigger": {
+            "type": "object_entered_zone",
+            "zone_id": 7
+          },
+          "action": {
+            "type": "create_notification",
+            "config": {
+              "title": "car entered zone + verify the vehicle trunk is open"
+            }
+          },
+          "cooldown_seconds": 10.0,
+          "requires_approval": true,
+          "visual_predicate": {
+            "prompt": "Does the image clearly show that the vehicle trunk is open?",
+            "labels": [
+              "yes",
+              "no"
+            ],
+            "expected_label": "yes",
+            "description": "the vehicle trunk is open"
+          }
+        },
+        "errors": [],
+        "warnings": [
+          "a visual predicate was detected; it requires a configured Teacher VLM at runtime and is checked only on candidate events"
+        ],
+        "explanation": "car \u00b7 object_entered_zone \u00b7 visual: the vehicle trunk is open \u2192 create_notification (draft, disabled until you approve)"
+      }
+    },
+    {
+      "text": "When a car enters Service Bay A with hood open and lights, create an alert",
+      "result": {
+        "ok": true,
+        "draft": {
+          "name": "car entered zone + verify the vehicle hood is open",
+          "source_id": 1,
+          "object_class": "car",
+          "trigger": {
+            "type": "object_entered_zone",
+            "zone_id": 7
+          },
+          "action": {
+            "type": "create_notification",
+            "config": {
+              "title": "car entered zone + verify the vehicle hood is open"
+            }
+          },
+          "cooldown_seconds": 10.0,
+          "requires_approval": true,
+          "visual_predicate": {
+            "prompt": "Does the image clearly show that the vehicle hood is open?",
+            "labels": [
+              "yes",
+              "no"
+            ],
+            "expected_label": "yes",
+            "description": "the vehicle hood is open"
+          }
+        },
+        "errors": [],
+        "warnings": [
+          "a visual predicate was detected; it requires a configured Teacher VLM at runtime and is checked only on candidate events"
+        ],
+        "explanation": "car \u00b7 object_entered_zone \u00b7 visual: the vehicle hood is open \u2192 create_notification (draft, disabled until you approve)"
+      }
+    },
+    {
+      "text": "When a car enters Service Bay A with hood, create an alert",
+      "result": {
+        "ok": true,
+        "draft": {
+          "name": "car entered zone",
+          "source_id": 1,
+          "object_class": "car",
+          "trigger": {
+            "type": "object_entered_zone",
+            "zone_id": 7
+          },
+          "action": {
+            "type": "create_notification",
+            "config": {
+              "title": "car entered zone"
+            }
+          },
+          "cooldown_seconds": 10.0,
+          "requires_approval": true
+        },
+        "errors": [],
+        "warnings": [],
+        "explanation": "car \u00b7 object_entered_zone \u2192 create_notification (draft, disabled until you approve)"
+      }
+    },
+    {
+      "text": "When a car enters Service Bay A with lights off, create an alert",
+      "result": {
+        "ok": false,
+        "draft": null,
+        "errors": [
+          "negated visual conditions (e.g. 'hood not open') are not supported; state the positive condition to verify"
+        ],
+        "warnings": [],
+        "explanation": "Could not compile a complete, unambiguous workflow."
+      }
+    },
+    {
+      "text": "When a car enters Service Bay A with hood not open, create an alert",
+      "result": {
+        "ok": false,
+        "draft": null,
+        "errors": [
+          "unsupported or unrecognized phrasing: 'not'; rephrase using the supported grammar (class, enter/exit/dwell/count, zone, optional single visual condition)"
+        ],
+        "warnings": [],
+        "explanation": "Could not compile a complete, unambiguous workflow."
+      }
+    },
+    {
+      "text": "When a car does not enter Service Bay A, create an alert",
+      "result": {
+        "ok": false,
+        "draft": null,
+        "errors": [
+          "a negated trigger (e.g. 'does not enter') is not supported; describe the positive event to detect (enter, exit, dwell, or count)",
+          "unsupported or unrecognized phrasing: 'not'; rephrase using the supported grammar (class, enter/exit/dwell/count, zone, optional single visual condition)"
+        ],
+        "warnings": [],
+        "explanation": "Could not compile a complete, unambiguous workflow."
+      }
+    },
+    {
+      "text": "When a car enters or exits Service Bay A, create an alert",
+      "result": {
+        "ok": false,
+        "draft": null,
+        "errors": [
+          "more than one trigger type was requested (object_entered_zone, object_exited_zone); specify a single trigger (enter, exit, dwell, or count)"
+        ],
+        "warnings": [],
+        "explanation": "Could not compile a complete, unambiguous workflow."
+      }
+    },
+    {
+      "text": "When fewer than 3 cars are in Service Bay A, create an alert",
+      "result": {
+        "ok": false,
+        "draft": null,
+        "errors": [
+          "only a lower-bound count is supported (e.g. 'more than N' or 'at least N'), not an upper bound"
+        ],
+        "warnings": [],
+        "explanation": "Could not compile a complete, unambiguous workflow."
+      }
+    },
+    {
+      "text": "When a car stays in Service Bay A for less than 5 minutes, create an alert",
+      "result": {
+        "ok": false,
+        "draft": null,
+        "errors": [
+          "only a minimum dwell duration is supported (e.g. 'for 10 minutes' or 'longer than 10 minutes'), not an upper bound"
+        ],
+        "warnings": [],
+        "explanation": "Could not compile a complete, unambiguous workflow."
+      }
+    },
+    {
+      "text": "When a car enters Service Bay A, delete the video",
+      "result": {
+        "ok": false,
+        "draft": null,
+        "errors": [
+          "deleting or modifying stored videos, recordings or evidence is not a supported action; only in-app notifications are supported",
+          "unsupported or unrecognized phrasing: 'delete', 'video'; rephrase using the supported grammar (class, enter/exit/dwell/count, zone, optional single visual condition)"
+        ],
+        "warnings": [],
+        "explanation": "Could not compile a complete, unambiguous workflow."
+      }
+    },
+    {
+      "text": "When a car enters Service Bay A, send a webhook",
+      "result": {
+        "ok": false,
+        "draft": null,
+        "errors": [
+          "external delivery (webhook/HTTP/email/SMS/phone/Slack/Telegram) is not available; only in-app notifications are supported",
+          "unsupported or unrecognized phrasing: 'webhook'; rephrase using the supported grammar (class, enter/exit/dwell/count, zone, optional single visual condition)"
+        ],
+        "warnings": [],
+        "explanation": "Could not compile a complete, unambiguous workflow."
+      }
+    },
+    {
+      "text": "When a car enters Service Bay A, execute a shell script",
+      "result": {
+        "ok": false,
+        "draft": null,
+        "errors": [
+          "executing code, scripts, or shell commands is not supported",
+          "unsupported or unrecognized phrasing: 'execute', 'shell', 'script'; rephrase using the supported grammar (class, enter/exit/dwell/count, zone, optional single visual condition)"
+        ],
+        "warnings": [],
+        "explanation": "Could not compile a complete, unambiguous workflow."
+      }
+    },
+    {
+      "text": "When 3 or more or 5 or more cars are in Service Bay A, create an alert",
+      "result": {
+        "ok": true,
+        "draft": {
+          "name": "car count exceeded",
+          "source_id": 1,
+          "object_class": "car",
+          "trigger": {
+            "type": "object_count_exceeded",
+            "zone_id": 7,
+            "threshold": 2
+          },
+          "action": {
+            "type": "create_notification",
+            "config": {
+              "title": "car count exceeded"
+            }
+          },
+          "cooldown_seconds": 10.0,
+          "requires_approval": true
+        },
+        "errors": [],
+        "warnings": [
+          "interpreting 'at least 3' as more than 2 (inclusive lower bound)"
+        ],
+        "explanation": "car \u00b7 object_count_exceeded >2 \u2192 create_notification (draft, disabled until you approve)"
+      }
+    },
+    {
+      "text": "Notify me for 5 minutes when a car stays in Service Bay A",
+      "result": {
+        "ok": true,
+        "draft": {
+          "name": "car dwell in zone",
+          "source_id": 1,
+          "object_class": "car",
+          "trigger": {
+            "type": "dwell_in_zone",
+            "zone_id": 7,
+            "duration_seconds": 300.0
+          },
+          "action": {
+            "type": "create_notification",
+            "config": {
+              "title": "car dwell in zone"
+            }
+          },
+          "cooldown_seconds": 10.0,
+          "requires_approval": true
+        },
+        "errors": [],
+        "warnings": [],
+        "explanation": "car \u00b7 dwell_in_zone \u2265300s \u2192 create_notification (draft, disabled until you approve)"
+      }
+    },
+    {
+      "text": "When a car stays in Service Bay A for more than 2.5 minutes, create an alert",
+      "result": {
+        "ok": false,
+        "draft": null,
+        "errors": [
+          "more than one trigger type was requested (dwell_in_zone, object_count_exceeded); specify a single trigger (enter, exit, dwell, or count)"
+        ],
+        "warnings": [],
+        "explanation": "Could not compile a complete, unambiguous workflow."
+      }
+    },
+    {
+      "text": "When a car stays in Service Bay A for 5 minutes with hood open for 10 seconds, create an alert",
+      "result": {
+        "ok": false,
+        "draft": null,
+        "errors": [
+          "more than one duration was specified (5 minutes, 10 seconds); specify a single duration"
+        ],
+        "warnings": [],
+        "explanation": "Could not compile a complete, unambiguous workflow."
+      }
+    }
+  ]
+}
