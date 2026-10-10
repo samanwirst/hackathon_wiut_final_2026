@@ -2,9 +2,65 @@
 
 - Branch: `experiment/autolearn-ten-hour` (worktree C).
 - Implementation commit SHA: `530f36a752d132e0845cc9fbbbfc8f138c49709b`.
+- **Blocker-fix pass code SHA: `699775eca6cf12ab7c18512215c31197aba509b0`**
+  (prior review base `440eaa72d32874779eae447f94ea46dcca695a17`).
 - Base: `ae2b5a5` (root `feature/demo-safe`, frozen — untouched).
 - Status: **EXPERIMENTAL / UNVERIFIED.** No milestone verdict changed. M2 stays
   BLOCKED. M3 is **not** marked PASS. No push performed (root pushes).
+
+---
+
+## Blocker-fix pass (review AUTOLEARN-TEN-HOUR-INITIAL, commit 440eaa7)
+
+Isolated one-pass fixes in worktree C only. Default demo guard and disabled
+Teacher workflow actions stay enforced; AutoLearn still never dispatches an
+action. Existing schema columns preserved; additions are a new table and nullable
+audit columns applied with a data-preserving additive migration, so root can
+retain the backed-up image hashes and human verifications.
+
+| Finding | Resolution | Where |
+| --- | --- | --- |
+| C-001 | FIXED | `labeling.py`: one owned persistent loop for sync callers; per-running-loop admission semaphore (no global semaphore across `asyncio.run` loops); admission inside the absolute overall deadline; cancellation frees capacity on unwind; sync outer safety budget. |
+| C-002 | FIXED | new `ModelVersionSample` manifest table; `service.evaluate/shadow_compare/gate_status` read the frozen per-version membership, fail closed on missing/inconsistent snapshots; gate requires finite f1, support == snapshot test count, both classes. |
+| C-003 | FIXED | `service.build_split_plan` groups by physical `source_id`/`session_id`, rejects inconsistent group metadata; `dataset.build_split` refuses decode/re-encode near-dups across groups using a FIXED decoded-pixel MAD threshold (5.0; not tuned on held-out). |
+| C-004 | FIXED | `page.tsx` selection-generation guard discards stale detail/sample fetches; added real image upload (session/group/source provenance) and offline-classify controls; minimal responsive rule. |
+| C-005 | FIXED | durable per-task (`AUTOLEARN_LABEL_BUDGET_PER_TASK`) + per-job (`AUTOLEARN_LABEL_JOB_MAX`) budgets counted from the audit; duplicate suppression + cached-identical reuse (zero attempts); missing provider = zero attempts; offline classify fallback is budget-guarded. |
+| C-006 | FIXED | `labeling._parse_strict` + content extraction reject non-string content (int/bool/object) as `invalid_response` instead of raising `AttributeError`. |
+| C-007 | PRESERVED | success candidates carry the provider's ACTUAL `response_model` + `method` (`chat_json`) + bounded raw (usage, content preview, configured alias) with no credentials; audit stores `response_model`/`method`. `confidence_calibrated=False` flags self-reported confidence as uncalibrated. (Root's local Smol likelihood-scoring provider is a separate private experiment, not in this tree.) |
+
+### Commands run and actual results (this pass)
+
+- `pytest tests/unit/test_autolearn_c_transport.py -q` → **6 passed** (real 127.0.0.1 loopback TCP).
+- `pytest tests/unit/test_autolearn_c_service.py -q` → **12 passed**.
+- `pytest` on all AutoLearn files incl. integration → **41 passed** (real ResNet18 encoder + genuine fit/save/load/evaluate).
+- `pytest tests/` (full suite) → **236 passed** (no regressions; one trace is the intentional simulated-crash recovery test).
+- `apps/web`: `npm run build` → **compiled + type-checked OK**, `/autolearn` route built.
+- Transpiled-component harness (deterministic hook/fetch, no browser): out-of-order
+  A→B selection now shows **B_yes** review labels and activation targets **version 201**
+  (Task B), not the stale Task A/101; 2 file inputs present with `/images`+FormData and `/classify` wiring.
+
+### New / changed files (this pass)
+
+- `services/api/app/autolearn/labeling.py`, `service.py`, `dataset.py`
+- `services/api/app/db.py` (new `ModelVersionSample` table; nullable `response_model`/`method`
+  on `LabelingAudit`; additive `_migrate_additive`), `config.py` (budgets, near-dup MAD)
+- `apps/web/app/autolearn/page.tsx`
+- `tests/unit/test_autolearn_c_transport.py`, `tests/unit/test_autolearn_c_service.py`
+
+### Honest limits (this pass)
+
+- No Student fit on root's real 24-image dataset here; root exercises new code
+  against the copied backup. Image approval does NOT authorize activation.
+- Synthetic data is QA_ONLY (shared-generator procedural renders) — no
+  natural-video quality conclusion. No rental cost / GPU time / savings measured.
+- The near-dup MAD threshold separates re-encodes (~0–1.5) from distinct synthetic
+  scenes (~13.5) in this generator; on real footage root should sanity-check it.
+- Live Teacher labeling against a real provider remains UNVERIFIED; tests use
+  owned loopback mocks only (plainly QA_ONLY). **Not an M3 PASS.**
+
+---
+
+## Original slice (commit 530f36a) — context below
 
 ## What this is
 
