@@ -14,7 +14,9 @@ and AutoLearn work proceed. Example preparation from this experimental worktree:
 
 ```sh
 python3.12 -m venv .agents/runtime/local-teacher/.venv
-.agents/runtime/local-teacher/.venv/bin/python -m pip install \
+mkdir -p .agents/runtime/local-teacher/tmp
+TMPDIR="$PWD/.agents/runtime/local-teacher/tmp" \
+  .agents/runtime/local-teacher/.venv/bin/python -m pip install \
   torch==2.7.1 torchvision==0.22.1 \
   --index-url https://download.pytorch.org/whl/cu118
 .agents/runtime/local-teacher/.venv/bin/python -m pip install \
@@ -24,6 +26,12 @@ export HF_HOME="$PWD/.agents/runtime/local-teacher/hf-cache"
 OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 \
   .agents/runtime/local-teacher/.venv/bin/python scripts/experiments/local_teacher.py
 ```
+
+Use project-disk `TMPDIR` for the CUDA wheels; the host's small `/tmp` tmpfs
+exhausted its quota during the initial probe. The completed pinned model
+download can also be reused with `LOCAL_TEACHER_MODEL_DIR` pointing at a local
+directory containing the downloaded files and a `source.json` identity/hash
+manifest. The harness rejects a mismatched manifest or weights hash.
 
 No credentials are required for the public model download. An optional
 `LOCAL_TEACHER_TOKEN` is read only from an ignored environment file; the client
