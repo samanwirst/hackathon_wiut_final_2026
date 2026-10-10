@@ -133,15 +133,30 @@ export default function AutoLearnPage() {
     refreshDetail(id, gen);
   }, [refreshDetail]);
 
-  const reloadCurrent = useCallback(async () => {
-    if (sel != null) await refreshDetail(sel, selGen.current);
-  }, [sel, refreshDetail]);
+  // Reload the task/version detail for an EXPLICIT selection generation captured
+  // when an action started (C-004) — never the live ``selGen.current``, so a
+  // delayed label/upload/train/eval result cannot repaint the detail of a task the
+  // user has since navigated away from.
+  const reloadFor = useCallback(async (taskId: number | null, gen: number) => {
+    if (taskId != null) await refreshDetail(taskId, gen);
+  }, [refreshDetail]);
 
   useEffect(() => { refreshTasks(); }, [refreshTasks]);
 
-  const run = async (label: string, fn: () => Promise<void>) => {
+  // Every delayed operation captures the selected task id + generation at START
+  // and keeps them through its reload/result/error commit. ``ctx.live()`` is true
+  // only while that generation is still selected, so stale successes/errors and
+  // shadow/classify payloads never replace the currently selected task's controls
+  // (C-004).
+  type RunCtx = { gen: number; taskId: number | null; live: () => boolean };
+  const run = async (label: string, fn: (ctx: RunCtx) => Promise<void>) => {
+    const gen = selGen.current;
+    const taskId = sel;
+    const live = () => gen === selGen.current;
     setBusy(label); setErr(null);
-    try { await fn(); } catch (e) { setErr(String(e)); } finally { setBusy(null); }
+    try { await fn({ gen, taskId, live }); }
+    catch (e) { if (live()) setErr(String(e)); }
+    finally { if (live()) setBusy(null); }
   };
 
   const createTask = () => run("create", async () => {
@@ -209,17 +224,17 @@ export default function AutoLearnPage() {
           )}
         </section>
 
-        {sel != null && detail && (
+        {sel != null && detail && detail.task.id === sel && (
           <>
             {/* ------------------------------------------------ dataset */}
             <section className="card">
               <div className="card-head"><span className="idx">2</span><h2>Dataset & labeling</h2>
                 <span className="sub">{detail.counts.samples} images · {detail.counts.sessions} sessions · {detail.counts.verified} verified</span></div>
               <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
-                <button className="secondary sm" disabled={!!busy} onClick={() => run("import", async () => { await jpost(`/api/autolearn/tasks/${sel}/import-synthetic`, { n_sessions: 5, per_class_per_session: 3 }); await reloadCurrent(); })}>
+                <button className="secondary sm" disabled={!!busy} onClick={() => run("import", async (ctx) => { await jpost(`/api/autolearn/tasks/${ctx.taskId}/import-synthetic`, { n_sessions: 5, per_class_per_session: 3 }); await reloadFor(ctx.taskId, ctx.gen); })}>
                   {busy === "import" ? <span className="spinner" /> : null} Import QA_ONLY synthetic sessions
                 </button>
-                <button className="secondary sm" disabled={!!busy} onClick={() => run("label", async () => { const r = await jpost<{ status: string; detail?: string }>(`/api/autolearn/tasks/${sel}/label`); if (r.status === "unavailable") setErr("Teacher provider not configured — labels remain pending (no synthetic labels invented)."); await reloadCurrent(); })}>
+                <button className="secondary sm" disabled={!!busy} onClick={() => run("label", async (ctx) => { const r = await jpost<{ status: string; detail?: string }>(`/api/autolearn/tasks/${ctx.taskId}/label`); if (ctx.live() && r.status === "unavailable") setErr("Teacher provider not configured — labels remain pending (no synthetic labels invented)."); await reloadFor(ctx.taskId, ctx.gen); })}>
                   {busy === "label" ? <span className="spinner" /> : null} Run Teacher labeling
                 </button>
               </div>
@@ -239,18 +254,18 @@ export default function AutoLearnPage() {
                     const input = e.target;
                     if (!files.length) return;
                     if (!upload.session_id.trim()) { setErr("A session ID is required to upload images (keeps grouping leakage-free)."); input.value = ""; return; }
-                    run("upload", async () => {
+                    run("upload", async (ctx) => {
                       const qs = new URLSearchParams({ session_id: upload.session_id.trim() });
                       if (upload.group_key.trim()) qs.set("group_key", upload.group_key.trim());
                       if (upload.source_id.trim()) qs.set("source_id", upload.source_id.trim());
                       let ok = 0, dup = 0;
                       for (const f of files) {
-                        const r = await jpostForm<{ imported: boolean }>(`/api/autolearn/tasks/${sel}/images?${qs.toString()}`, f);
+                        const r = await jpostForm<{ imported: boolean }>(`/api/autolearn/tasks/${ctx.taskId}/images?${qs.toString()}`, f);
                         if (r.imported) ok++; else dup++;
                       }
                       input.value = "";
-                      if (dup) setErr(`Uploaded ${ok} image(s); skipped ${dup} exact duplicate(s).`);
-                      await reloadCurrent();
+                      if (ctx.live() && dup) setErr(`Uploaded ${ok} image(s); skipped ${dup} exact duplicate(s).`);
+                      await reloadFor(ctx.taskId, ctx.gen);
                     });
                   }} />
                   {busy === "upload" ? <span className="spinner" /> : null}
@@ -269,8 +284,8 @@ export default function AutoLearnPage() {
                         ? <span className="badge done" style={{ marginTop: 4 }}><span className="dot" />verified: {s.verified_label}</span>
                         : (
                           <div className="row" style={{ marginTop: 6, gap: 4 }}>
-                            <button className="ghost sm" disabled={!!busy} onClick={() => run("rev", async () => { await jpost(`/api/autolearn/samples/${s.id}/review`, { verified_label: detail.task.positive_label, reviewer }); await reloadCurrent(); })}>{detail.task.positive_label}</button>
-                            <button className="ghost sm" disabled={!!busy} onClick={() => run("rev", async () => { await jpost(`/api/autolearn/samples/${s.id}/review`, { verified_label: detail.task.negative_label, reviewer }); await reloadCurrent(); })}>{detail.task.negative_label}</button>
+                            <button className="ghost sm" disabled={!!busy} onClick={() => run("rev", async (ctx) => { await jpost(`/api/autolearn/samples/${s.id}/review`, { verified_label: detail.task.positive_label, reviewer }); await reloadFor(ctx.taskId, ctx.gen); })}>{detail.task.positive_label}</button>
+                            <button className="ghost sm" disabled={!!busy} onClick={() => run("rev", async (ctx) => { await jpost(`/api/autolearn/samples/${s.id}/review`, { verified_label: detail.task.negative_label, reviewer }); await reloadFor(ctx.taskId, ctx.gen); })}>{detail.task.negative_label}</button>
                           </div>
                         )}
                     </div>
@@ -284,10 +299,10 @@ export default function AutoLearnPage() {
               <div className="card-head"><span className="idx">3</span><h2>Train & evaluate Student</h2>
                 <span className="sub">frozen ResNet18 embeddings · logistic regression</span></div>
               <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
-                <button className="secondary sm" disabled={!!busy} onClick={() => run("train", async () => { await jpost(`/api/autolearn/tasks/${sel}/train`); await reloadCurrent(); })}>
+                <button className="secondary sm" disabled={!!busy} onClick={() => run("train", async (ctx) => { await jpost(`/api/autolearn/tasks/${ctx.taskId}/train`); await reloadFor(ctx.taskId, ctx.gen); })}>
                   {busy === "train" ? <span className="spinner" /> : null} Train Student
                 </button>
-                {latest && <button className="secondary sm" disabled={!!busy} onClick={() => run("shadow", async () => { setShadow(await jget(`/api/autolearn/tasks/${sel}/shadow`)); })}>Run shadow comparison</button>}
+                {latest && <button className="secondary sm" disabled={!!busy} onClick={() => run("shadow", async (ctx) => { const sh = await jget<Record<string, unknown>>(`/api/autolearn/tasks/${ctx.taskId}/shadow`); if (ctx.live()) setShadow(sh); })}>Run shadow comparison</button>}
               </div>
 
               {detail.versions.length > 0 && (
@@ -304,8 +319,8 @@ export default function AutoLearnPage() {
                           <td>{m.f1 ?? "—"}</td><td>{m.precision ?? "—"}</td><td>{m.recall ?? "—"}</td>
                           <td className="faint">{v.threshold}</td>
                           <td className="row" style={{ gap: 4, justifyContent: "flex-end" }}>
-                            <button className="ghost sm" disabled={!!busy} onClick={() => run("eval", async () => { await jpost(`/api/autolearn/versions/${v.id}/evaluate`); await reloadCurrent(); })}>Eval</button>
-                            <button className="sm" disabled={!!busy} onClick={() => run("act", async () => { const r = await jpost<{ activated: boolean; reason?: string }>(`/api/autolearn/versions/${v.id}/activate`, { approve: true, approver: reviewer }); if (!r.activated) setErr(`Not activated: ${r.reason}`); await reloadCurrent(); })}>Activate</button>
+                            <button className="ghost sm" disabled={!!busy} onClick={() => run("eval", async (ctx) => { await jpost(`/api/autolearn/versions/${v.id}/evaluate`); await reloadFor(ctx.taskId, ctx.gen); })}>Eval</button>
+                            <button className="sm" disabled={!!busy} onClick={() => run("act", async (ctx) => { const r = await jpost<{ activated: boolean; reason?: string }>(`/api/autolearn/versions/${v.id}/activate`, { approve: true, approver: reviewer }); if (ctx.live() && !r.activated) setErr(`Not activated: ${r.reason}`); await reloadFor(ctx.taskId, ctx.gen); })}>Activate</button>
                           </td>
                         </tr>
                       );
@@ -317,7 +332,7 @@ export default function AutoLearnPage() {
                 Activation requires a passed held-out gate (F1 ≥ {status?.gate.min_f1}, test ≥ {status?.gate.min_test}) <em>and</em> this explicit approval. Metrics come from real held-out predictions.
               </p>
               <div className="row" style={{ marginTop: 6, gap: 8 }}>
-                {detail.task.active_version_id && <button className="ghost sm" disabled={!!busy} onClick={() => run("rb", async () => { await jpost(`/api/autolearn/tasks/${sel}/rollback`, { approver: reviewer }); await reloadCurrent(); })}>Roll back active version</button>}
+                {detail.task.active_version_id && <button className="ghost sm" disabled={!!busy} onClick={() => run("rb", async (ctx) => { await jpost(`/api/autolearn/tasks/${ctx.taskId}/rollback`, { approver: reviewer }); await reloadFor(ctx.taskId, ctx.gen); })}>Roll back active version</button>}
               </div>
             </section>
 
@@ -341,9 +356,9 @@ export default function AutoLearnPage() {
                   const f = (e.target.files || [])[0];
                   const input = e.target;
                   if (!f) return;
-                  run("classify", async () => {
-                    const res = await jpostForm<Record<string, unknown>>(`/api/autolearn/tasks/${sel}/classify`, f);
-                    setClassifyResult(res);
+                  run("classify", async (ctx) => {
+                    const res = await jpostForm<Record<string, unknown>>(`/api/autolearn/tasks/${ctx.taskId}/classify`, f);
+                    if (ctx.live()) setClassifyResult(res);
                     input.value = "";
                   });
                 }} />
