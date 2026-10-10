@@ -36,7 +36,7 @@ def main():
         model.raise_for_status()
         for path in args.images:
             raw = path.read_bytes()
-            request = {"model": MODEL, "max_tokens": 96, "temperature": 0,
+            request = {"model": MODEL, "max_tokens": 64, "temperature": 0,
                        "messages": [{"role": "user", "content": [
                            {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64," + base64.b64encode(raw).decode()}},
                            {"type": "text", "text": PROMPT},

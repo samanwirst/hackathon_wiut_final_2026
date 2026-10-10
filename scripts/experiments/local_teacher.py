@@ -71,7 +71,8 @@ def load_model():
     model = AutoModelForVision2Seq.from_pretrained(
         source, revision=REVISION, torch_dtype=torch.bfloat16,
         _attn_implementation="sdpa", trust_remote_code=False,
-    ).to("cuda").eval()
+        device_map="cuda", low_cpu_mem_usage=True,
+    ).eval()
     torch.cuda.synchronize()
     metadata = {
         "model": MODEL_ID, "revision": REVISION, "license": "Apache-2.0",
@@ -147,12 +148,14 @@ def parse_payload(payload):
                     if len(raw) > MAX_IMAGE_BYTES:
                         raise HTTPException(413, "encoded image exceeds limit")
                     image = Image.open(io.BytesIO(raw))
+                    if image.format not in {"JPEG", "PNG"}:
+                        raise HTTPException(400, "decoded image must be JPEG or PNG")
                     if image.width * image.height > 4_000_000:
                         raise HTTPException(413, "image pixel limit exceeded")
                     image.load()
                     image = image.convert("RGB")
                     image.thumbnail((512, 512))
-                except (ValueError, UnidentifiedImageError, Image.DecompressionBombError):
+                except (ValueError, OSError, UnidentifiedImageError, Image.DecompressionBombError):
                     raise HTTPException(400, "invalid image") from None
                 images.append(image)
                 prepared.append({"type": "image"})

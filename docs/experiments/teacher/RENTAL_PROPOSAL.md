@@ -38,8 +38,11 @@ send a credential in chat. Account/key availability alone is not approval.
 
 1. After approval, register only the operator's intended public SSH key and
    use a pinned vLLM image/version. Current upstream release observed today is
-   `v0.31.0`; its actual GPU/driver compatibility and image digest still require
-   verification before launching. Do not use a mutable `latest` container.
+   `v0.31.0`; the official Docker Hub linux/amd64 image digest is
+   `sha256:a4a4c0437bf7240089da5f08aa370c4aee17ae5290f7a3b468825ee26c4c3a6b`
+   (compressed size 9,035,211,086 bytes). Its tagged Dockerfile uses CUDA 13.0.3,
+   matching the candidate's reported CUDA 13.0 compatibility. Actual image
+   startup/GPU compatibility still needs verification. Never use `latest`.
 2. Candidate Teacher is `Qwen/Qwen2.5-VL-7B-Instruct`, Apache-2.0, pinned
    revision `cc594898137f460bfe9f0759e9844b3ce807cfb5`. Actual fit and performance
    on the 3090 remain **UNVERIFIED**. Cap context, images and concurrent sequences;
@@ -69,6 +72,8 @@ Primary sources checked:
 - [Vast SSH and port forwarding](https://docs.vast.ai/guides/instances/connect/ssh)
 - [vLLM Qwen2.5-VL recipe](https://docs.vllm.ai/projects/recipes/en/stable/Qwen/Qwen2.5-VL.html)
 - [vLLM releases](https://github.com/vllm-project/vllm/releases)
+- [vLLM tagged Dockerfile](https://github.com/vllm-project/vllm/blob/v0.31.0/docker/Dockerfile)
+- [Official vLLM Docker image tag](https://hub.docker.com/r/vllm/vllm-openai/tags?name=v0.31.0)
 - [Qwen model and license](https://huggingface.co/Qwen/Qwen2.5-VL-7B-Instruct)
 
 All remote inference, compatibility, actual cost and benchmark claims are
