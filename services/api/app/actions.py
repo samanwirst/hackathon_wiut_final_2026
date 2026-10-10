@@ -16,8 +16,9 @@ from __future__ import annotations
 
 import ipaddress
 import logging
+import posixpath
 import socket
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, urlunsplit
 
 import httpx
 from sqlalchemy.orm import Session
@@ -39,6 +40,35 @@ def _effective_port(scheme: str, port: int | None) -> int:
     return 443 if scheme == "https" else 80
 
 
+def _canonical_path(raw_path: str) -> str | None:
+    """Return a normalized absolute path with '.'/'..' segments resolved, or
+    None if the path uses ambiguous or percent/backslash-encoded traversal.
+
+    Encoded separators (%2e, %2f, %5c) and backslashes are rejected outright
+    because the server would decode them after our prefix check, re-opening the
+    traversal hole. Plain '..' segments are collapsed so authorization sees the
+    same effective path the HTTP client will ultimately request."""
+    lowered = raw_path.lower()
+    if any(tok in lowered for tok in ("%2e", "%2f", "%5c", "\\")):
+        return None
+    if not raw_path.startswith("/"):
+        raw_path = "/" + raw_path
+    normalized = posixpath.normpath(raw_path)
+    # normpath drops a trailing slash and collapses "/" to "/"; that is fine for
+    # prefix comparison. Absolute paths can never escape above root here.
+    if normalized == ".":
+        normalized = "/"
+    return normalized
+
+
+def _path_within(req_path: str, prefix: str) -> bool:
+    """True if the normalized request path is at or below the normalized prefix,
+    respecting segment boundaries so '/hookother' does not match '/hook'."""
+    if prefix == "/":
+        return True
+    return req_path == prefix or req_path.startswith(prefix + "/")
+
+
 def _parse_allowlist() -> list[tuple[str, str, int, str]]:
     """Canonicalize each configured allowlist entry into
     (scheme, hostname, port, path_prefix). Malformed entries are ignored."""
@@ -48,12 +78,13 @@ def _parse_allowlist() -> list[tuple[str, str, int, str]]:
             parts = urlsplit(raw)
             if parts.scheme not in ("http", "https") or not parts.hostname:
                 continue
+            prefix = _canonical_path(parts.path or "/") or "/"
             entries.append(
                 (
                     parts.scheme,
                     parts.hostname.lower(),
                     _effective_port(parts.scheme, parts.port),
-                    parts.path or "/",
+                    prefix,
                 )
             )
         except ValueError:
@@ -88,42 +119,63 @@ def _resolves_to_internal(host: str) -> tuple[bool, str]:
     return False, "ok"
 
 
-def _webhook_authorization(url: str) -> tuple[bool, str]:
-    """Authorize a webhook destination against WEBHOOK_ALLOWLIST.
+def _authorize_webhook(url: str) -> tuple[bool, str, str | None]:
+    """Authorize a webhook destination against WEBHOOK_ALLOWLIST and return the
+    exact canonical URL that must be delivered.
 
     Canonicalizes the requested URL, rejects embedded userinfo (which HTTPX
-    would otherwise use to disguise an internal destination), and compares
-    scheme/hostname/effective-port exactly while enforcing the permitted path
-    prefix. Returns (allowed, reason)."""
+    would otherwise use to disguise an internal destination), compares
+    scheme/hostname/effective-port exactly, resolves '.'/'..' path segments, and
+    enforces the permitted path prefix after normalization. The authorized URL
+    and the delivered URL are identical, so the HTTP client cannot normalize a
+    path out of the allowlist after the check (M1-006). Returns
+    (allowed, reason, canonical_url)."""
     try:
         parts = urlsplit(url)
     except ValueError as exc:
-        return False, f"invalid webhook URL: {exc}"
+        return False, f"invalid webhook URL: {exc}", None
     if parts.scheme not in ("http", "https"):
-        return False, "webhook scheme must be http or https"
+        return False, "webhook scheme must be http or https", None
     if parts.username or parts.password:
-        return False, "webhook URL must not contain userinfo"
+        return False, "webhook URL must not contain userinfo", None
     host = (parts.hostname or "").lower()
     if not host:
-        return False, "webhook URL missing host"
+        return False, "webhook URL missing host", None
     try:
         port = _effective_port(parts.scheme, parts.port)
     except ValueError:
-        return False, "webhook URL has invalid port"
-    req_path = parts.path or "/"
+        return False, "webhook URL has invalid port", None
+
+    req_path = _canonical_path(parts.path or "/")
+    if req_path is None:
+        return False, "webhook URL uses ambiguous or encoded path traversal", None
 
     matched = False
     for scheme, ahost, aport, apath in _parse_allowlist():
-        if scheme == parts.scheme and ahost == host and aport == port and req_path.startswith(apath):
+        if (
+            scheme == parts.scheme
+            and ahost == host
+            and aport == port
+            and _path_within(req_path, apath)
+        ):
             matched = True
             break
     if not matched:
-        return False, "webhook destination not in WEBHOOK_ALLOWLIST; refusing to send"
+        return False, "webhook destination not in WEBHOOK_ALLOWLIST; refusing to send", None
 
     internal, reason = _resolves_to_internal(host)
     if internal:
-        return False, reason
-    return True, "ok"
+        return False, reason, None
+
+    netloc = host if parts.port is None else f"{host}:{parts.port}"
+    canonical_url = urlunsplit((parts.scheme, netloc, req_path, parts.query, ""))
+    return True, "ok", canonical_url
+
+
+def _webhook_authorization(url: str) -> tuple[bool, str]:
+    """Backward-compatible 2-tuple wrapper around :func:`_authorize_webhook`."""
+    allowed, reason, _ = _authorize_webhook(url)
+    return allowed, reason
 
 
 def _post_webhook(url: str, payload: dict) -> None:
@@ -157,7 +209,7 @@ def execute_action(session: Session, event: TrackEvent, action_type: str, action
 
         elif action_type == "send_webhook":
             url = action_config.get("url", "")
-            allowed, reason = _webhook_authorization(url)
+            allowed, reason, canonical_url = _authorize_webhook(url)
             if not allowed:
                 execution.status = "rejected"
                 execution.error = reason
@@ -171,7 +223,9 @@ def execute_action(session: Session, event: TrackEvent, action_type: str, action
                     "confidence": event.confidence,
                     "detail": event.detail,
                 }
-                _post_webhook(url, payload)
+                # Deliver the exact authorized URL (M1-006): no component the
+                # client could re-normalize past the allowlist check.
+                _post_webhook(canonical_url, payload)
                 execution.status = "success"
         else:
             execution.status = "failed"

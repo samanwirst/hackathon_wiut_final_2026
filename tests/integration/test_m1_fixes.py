@@ -1,4 +1,4 @@
-"""Integration tests for M1 defect fixes M1-003/004/005.
+"""Integration tests for M1 defect fixes M1-003/004/005/007/008/009.
 
 All use clearly-disclosed test-only stub detectors (not real inference).
 """
@@ -12,7 +12,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app import pipeline
-from app.db import VideoSource, get_session
+from app.db import VideoSource, Workflow, get_session
 from app.main import app
 from visionflow_vision.detector import BaseDetectorTracker
 from visionflow_vision.events import TrackedObject
@@ -76,6 +76,15 @@ def _wait_status(client, source_id, target=("processed", "failed"), timeout=30):
             return status
         time.sleep(0.1)
     return client.get(f"/api/sources/{source_id}").json()["status"]
+
+
+def _wait_not_running(source_id, timeout=15):
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        if not pipeline.is_running(source_id):
+            return True
+        time.sleep(0.05)
+    return not pipeline.is_running(source_id)
 
 
 def _use_detector(det):
@@ -241,5 +250,178 @@ def test_interrupted_processing_recovered_and_retryable(client, video_path):
         # Retry is now permitted (not 409).
         assert client.post(f"/api/sources/{source['id']}/process").status_code == 202
         assert _wait_status(client, source["id"]) == "processed"
+    finally:
+        _reset_detector()
+
+
+# -------------------------------------------------------------- M1-003 (two events / one frame)
+
+
+class TwoCarDetector(BaseDetectorTracker):
+    """Reports two distinct cars, both inside the right-half zone every frame, so
+    both transition inside and emit enter events on the same sampled frame."""
+
+    def __init__(self):
+        self.last_inference_ms = 0.1
+
+    def reset(self):
+        pass
+
+    def track_frame(self, frame, timestamp):
+        h, w = frame.shape[:2]
+        cx = 0.8 * w
+        return [
+            TrackedObject(1, "car", 0.95, cx - 10, 100, cx + 10, 140),
+            TrackedObject(2, "car", 0.95, cx - 10, 150, cx + 10, 190),
+        ]
+
+
+def test_disable_between_events_in_one_frame_suppresses_remainder(client, video_path):
+    det = TwoCarDetector()
+    _use_detector(det)
+    original = pipeline._dispatch_action
+    state = {"count": 0, "wf_id": None}
+
+    def wrapped(session, wf, event):
+        original(session, wf, event)
+        state["count"] += 1
+        if state["count"] == 1:
+            # Disable (committed, like the API does) immediately after the first
+            # action commits, before the second event of the same frame.
+            s = get_session()
+            try:
+                row = s.get(Workflow, state["wf_id"])
+                row.enabled = False
+                s.commit()
+            finally:
+                s.close()
+
+    try:
+        source = _upload(client, video_path, "m1003b.mp4")
+        zone = _right_half_zone(client, source["id"])
+        wf = _enter_workflow(client, source["id"], zone["id"])
+        state["wf_id"] = wf["id"]
+        pipeline._dispatch_action = wrapped
+
+        assert client.post(f"/api/sources/{source['id']}/process").status_code == 202
+        assert _wait_status(client, source["id"]) == "processed"
+
+        events = client.get("/api/events", params={"source_id": source["id"]}).json()
+        # First event (and its action) kept; the second is suppressed by disable.
+        assert len(events) == 1, f"expected exactly one event, got {events}"
+        assert events[0]["action_status"] == "done"
+        assert state["count"] == 1, "a second action was dispatched after disable"
+    finally:
+        pipeline._dispatch_action = original
+        _reset_detector()
+
+
+# -------------------------------------------------------------- M1-007 (resume undispatched action)
+
+
+class SingleCarDetector(BaseDetectorTracker):
+    def __init__(self):
+        self.last_inference_ms = 0.1
+
+    def reset(self):
+        pass
+
+    def track_frame(self, frame, timestamp):
+        h, w = frame.shape[:2]
+        cx = 0.8 * w
+        return [TrackedObject(1, "car", 0.95, cx - 10, 100, cx + 10, 140)]
+
+
+def test_interrupted_before_dispatch_resumes_on_retry(client, video_path):
+    det = SingleCarDetector()
+    _use_detector(det)
+    original = pipeline._dispatch_action
+    interrupt = {"armed": True}
+
+    def crashing_dispatch(session, wf, event):
+        if interrupt["armed"]:
+            interrupt["armed"] = False
+            raise SystemExit("simulated crash after event+evidence commit")
+        original(session, wf, event)
+
+    try:
+        source = _upload(client, video_path, "m1007b.mp4")
+        zone = _right_half_zone(client, source["id"])
+        wf = _enter_workflow(client, source["id"], zone["id"])
+
+        pipeline._dispatch_action = crashing_dispatch
+        assert client.post(f"/api/sources/{source['id']}/process").status_code == 202
+        assert _wait_not_running(source["id"]), "worker thread did not exit"
+
+        # The event + evidence committed, but the action never dispatched.
+        events = client.get("/api/events", params={"source_id": source["id"]}).json()
+        assert len(events) == 1, events
+        ev_id = events[0]["id"]
+        assert events[0]["action_status"] == "pending"
+        assert client.get(f"/api/events/{ev_id}/actions").json() == []
+
+        # Restore dispatch, recover the interrupted source, reprocess.
+        pipeline._dispatch_action = original
+        assert pipeline.recover_interrupted_sources() >= 1
+        assert client.get(f"/api/sources/{source['id']}").json()["status"] == "failed"
+
+        assert client.post(f"/api/sources/{source['id']}/process").status_code == 202
+        assert _wait_status(client, source["id"]) == "processed"
+
+        # No duplicate event; the previously pending action now completes once.
+        events2 = client.get("/api/events", params={"source_id": source["id"]}).json()
+        assert len(events2) == 1, f"reprocess duplicated events: {events2}"
+        assert events2[0]["action_status"] == "done"
+        acts = client.get(f"/api/events/{ev_id}/actions").json()
+        assert len(acts) == 1 and acts[0]["status"] == "success", acts
+    finally:
+        pipeline._dispatch_action = original
+        _reset_detector()
+
+
+# -------------------------------------------------------------- M1-008 (invalid notification title)
+
+
+def test_invalid_notification_title_rejected(client, video_path):
+    source = _upload(client, video_path, "m1008.mp4")
+    zone = _right_half_zone(client, source["id"])
+    r = client.post(
+        "/api/workflows",
+        json={
+            "name": "bad title",
+            "source_id": source["id"],
+            "object_class": "car",
+            "trigger": {"type": "object_entered_zone", "zone_id": zone["id"]},
+            "action": {
+                "type": "create_notification",
+                "config": {"title": {"invalid": "object"}},
+            },
+        },
+    )
+    assert r.status_code == 422, r.text
+
+
+# -------------------------------------------------------------- M1-009 (evidence write failure)
+
+
+def test_evidence_write_failure_fails_source_and_rolls_back(client, video_path, monkeypatch):
+    det = SingleCarDetector()
+    _use_detector(det)
+    try:
+        source = _upload(client, video_path, "m1009.mp4")
+        zone = _right_half_zone(client, source["id"])
+        _enter_workflow(client, source["id"], zone["id"])
+
+        # Simulate an unwritable/full evidence destination.
+        monkeypatch.setattr(pipeline.cv2, "imwrite", lambda *a, **k: False)
+
+        assert client.post(f"/api/sources/{source['id']}/process").status_code == 202
+        assert _wait_status(client, source["id"]) == "failed"
+
+        got = client.get(f"/api/sources/{source['id']}").json()
+        assert "evidence" in (got["error"] or "").lower(), got
+        # The incomplete event was rolled back — no dangling event/evidence URL.
+        events = client.get("/api/events", params={"source_id": source["id"]}).json()
+        assert events == [], f"event persisted despite evidence failure: {events}"
     finally:
         _reset_detector()

@@ -35,12 +35,29 @@ Branch: `feature/visionflow`.
 - New tests: `tests/unit/test_webhook_auth.py`, count re-arm case in
   `tests/unit/test_events.py`, `tests/integration/test_m1_fixes.py`.
 
+## M1 review fix cycle 2 (2026-10-10) — all FIXED
+
+- M1-006 webhook path traversal: authorize and deliver one canonical URL;
+  `'.'/'..'` resolved and prefix enforced after normalization; encoded
+  traversal (`%2e`/`%2f`/`%5c`/`\`) rejected (`actions.py`).
+- M1-003 disable between two events in one frame: `enabled` re-checked before
+  each event, not once per frame (`pipeline.py`).
+- M1-007 interrupted before dispatch: resume committed-but-undispatched events
+  (pending + zero ActionExecution) on reprocess/recovery; completed events stay
+  deduped (`pipeline.py`).
+- M1-008 bad notification title: bounded-string validation → 422; failed
+  transactions rolled back before recording source failure, fresh-session
+  fallback (`schemas.py`, `pipeline.py`).
+- M1-009 evidence write failure: `cv2.imwrite` return checked, raises, event
+  work rolled back, source recorded failed (`pipeline.py`).
+- New tests: traversal cases in `tests/unit/test_webhook_auth.py`; M1-003/007/
+  008/009 cases in `tests/integration/test_m1_fixes.py`.
+
 ## Verified by actual execution (2026-10-10)
 
-- `pytest tests/` → 60 passed.
+- `pytest tests/` → 69 passed (16 controller tests unchanged).
 - `scripts/smoke_e2e.py` → PASS: bus detected (conf 0.76), enter event at
-  t=4.2 s, evidence JPEG, notification; 136.9 ms avg CPU inference (cold),
-  62 ms warm.
+  t=4.2 s, evidence JPEG served 200, notification; 54.7 ms avg CPU inference.
 - Manual browser run of the full UI flow (upload → zone → workflow → process
   → event + evidence + notification).
 

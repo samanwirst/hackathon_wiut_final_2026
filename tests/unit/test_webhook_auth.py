@@ -81,6 +81,88 @@ def test_empty_allowlist_rejects_everything(monkeypatch):
     assert "allowlist" in reason.lower()
 
 
+# ------------------------------------------------- path traversal (M1-006)
+
+
+def test_dotdot_traversal_rejected(monkeypatch):
+    monkeypatch.setattr(config, "WEBHOOK_ALLOWLIST", ["http://127.0.0.1:9876/hook/"])
+    allowed, reason, canonical = actions._authorize_webhook(
+        "http://127.0.0.1:9876/hook/../admin"
+    )
+    assert not allowed
+    assert canonical is None
+
+
+def test_encoded_traversal_rejected(monkeypatch):
+    monkeypatch.setattr(config, "WEBHOOK_ALLOWLIST", ["http://127.0.0.1:9876/hook/"])
+    allowed, reason, canonical = actions._authorize_webhook(
+        "http://127.0.0.1:9876/hook/%2e%2e/admin"
+    )
+    assert not allowed
+    assert canonical is None
+    assert "traversal" in reason.lower()
+
+
+def test_legit_subpath_canonicalized(monkeypatch):
+    monkeypatch.setattr(config, "WEBHOOK_ALLOWLIST", ["http://127.0.0.1:9876/hook/"])
+    allowed, _, canonical = actions._authorize_webhook(
+        "http://127.0.0.1:9876/hook/./deploy"
+    )
+    assert allowed
+    assert canonical == "http://127.0.0.1:9876/hook/deploy"
+
+
+def test_traversal_never_reaches_admin_via_transport(session, monkeypatch):
+    """The defect: authorization accepts the raw '/hook/../admin' path but HTTPX
+    normalizes it to '/admin' on the wire. The transport must never see it."""
+    monkeypatch.setattr(config, "WEBHOOK_ALLOWLIST", ["http://127.0.0.1:9876/hook/"])
+    seen: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request.url.path)
+        return httpx.Response(200)
+
+    monkeypatch.setattr(actions, "webhook_transport", httpx.MockTransport(handler))
+
+    ev = _make_event(session)
+    actions.execute_action(
+        session, ev, "send_webhook",
+        {"url": "http://127.0.0.1:9876/hook/../admin"},
+    )
+
+    assert seen == []  # no request reached the transport, certainly not /admin
+    exec_row = (
+        session.query(db.ActionExecution)
+        .filter(db.ActionExecution.event_id == ev.id)
+        .one()
+    )
+    assert exec_row.status == "rejected"
+
+
+def test_authorized_path_is_exactly_what_is_delivered(session, monkeypatch):
+    monkeypatch.setattr(config, "WEBHOOK_ALLOWLIST", ["http://127.0.0.1:9000/hook/"])
+    seen: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(str(request.url))
+        return httpx.Response(200)
+
+    monkeypatch.setattr(actions, "webhook_transport", httpx.MockTransport(handler))
+
+    ev = _make_event(session)
+    actions.execute_action(
+        session, ev, "send_webhook", {"url": "http://127.0.0.1:9000/hook/./deploy"}
+    )
+
+    exec_row = (
+        session.query(db.ActionExecution)
+        .filter(db.ActionExecution.event_id == ev.id)
+        .one()
+    )
+    assert exec_row.status == "success", exec_row.error
+    assert seen == ["http://127.0.0.1:9000/hook/deploy"]
+
+
 # ------------------------------------------------- end-to-end via transport
 
 

@@ -55,6 +55,15 @@ class Action(BaseModel):
             url = self.config.get("url", "")
             if not isinstance(url, str) or not url.startswith(("http://", "https://")):
                 raise ValueError("send_webhook requires config.url (http/https)")
+        if self.type == "create_notification":
+            title = self.config.get("title")
+            # Optional: falls back to a generated title. If present it must be a
+            # bounded string — a dict/list would be rejected by SQLite at commit
+            # time and strand the source in 'processing' (M1-008).
+            if title is not None and (not isinstance(title, str) or len(title) > 255):
+                raise ValueError(
+                    "create_notification config.title must be a string of at most 255 characters"
+                )
         return self
 
 

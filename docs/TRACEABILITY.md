@@ -22,7 +22,7 @@ Statuses: planned | in_progress | implemented | verified | blocked.
 | R9 | Real authorized action | PRD P0.8 | `services/api/app/actions.py` (notification persisted; webhook allowlisted) | integration: notification row created; non-allowlisted webhook rejected | verified |
 | R10 | Event persistence with evidence | PRD P0.9 | `TrackEvent` + evidence JPEG in `app/pipeline.py` | smoke + integration: evidence URL serves image/jpeg | verified |
 | R11 | Working web interface | PRD P0.10 | `apps/web/app/page.tsx` | manual browser run 2026-10-10: full flow exercised | verified |
-| R12 | Automated tests | PRD P0.11 | `tests/` | `pytest tests/` — 60 passed 2026-10-10 | verified |
+| R12 | Automated tests | PRD P0.11 | `tests/` | `pytest tests/` — 69 passed 2026-10-10 | verified |
 | R13 | NL → workflow compilation | PRD P0.6 | — | planned for M2 | planned |
 | R14 | Live camera source | PRD P0.2 | — | planned (M2+, hardware-dependent) | planned |
 | R15 | Public deployment | Brief "publicly available" | — | planned for M4 | planned |
@@ -37,6 +37,16 @@ Statuses: planned | in_progress | implemented | verified | blocked.
 | M1-003 | P1 | FIXED | `services/api/app/pipeline.py` — authoritative `enabled` re-checked per frame via fresh session before emitting/acting | `tests/integration/test_m1_fixes.py::test_disable_during_processing_revokes_actions` |
 | M1-004 | P1 | FIXED | `services/api/app/pipeline.py` — complete session serialized by `_session_lock` around reset + all frame calls | `tests/integration/test_m1_fixes.py::test_concurrent_sources_are_serialized` |
 | M1-005 | P1 | FIXED | `services/api/app/{pipeline,main}.py` — startup marks interrupted `processing` rows failed and permits retry | `tests/integration/test_m1_fixes.py::test_interrupted_processing_recovered_and_retryable` |
+
+## M1 review fixes (cycle 2, 2026-10-10)
+
+| ID | Severity | Resolution | File | Test |
+| --- | --- | --- | --- | --- |
+| M1-006 | P1 | FIXED | `services/api/app/actions.py` — authorize and deliver one canonical URL; `'.'/'..'` path segments resolved and prefix enforced after normalization; percent/backslash-encoded traversal rejected | `tests/unit/test_webhook_auth.py` (`test_dotdot_traversal_rejected`, `test_encoded_traversal_rejected`, `test_traversal_never_reaches_admin_via_transport`, `test_authorized_path_is_exactly_what_is_delivered`) |
+| M1-003 | P1 | FIXED (re-hardened) | `services/api/app/pipeline.py` — authoritative `enabled` re-checked before EACH event, not once per frame, so a disable between two events in one frame suppresses the remainder | `tests/integration/test_m1_fixes.py::test_disable_between_events_in_one_frame_suppresses_remainder` |
+| M1-007 | P1 | FIXED | `services/api/app/pipeline.py` — a committed event with no dispatched action (pending + zero ActionExecution) is resumed on reprocess/recovery; completed events stay deduped | `tests/integration/test_m1_fixes.py::test_interrupted_before_dispatch_resumes_on_retry` |
+| M1-008 | P1 | FIXED | `services/api/app/schemas.py` (bounded-string title → 422) + `services/api/app/pipeline.py` (`_record_source_failure` rolls back the aborted transaction, fresh-session fallback) | `tests/integration/test_m1_fixes.py::test_invalid_notification_title_rejected` |
+| M1-009 | P2 | FIXED | `services/api/app/pipeline.py` — `_save_evidence` checks `cv2.imwrite` return and raises; event work is rolled back and the source recorded failed | `tests/integration/test_m1_fixes.py::test_evidence_write_failure_fails_source_and_rolls_back` |
 
 ## Discrepancies / notes
 

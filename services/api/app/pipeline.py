@@ -16,7 +16,14 @@ import cv2
 
 from app import config
 from app.actions import execute_action
-from app.db import TrackEvent, VideoSource, Workflow, Zone as ZoneRow, get_session
+from app.db import (
+    ActionExecution,
+    TrackEvent,
+    VideoSource,
+    Workflow,
+    Zone as ZoneRow,
+    get_session,
+)
 from visionflow_vision.detector import BaseDetectorTracker
 from visionflow_vision.events import EventType, ZoneEventEngine
 from visionflow_vision.zones import Zone
@@ -174,8 +181,76 @@ def _save_evidence(frame, objects, zone: Zone, event, frame_w: int, frame_h: int
     )
     fname = f"event_{event.dedupe_key.replace(':', '_').replace('/', '_')}.jpg"
     out_path = config.EVIDENCE_DIR / fname
-    cv2.imwrite(str(out_path), img)
+    # cv2.imwrite returns False (never raises) on an unwritable/full destination.
+    # Surface it so we never publish an evidence URL that 404s (M1-009).
+    if not cv2.imwrite(str(out_path), img):
+        raise RuntimeError(f"failed to write evidence image: {out_path}")
     return f"evidence/{fname}"
+
+
+def _record_source_failure(session, source_id: int, message: str) -> None:
+    """Mark a source failed after an exception. The worker's session may be in a
+    broken/aborted transaction (e.g. SQLite rejected a bad value at commit), so
+    roll it back first; if it still cannot persist, use a fresh session. This
+    guarantees an interrupted run never leaves the source stuck in 'processing'
+    with no visible error (M1-008)."""
+    try:
+        session.rollback()
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        source = session.get(VideoSource, source_id)
+        if source is not None:
+            source.status = "failed"
+            source.error = message
+            session.commit()
+            return
+    except Exception:  # noqa: BLE001
+        logger.exception("failed to record source failure on worker session; retrying fresh")
+        try:
+            session.rollback()
+        except Exception:  # noqa: BLE001
+            pass
+    fresh = get_session()
+    try:
+        source = fresh.get(VideoSource, source_id)
+        if source is not None:
+            source.status = "failed"
+            source.error = message
+            fresh.commit()
+    except Exception:  # noqa: BLE001
+        logger.exception("could not record source failure even with a fresh session")
+    finally:
+        fresh.close()
+
+
+def _dispatch_action(session, wf: Workflow, event: TrackEvent) -> None:
+    """Run the workflow's action for one persisted event."""
+    execute_action(
+        session, event, wf.dsl["action"]["type"], wf.dsl["action"].get("config", {})
+    )
+
+
+def _resume_pending_event(session, wf: Workflow, existing: TrackEvent) -> bool:
+    """If a previously committed event never had its action dispatched (e.g. the
+    process was interrupted between the event commit and action dispatch),
+    complete it now instead of silently skipping (M1-007).
+
+    Returns True if the event was handled as a resume (completed or already
+    complete), so the caller treats this dedupe key as done. Completed events
+    (action_status != 'pending' or an existing ActionExecution row) are left
+    untouched to preserve idempotent deduplication."""
+    has_execution = (
+        session.query(ActionExecution.id)
+        .filter(ActionExecution.event_id == existing.id)
+        .first()
+        is not None
+    )
+    if existing.action_status != "pending" or has_execution:
+        return True  # already dispatched; keep dedupe, do not re-run
+    logger.info("resuming undispatched action for event %s", existing.id)
+    _dispatch_action(session, wf, existing)
+    return True
 
 
 def _process_source(source_id: int) -> None:
@@ -233,19 +308,22 @@ def _process_source(source_id: int) -> None:
 
             for wf, engine in engines:
                 # Advance the engine exactly once per frame to keep debounce /
-                # cooldown state consistent, then re-check authoritative enabled
-                # state: a disable committed by the API during this run must
-                # revoke further events and actions (M1-003).
+                # cooldown state consistent.
                 emitted = engine.update(objects, timestamp)
-                if not _workflow_enabled(wf.id):
-                    continue
                 for ev in emitted:
+                    # Re-check authoritative enabled state before EACH event so a
+                    # disable committed by the API mid-frame (e.g. between two
+                    # events emitted on the same frame) revokes the remaining
+                    # events and actions (M1-003).
+                    if not _workflow_enabled(wf.id):
+                        break
                     existing = (
                         session.query(TrackEvent)
                         .filter(TrackEvent.dedupe_key == ev.dedupe_key)
                         .first()
                     )
-                    if existing:
+                    if existing is not None:
+                        _resume_pending_event(session, wf, existing)
                         continue
                     row = TrackEvent(
                         source_id=source.id,
@@ -260,13 +338,14 @@ def _process_source(source_id: int) -> None:
                     )
                     session.add(row)
                     session.flush()
+                    # Evidence must be written before we commit the event so an
+                    # unwritable destination rolls back the whole event instead
+                    # of publishing a dangling evidence URL (M1-009).
                     row.evidence_path = _save_evidence(
                         frame, objects, engine.zone, row, frame_w, frame_h
                     )
                     session.commit()
-                    execute_action(
-                        session, row, wf.dsl["action"]["type"], wf.dsl["action"].get("config", {})
-                    )
+                    _dispatch_action(session, wf, row)
                     logger.info("event %s: %s", row.id, ev.detail)
 
             if processed % 25 == 0:
@@ -285,14 +364,7 @@ def _process_source(source_id: int) -> None:
         )
     except Exception as exc:  # noqa: BLE001 — surface failure on the source row
         logger.exception("processing failed for source %s", source_id)
-        try:
-            source = session.get(VideoSource, source_id)
-            if source is not None:
-                source.status = "failed"
-                source.error = str(exc)[:1000]
-                session.commit()
-        except Exception:
-            pass
+        _record_source_failure(session, source_id, str(exc)[:1000])
     finally:
         if session_locked:
             _session_lock.release()
