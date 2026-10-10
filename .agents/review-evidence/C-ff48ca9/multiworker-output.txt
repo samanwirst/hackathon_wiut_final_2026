@@ -1,0 +1,132 @@
+{
+  "disclosure": "QA_ONLY actual production app, 2 Uvicorn worker processes; response header only wrapper",
+  "ready_workers": [
+    "10",
+    "9"
+  ],
+  "responses": [
+    {
+      "http": 200,
+      "worker_pid": "10",
+      "body": {
+        "status": "done",
+        "provider_configured": true,
+        "labeled": 0,
+        "cached": 0,
+        "deduped": 1,
+        "failed": 0,
+        "suppressed_budget": 0,
+        "attempts_made": 0,
+        "budget_remaining": 0
+      }
+    },
+    {
+      "http": 200,
+      "worker_pid": "9",
+      "body": {
+        "status": "done",
+        "provider_configured": true,
+        "labeled": 0,
+        "cached": 0,
+        "deduped": 1,
+        "failed": 0,
+        "suppressed_budget": 0,
+        "attempts_made": 0,
+        "budget_remaining": 0
+      }
+    },
+    {
+      "http": 200,
+      "worker_pid": "10",
+      "body": {
+        "status": "done",
+        "provider_configured": true,
+        "labeled": 0,
+        "cached": 0,
+        "deduped": 1,
+        "failed": 0,
+        "suppressed_budget": 0,
+        "attempts_made": 0,
+        "budget_remaining": 0
+      }
+    },
+    {
+      "http": 200,
+      "worker_pid": "9",
+      "body": {
+        "status": "done",
+        "provider_configured": true,
+        "labeled": 1,
+        "cached": 0,
+        "deduped": 0,
+        "failed": 0,
+        "suppressed_budget": 0,
+        "attempts_made": 1,
+        "budget_remaining": 0
+      }
+    },
+    {
+      "http": 200,
+      "worker_pid": "10",
+      "body": {
+        "status": "done",
+        "provider_configured": true,
+        "labeled": 0,
+        "cached": 0,
+        "deduped": 1,
+        "failed": 0,
+        "suppressed_budget": 0,
+        "attempts_made": 0,
+        "budget_remaining": 0
+      }
+    },
+    {
+      "http": 200,
+      "worker_pid": "9",
+      "body": {
+        "status": "done",
+        "provider_configured": true,
+        "labeled": 0,
+        "cached": 0,
+        "deduped": 1,
+        "failed": 0,
+        "suppressed_budget": 0,
+        "attempts_made": 0,
+        "budget_remaining": 0
+      }
+    },
+    {
+      "http": 200,
+      "worker_pid": "10",
+      "body": {
+        "status": "done",
+        "provider_configured": true,
+        "labeled": 0,
+        "cached": 0,
+        "deduped": 1,
+        "failed": 0,
+        "suppressed_budget": 0,
+        "attempts_made": 0,
+        "budget_remaining": 0
+      }
+    },
+    {
+      "http": 200,
+      "worker_pid": "9",
+      "body": {
+        "status": "done",
+        "provider_configured": true,
+        "labeled": 0,
+        "cached": 0,
+        "deduped": 1,
+        "failed": 0,
+        "suppressed_budget": 0,
+        "attempts_made": 0,
+        "budget_remaining": 0
+      }
+    }
+  ],
+  "actual_provider_posts": 1,
+  "provider_peak": 1,
+  "audit_count": 8
+}

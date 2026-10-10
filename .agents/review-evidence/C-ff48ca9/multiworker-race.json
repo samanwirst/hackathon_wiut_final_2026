@@ -1,0 +1,53 @@
+{
+  "disclosure": "QA_ONLY real production HTTP, 2 distinct Uvicorn processes, pause ONLY before the max-slot SQL select after count",
+  "ready_workers": [
+    "7",
+    "8"
+  ],
+  "responses": [
+    {
+      "worker": "7",
+      "http": 200,
+      "body": {
+        "status": "done",
+        "provider_configured": true,
+        "labeled": 1,
+        "cached": 0,
+        "deduped": 0,
+        "failed": 0,
+        "suppressed_budget": 0,
+        "attempts_made": 1,
+        "budget_remaining": 0
+      }
+    },
+    {
+      "worker": "8",
+      "http": 200,
+      "body": {
+        "status": "done",
+        "provider_configured": true,
+        "labeled": 1,
+        "cached": 0,
+        "deduped": 0,
+        "failed": 0,
+        "suppressed_budget": 0,
+        "attempts_made": 1,
+        "budget_remaining": 0
+      }
+    }
+  ],
+  "actual_provider_posts": 2,
+  "provider_peak": 2,
+  "ledger": [
+    {
+      "slot": 0,
+      "status": "sent",
+      "key": "1ec633e5d5df53a8a62dad3d8ca35ca554232906cae081d50ae564210219dd0b"
+    },
+    {
+      "slot": 1,
+      "status": "sent",
+      "key": "1ec633e5d5df53a8a62dad3d8ca35ca554232906cae081d50ae564210219dd0b"
+    }
+  ]
+}

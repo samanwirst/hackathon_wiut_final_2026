@@ -1,0 +1,32 @@
+{
+  "response": {
+    "http": 500,
+    "body": "Internal Server Error"
+  },
+  "seconds": 5.069103551999433,
+  "actual_provider_posts": 1,
+  "samples": [
+    {
+      "id": 1,
+      "status": "pending",
+      "label": null
+    },
+    {
+      "id": 2,
+      "status": "pending",
+      "label": null
+    },
+    {
+      "id": 3,
+      "status": "pending",
+      "label": null
+    }
+  ],
+  "ledger": [
+    {
+      "slot": 0,
+      "status": "sent"
+    }
+  ],
+  "audit": []
+}

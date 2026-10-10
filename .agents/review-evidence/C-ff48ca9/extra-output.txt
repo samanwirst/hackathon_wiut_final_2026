@@ -1,0 +1,98 @@
+/home/samanwirst/Desktop/hackathon_wiut_final_2026/.agents/runtime/ten-hour/worktrees/review-autolearn-review-3/services/api/.venv/lib/python3.14/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+  from starlette.testclient import TestClient as TestClient  # noqa
+{
+  "nonfinite_predictions_evaluation": {
+    "http": 200,
+    "body": {
+      "experimental": true,
+      "version": 1,
+      "metrics": {
+        "error": "student produced non-finite probabilities",
+        "support": 0,
+        "f1": null
+      }
+    }
+  },
+  "nonfinite_predictions_gate": {
+    "http": 200,
+    "body": {
+      "experimental": true,
+      "version": 1,
+      "gate": {
+        "passed": false,
+        "f1": null,
+        "support": 0,
+        "min_f1": 0.75,
+        "test_count": 6,
+        "min_test": 4,
+        "reasons": [
+          "stored metrics were not computed against the current frozen manifest; re-evaluate before activation (fail-closed)",
+          "no held-out metrics; run evaluate first",
+          "evaluated support 0 != frozen snapshot test count 6; membership is inconsistent",
+          "held-out set must contain both classes (positives=None, negatives=None)"
+        ]
+      }
+    }
+  },
+  "nonfinite_predictions_offline": {
+    "http": 200,
+    "body": {
+      "experimental": true,
+      "status": "unknown",
+      "detail": "student produced non-finite probabilities",
+      "action": "none"
+    }
+  },
+  "upload_provenance": {
+    "http": 201,
+    "body": {
+      "imported": true,
+      "sample_id": 115
+    }
+  },
+  "exact_duplicate": {
+    "http": 201,
+    "body": {
+      "imported": false,
+      "reason": "duplicate image content (skipped)"
+    }
+  },
+  "unreadable_image": {
+    "http": 400,
+    "body": {
+      "detail": "file is not a readable image"
+    }
+  },
+  "invalid_source_id": {
+    "http": 422,
+    "body": {
+      "detail": [
+        {
+          "type": "int_parsing",
+          "loc": [
+            "query",
+            "source_id"
+          ],
+          "msg": "Input should be a valid integer, unable to parse string as an integer",
+          "input": "nope"
+        }
+      ]
+    }
+  },
+  "stored_provenance": {
+    "session_id": "QA_ONLY-upload",
+    "source_id": 123,
+    "group_key": "QA_ONLY-group",
+    "video_timestamp": 1.25,
+    "image_hash": "78e1a62e123080a18f3448f10c20837d3170dd8435453bec3e82ad53532dcc10"
+  },
+  "decoded_reencoding": {
+    "refused": true,
+    "detail": "near-duplicate image content appears across groups 'a' and 'b' (decoded-pixel MAD 1.333 <= 5.0); refusing to split to prevent leakage"
+  },
+  "insufficient_independence": {
+    "refused": true,
+    "detail": "insufficient independent groups: have 1, need at least 4 (train>=2, val>=1, test>=1)"
+  },
+  "fixed_threshold": 5.0
+}

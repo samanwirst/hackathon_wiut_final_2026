@@ -1,0 +1,36 @@
+{
+  "failure": {
+    "http": 500,
+    "body": "Internal Server Error"
+  },
+  "previous_artifacts_unchanged": {
+    "/tmp/visionflow-c-final-ff48ca9/cleanup-data/autolearn/models/task_1/v1.pt": true,
+    "/tmp/visionflow-c-final-ff48ca9/cleanup-data/autolearn/models/task_1/v2.pt": true
+  },
+  "other_temp_preserved": true,
+  "rows": [
+    {
+      "id": 1,
+      "version": 1,
+      "status": "trained",
+      "exists": true
+    },
+    {
+      "id": 2,
+      "version": 2,
+      "status": "trained",
+      "exists": true
+    },
+    {
+      "id": 3,
+      "version": 3,
+      "status": "failed",
+      "exists": false
+    }
+  ],
+  "files": [
+    ".QA_ONLY-other-job-owned.tmp",
+    "v2.pt",
+    "v1.pt"
+  ]
+}

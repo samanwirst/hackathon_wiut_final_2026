@@ -1,0 +1,735 @@
+{
+  "disclosure": "QA_ONLY deterministic actual-component harness; owned fetch fixtures only",
+  "label": {
+    "before": {
+      "selected": 2,
+      "task": 2,
+      "samples": [
+        20
+      ]
+    },
+    "after": {
+      "selected": 2,
+      "detailTask": 2,
+      "busy": "label",
+      "disabledControls": [
+        " Import QA_ONLY synthetic sessions",
+        " Run Teacher labeling",
+        "B_yes",
+        "B_no",
+        " Train Student",
+        "Run shadow comparison",
+        "Eval",
+        "Activate",
+        "Roll back active version"
+      ],
+      "visibleReviewButtons": [
+        "B_yes",
+        "B_no"
+      ],
+      "shadow": null,
+      "classifyResult": null,
+      "error": null,
+      "visibleErrorBanner": []
+    },
+    "posts": [
+      {
+        "path": "/api/autolearn/tasks/1/label",
+        "search": ""
+      }
+    ],
+    "getCalls": [
+      "/api/autolearn/tasks",
+      "/api/autolearn/status",
+      "/api/autolearn/tasks/1",
+      "/api/autolearn/tasks/1/samples",
+      "/api/autolearn/tasks/2",
+      "/api/autolearn/tasks/2/samples",
+      "/api/autolearn/tasks/1",
+      "/api/autolearn/tasks/1/samples"
+    ]
+  },
+  "shadow": {
+    "before": {
+      "selected": 2,
+      "task": 2,
+      "samples": [
+        20
+      ]
+    },
+    "after": {
+      "selected": 2,
+      "detailTask": 2,
+      "busy": "shadow",
+      "disabledControls": [
+        " Import QA_ONLY synthetic sessions",
+        " Run Teacher labeling",
+        "B_yes",
+        "B_no",
+        " Train Student",
+        "Run shadow comparison",
+        "Eval",
+        "Activate",
+        "Roll back active version"
+      ],
+      "visibleReviewButtons": [
+        "B_yes",
+        "B_no"
+      ],
+      "shadow": null,
+      "classifyResult": null,
+      "error": null,
+      "visibleErrorBanner": []
+    },
+    "posts": [],
+    "getCalls": [
+      "/api/autolearn/tasks",
+      "/api/autolearn/status",
+      "/api/autolearn/tasks/1",
+      "/api/autolearn/tasks/1/samples",
+      "/api/autolearn/tasks/1/shadow",
+      "/api/autolearn/tasks/2",
+      "/api/autolearn/tasks/2/samples"
+    ]
+  },
+  "classify": {
+    "before": {
+      "selected": 2,
+      "task": 2,
+      "samples": [
+        20
+      ]
+    },
+    "after": {
+      "selected": 2,
+      "detailTask": 2,
+      "busy": "classify",
+      "disabledControls": [
+        " Import QA_ONLY synthetic sessions",
+        " Run Teacher labeling",
+        "B_yes",
+        "B_no",
+        " Train Student",
+        "Run shadow comparison",
+        "Eval",
+        "Activate",
+        "Roll back active version"
+      ],
+      "visibleReviewButtons": [
+        "B_yes",
+        "B_no"
+      ],
+      "shadow": null,
+      "classifyResult": null,
+      "error": null,
+      "visibleErrorBanner": []
+    },
+    "posts": [
+      {
+        "path": "/api/autolearn/tasks/1/classify",
+        "search": "",
+        "body": [
+          "file"
+        ]
+      }
+    ],
+    "getCalls": [
+      "/api/autolearn/tasks",
+      "/api/autolearn/status",
+      "/api/autolearn/tasks/1",
+      "/api/autolearn/tasks/1/samples",
+      "/api/autolearn/tasks/2",
+      "/api/autolearn/tasks/2/samples"
+    ]
+  },
+  "upload": {
+    "before": {
+      "selected": 2,
+      "task": 2,
+      "samples": [
+        20
+      ]
+    },
+    "after": {
+      "selected": 2,
+      "detailTask": 2,
+      "busy": "upload",
+      "disabledControls": [
+        " Import QA_ONLY synthetic sessions",
+        " Run Teacher labeling",
+        "B_yes",
+        "B_no",
+        " Train Student",
+        "Run shadow comparison",
+        "Eval",
+        "Activate",
+        "Roll back active version"
+      ],
+      "visibleReviewButtons": [
+        "B_yes",
+        "B_no"
+      ],
+      "shadow": null,
+      "classifyResult": null,
+      "error": null,
+      "visibleErrorBanner": []
+    },
+    "posts": [
+      {
+        "path": "/api/autolearn/tasks/1/images",
+        "search": "?session_id=QA_ONLY+real+upload+session&source_id=7",
+        "body": [
+          "file"
+        ]
+      }
+    ],
+    "getCalls": [
+      "/api/autolearn/tasks",
+      "/api/autolearn/status",
+      "/api/autolearn/tasks/1",
+      "/api/autolearn/tasks/1/samples",
+      "/api/autolearn/tasks/2",
+      "/api/autolearn/tasks/2/samples",
+      "/api/autolearn/tasks/1",
+      "/api/autolearn/tasks/1/samples"
+    ]
+  },
+  "upload_error": {
+    "before": {
+      "selected": 2,
+      "task": 2,
+      "samples": [
+        20
+      ]
+    },
+    "after": {
+      "selected": 2,
+      "detailTask": 2,
+      "busy": "upload",
+      "disabledControls": [
+        " Import QA_ONLY synthetic sessions",
+        " Run Teacher labeling",
+        "B_yes",
+        "B_no",
+        " Train Student",
+        "Run shadow comparison",
+        "Eval",
+        "Activate",
+        "Roll back active version"
+      ],
+      "visibleReviewButtons": [
+        "B_yes",
+        "B_no"
+      ],
+      "shadow": null,
+      "classifyResult": null,
+      "error": null,
+      "visibleErrorBanner": []
+    },
+    "posts": [
+      {
+        "path": "/api/autolearn/tasks/1/images",
+        "search": "?session_id=QA_ONLY+real+upload+session&source_id=7",
+        "body": [
+          "file"
+        ]
+      }
+    ],
+    "getCalls": [
+      "/api/autolearn/tasks",
+      "/api/autolearn/status",
+      "/api/autolearn/tasks/1",
+      "/api/autolearn/tasks/1/samples",
+      "/api/autolearn/tasks/2",
+      "/api/autolearn/tasks/2/samples"
+    ]
+  },
+  "train": {
+    "before": {
+      "selected": 2,
+      "task": 2,
+      "samples": [
+        20
+      ]
+    },
+    "after": {
+      "selected": 2,
+      "detailTask": 2,
+      "busy": "train",
+      "disabledControls": [
+        " Import QA_ONLY synthetic sessions",
+        " Run Teacher labeling",
+        "B_yes",
+        "B_no",
+        " Train Student",
+        "Run shadow comparison",
+        "Eval",
+        "Activate",
+        "Roll back active version"
+      ],
+      "visibleReviewButtons": [
+        "B_yes",
+        "B_no"
+      ],
+      "shadow": null,
+      "classifyResult": null,
+      "error": null,
+      "visibleErrorBanner": []
+    },
+    "posts": [
+      {
+        "path": "/api/autolearn/tasks/1/train",
+        "search": ""
+      }
+    ],
+    "getCalls": [
+      "/api/autolearn/tasks",
+      "/api/autolearn/status",
+      "/api/autolearn/tasks/1",
+      "/api/autolearn/tasks/1/samples",
+      "/api/autolearn/tasks/2",
+      "/api/autolearn/tasks/2/samples",
+      "/api/autolearn/tasks/1",
+      "/api/autolearn/tasks/1/samples"
+    ]
+  },
+  "train_error": {
+    "before": {
+      "selected": 2,
+      "task": 2,
+      "samples": [
+        20
+      ]
+    },
+    "after": {
+      "selected": 2,
+      "detailTask": 2,
+      "busy": "train",
+      "disabledControls": [
+        " Import QA_ONLY synthetic sessions",
+        " Run Teacher labeling",
+        "B_yes",
+        "B_no",
+        " Train Student",
+        "Run shadow comparison",
+        "Eval",
+        "Activate",
+        "Roll back active version"
+      ],
+      "visibleReviewButtons": [
+        "B_yes",
+        "B_no"
+      ],
+      "shadow": null,
+      "classifyResult": null,
+      "error": null,
+      "visibleErrorBanner": []
+    },
+    "posts": [
+      {
+        "path": "/api/autolearn/tasks/1/train",
+        "search": ""
+      }
+    ],
+    "getCalls": [
+      "/api/autolearn/tasks",
+      "/api/autolearn/status",
+      "/api/autolearn/tasks/1",
+      "/api/autolearn/tasks/1/samples",
+      "/api/autolearn/tasks/2",
+      "/api/autolearn/tasks/2/samples"
+    ]
+  },
+  "evaluate": {
+    "before": {
+      "selected": 2,
+      "task": 2,
+      "samples": [
+        20
+      ]
+    },
+    "after": {
+      "selected": 2,
+      "detailTask": 2,
+      "busy": "eval",
+      "disabledControls": [
+        " Import QA_ONLY synthetic sessions",
+        " Run Teacher labeling",
+        "B_yes",
+        "B_no",
+        " Train Student",
+        "Run shadow comparison",
+        "Eval",
+        "Activate",
+        "Roll back active version"
+      ],
+      "visibleReviewButtons": [
+        "B_yes",
+        "B_no"
+      ],
+      "shadow": null,
+      "classifyResult": null,
+      "error": null,
+      "visibleErrorBanner": []
+    },
+    "posts": [
+      {
+        "path": "/api/autolearn/versions/101/evaluate",
+        "search": ""
+      }
+    ],
+    "getCalls": [
+      "/api/autolearn/tasks",
+      "/api/autolearn/status",
+      "/api/autolearn/tasks/1",
+      "/api/autolearn/tasks/1/samples",
+      "/api/autolearn/tasks/2",
+      "/api/autolearn/tasks/2/samples",
+      "/api/autolearn/tasks/1",
+      "/api/autolearn/tasks/1/samples"
+    ]
+  },
+  "evaluate_error": {
+    "before": {
+      "selected": 2,
+      "task": 2,
+      "samples": [
+        20
+      ]
+    },
+    "after": {
+      "selected": 2,
+      "detailTask": 2,
+      "busy": "eval",
+      "disabledControls": [
+        " Import QA_ONLY synthetic sessions",
+        " Run Teacher labeling",
+        "B_yes",
+        "B_no",
+        " Train Student",
+        "Run shadow comparison",
+        "Eval",
+        "Activate",
+        "Roll back active version"
+      ],
+      "visibleReviewButtons": [
+        "B_yes",
+        "B_no"
+      ],
+      "shadow": null,
+      "classifyResult": null,
+      "error": null,
+      "visibleErrorBanner": []
+    },
+    "posts": [
+      {
+        "path": "/api/autolearn/versions/101/evaluate",
+        "search": ""
+      }
+    ],
+    "getCalls": [
+      "/api/autolearn/tasks",
+      "/api/autolearn/status",
+      "/api/autolearn/tasks/1",
+      "/api/autolearn/tasks/1/samples",
+      "/api/autolearn/tasks/2",
+      "/api/autolearn/tasks/2/samples"
+    ]
+  },
+  "activate": {
+    "before": {
+      "selected": 2,
+      "task": 2,
+      "samples": [
+        20
+      ]
+    },
+    "after": {
+      "selected": 2,
+      "detailTask": 2,
+      "busy": "act",
+      "disabledControls": [
+        " Import QA_ONLY synthetic sessions",
+        " Run Teacher labeling",
+        "B_yes",
+        "B_no",
+        " Train Student",
+        "Run shadow comparison",
+        "Eval",
+        "Activate",
+        "Roll back active version"
+      ],
+      "visibleReviewButtons": [
+        "B_yes",
+        "B_no"
+      ],
+      "shadow": null,
+      "classifyResult": null,
+      "error": null,
+      "visibleErrorBanner": []
+    },
+    "posts": [
+      {
+        "path": "/api/autolearn/versions/101/activate",
+        "search": "",
+        "body": "{\"approve\":true,\"approver\":\"operator\"}"
+      }
+    ],
+    "getCalls": [
+      "/api/autolearn/tasks",
+      "/api/autolearn/status",
+      "/api/autolearn/tasks/1",
+      "/api/autolearn/tasks/1/samples",
+      "/api/autolearn/tasks/2",
+      "/api/autolearn/tasks/2/samples",
+      "/api/autolearn/tasks/1",
+      "/api/autolearn/tasks/1/samples"
+    ]
+  },
+  "activate_error": {
+    "before": {
+      "selected": 2,
+      "task": 2,
+      "samples": [
+        20
+      ]
+    },
+    "after": {
+      "selected": 2,
+      "detailTask": 2,
+      "busy": "act",
+      "disabledControls": [
+        " Import QA_ONLY synthetic sessions",
+        " Run Teacher labeling",
+        "B_yes",
+        "B_no",
+        " Train Student",
+        "Run shadow comparison",
+        "Eval",
+        "Activate",
+        "Roll back active version"
+      ],
+      "visibleReviewButtons": [
+        "B_yes",
+        "B_no"
+      ],
+      "shadow": null,
+      "classifyResult": null,
+      "error": null,
+      "visibleErrorBanner": []
+    },
+    "posts": [
+      {
+        "path": "/api/autolearn/versions/101/activate",
+        "search": "",
+        "body": "{\"approve\":true,\"approver\":\"operator\"}"
+      }
+    ],
+    "getCalls": [
+      "/api/autolearn/tasks",
+      "/api/autolearn/status",
+      "/api/autolearn/tasks/1",
+      "/api/autolearn/tasks/1/samples",
+      "/api/autolearn/tasks/2",
+      "/api/autolearn/tasks/2/samples"
+    ]
+  },
+  "rollback": {
+    "before": {
+      "selected": 2,
+      "task": 2,
+      "samples": [
+        20
+      ]
+    },
+    "after": {
+      "selected": 2,
+      "detailTask": 2,
+      "busy": "rb",
+      "disabledControls": [
+        " Import QA_ONLY synthetic sessions",
+        " Run Teacher labeling",
+        "B_yes",
+        "B_no",
+        " Train Student",
+        "Run shadow comparison",
+        "Eval",
+        "Activate",
+        "Roll back active version"
+      ],
+      "visibleReviewButtons": [
+        "B_yes",
+        "B_no"
+      ],
+      "shadow": null,
+      "classifyResult": null,
+      "error": null,
+      "visibleErrorBanner": []
+    },
+    "posts": [
+      {
+        "path": "/api/autolearn/tasks/1/rollback",
+        "search": "",
+        "body": "{\"approver\":\"operator\"}"
+      }
+    ],
+    "getCalls": [
+      "/api/autolearn/tasks",
+      "/api/autolearn/status",
+      "/api/autolearn/tasks/1",
+      "/api/autolearn/tasks/1/samples",
+      "/api/autolearn/tasks/2",
+      "/api/autolearn/tasks/2/samples",
+      "/api/autolearn/tasks/1",
+      "/api/autolearn/tasks/1/samples"
+    ]
+  },
+  "rollback_error": {
+    "before": {
+      "selected": 2,
+      "task": 2,
+      "samples": [
+        20
+      ]
+    },
+    "after": {
+      "selected": 2,
+      "detailTask": 2,
+      "busy": "rb",
+      "disabledControls": [
+        " Import QA_ONLY synthetic sessions",
+        " Run Teacher labeling",
+        "B_yes",
+        "B_no",
+        " Train Student",
+        "Run shadow comparison",
+        "Eval",
+        "Activate",
+        "Roll back active version"
+      ],
+      "visibleReviewButtons": [
+        "B_yes",
+        "B_no"
+      ],
+      "shadow": null,
+      "classifyResult": null,
+      "error": null,
+      "visibleErrorBanner": []
+    },
+    "posts": [
+      {
+        "path": "/api/autolearn/tasks/1/rollback",
+        "search": "",
+        "body": "{\"approver\":\"operator\"}"
+      }
+    ],
+    "getCalls": [
+      "/api/autolearn/tasks",
+      "/api/autolearn/status",
+      "/api/autolearn/tasks/1",
+      "/api/autolearn/tasks/1/samples",
+      "/api/autolearn/tasks/2",
+      "/api/autolearn/tasks/2/samples"
+    ]
+  },
+  "review": {
+    "before": {
+      "selected": 2,
+      "task": 2,
+      "samples": [
+        20
+      ]
+    },
+    "after": {
+      "selected": 2,
+      "detailTask": 2,
+      "busy": "rev",
+      "disabledControls": [
+        " Import QA_ONLY synthetic sessions",
+        " Run Teacher labeling",
+        "B_yes",
+        "B_no",
+        " Train Student",
+        "Run shadow comparison",
+        "Eval",
+        "Activate",
+        "Roll back active version"
+      ],
+      "visibleReviewButtons": [
+        "B_yes",
+        "B_no"
+      ],
+      "shadow": null,
+      "classifyResult": null,
+      "error": null,
+      "visibleErrorBanner": []
+    },
+    "posts": [
+      {
+        "path": "/api/autolearn/samples/10/review",
+        "search": "",
+        "body": "{\"verified_label\":\"A_yes\",\"reviewer\":\"operator\"}"
+      }
+    ],
+    "getCalls": [
+      "/api/autolearn/tasks",
+      "/api/autolearn/status",
+      "/api/autolearn/tasks/1",
+      "/api/autolearn/tasks/1/samples",
+      "/api/autolearn/tasks/2",
+      "/api/autolearn/tasks/2/samples",
+      "/api/autolearn/tasks/1",
+      "/api/autolearn/tasks/1/samples"
+    ]
+  },
+  "import": {
+    "before": {
+      "selected": 2,
+      "task": 2,
+      "samples": [
+        20
+      ]
+    },
+    "after": {
+      "selected": 2,
+      "detailTask": 2,
+      "busy": "import",
+      "disabledControls": [
+        " Import QA_ONLY synthetic sessions",
+        " Run Teacher labeling",
+        "B_yes",
+        "B_no",
+        " Train Student",
+        "Run shadow comparison",
+        "Eval",
+        "Activate",
+        "Roll back active version"
+      ],
+      "visibleReviewButtons": [
+        "B_yes",
+        "B_no"
+      ],
+      "shadow": null,
+      "classifyResult": null,
+      "error": null,
+      "visibleErrorBanner": []
+    },
+    "posts": [
+      {
+        "path": "/api/autolearn/tasks/1/import-synthetic",
+        "search": "",
+        "body": "{\"n_sessions\":5,\"per_class_per_session\":3}"
+      }
+    ],
+    "getCalls": [
+      "/api/autolearn/tasks",
+      "/api/autolearn/status",
+      "/api/autolearn/tasks/1",
+      "/api/autolearn/tasks/1/samples",
+      "/api/autolearn/tasks/2",
+      "/api/autolearn/tasks/2/samples",
+      "/api/autolearn/tasks/1",
+      "/api/autolearn/tasks/1/samples"
+    ]
+  }
+}

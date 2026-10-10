@@ -1,0 +1,39 @@
+{
+  "disclosure": "QA_ONLY deterministic actual-component harness; owned fetch fixtures only",
+  "label": {
+    "before": {
+      "selected": 2,
+      "task": 1,
+      "samples": [
+        20
+      ]
+    },
+    "after": {
+      "selected": 2,
+      "detailTask": 1,
+      "busy": "label",
+      "disabledControls": [],
+      "visibleReviewButtons": [],
+      "shadow": null,
+      "classifyResult": null,
+      "error": null,
+      "visibleErrorBanner": []
+    },
+    "posts": [
+      {
+        "path": "/api/autolearn/tasks/1/label",
+        "search": ""
+      }
+    ],
+    "getCalls": [
+      "/api/autolearn/tasks",
+      "/api/autolearn/status",
+      "/api/autolearn/tasks/1",
+      "/api/autolearn/tasks/1/samples",
+      "/api/autolearn/tasks/2",
+      "/api/autolearn/tasks/2/samples",
+      "/api/autolearn/tasks/1",
+      "/api/autolearn/tasks/1/samples"
+    ]
+  }
+}

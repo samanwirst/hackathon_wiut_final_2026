@@ -1,0 +1,14 @@
+{
+  "response": {
+    "http": 500,
+    "body": "Internal Server Error"
+  },
+  "actual_provider_posts": 1,
+  "audit": [],
+  "ledger": [
+    {
+      "slot": 0,
+      "status": "reserved"
+    }
+  ]
+}
