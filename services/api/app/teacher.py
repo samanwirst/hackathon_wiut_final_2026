@@ -29,9 +29,12 @@ import json
 import logging
 import math
 import re
+import socket
+import ssl
 import time
 from abc import ABC, abstractmethod
 from typing import Callable, Literal, Sequence
+from urllib.parse import urlsplit
 
 import threading
 
@@ -438,36 +441,34 @@ class OpenAICompatibleTeacher(TeacherAdapter):
         )
 
     def _post_with_deadline(self, url, payload, headers, attempt_timeout, deadline, slot, on_attempt=None):
-        """Execute one POST on an OWNED, cancellable streaming transport bounded by
-        the overall wall-clock ``deadline`` (M2-003), with the final approval/budget
-        admission check at the transport boundary (M2-007).
+        """Execute one POST bounded by the overall wall-clock ``deadline`` (M2-003),
+        coupling admission to the actual send (M2-007).
 
-        httpx's phase timeouts reset per read, so a provider that trickles small
-        chunks within each read timeout can run far past the overall deadline. The
-        previous implementation ran a blocking ``httpx.post`` in a daemon worker
-        and, at the deadline, abandoned the worker while it kept reading the full
-        body — the reviewed defect (an endless/trickling stream accumulated
-        megabytes and held capacity). Here we instead drive the body read in THIS
-        thread via ``client.stream`` and check the wall-clock deadline between
-        chunks: when the deadline passes (or the byte cap is hit) we raise, and
-        exiting the ``with`` block closes the response and its connection. The
-        request is therefore genuinely cancelled — no background worker survives —
-        so ``classify`` can release the concurrency permit normally and capacity is
-        never held by an in-flight read.
+        Two transports share this entry point:
 
-        M2-007: ``on_attempt`` (the router guard) rechecks the authoritative
-        workflow-enabled state and grants one budget unit under the shared dispatch
-        admission lock, immediately BEFORE a connection is opened. A disable that
-        committed (and returned 200) before this call reads enabled=False here, so
-        no new HTTP request ever starts after a successful disable. A denial raises
-        :class:`_AttemptNotAdmitted` without opening any connection."""
+        - The REAL path (``self._transport is None``, production) uses an OWNED raw
+          socket (:meth:`_post_raw_socket`) so every phase — connect, send, header
+          receipt and body receipt — is hard-bounded by the wall-clock deadline and
+          the socket is genuinely closed on expiry. This is the path the real-TCP
+          regressions and the independent reviewer probes exercise.
+        - The TEST path (``self._transport`` set to an ``httpx.MockTransport``) uses
+          :meth:`_post_via_httpx` so the response-validation and byte-cap unit tests
+          drive the real httpx parse path without opening a socket."""
+        if self._transport is not None:
+            return self._post_via_httpx(
+                url, payload, headers, attempt_timeout, deadline, on_attempt
+            )
+        return self._post_raw_socket(url, payload, headers, deadline, on_attempt)
+
+    def _post_via_httpx(self, url, payload, headers, attempt_timeout, deadline, on_attempt=None):
+        """Injected-transport path for unit tests (``httpx.MockTransport``).
+
+        The guard is consulted immediately before the in-process mock call; there is
+        no real connect phase to race against, so the admission boundary here is the
+        guard return (no coupled send). The wall-clock deadline is still enforced
+        between streamed chunks and the response-byte cap still applies."""
         import httpx
 
-        # One enforceable boundary: admission (approval recheck + budget grant)
-        # then the actual transport start, with nothing sendable in between. The
-        # remaining wall-clock budget bounds admission too (M2-003): the guard will
-        # not wait for a contended admission lock past the overall deadline, so a
-        # late request is never sent after expiry.
         if on_attempt is not None:
             remaining = deadline - time.perf_counter()
             if remaining <= 0 or not on_attempt(remaining):
@@ -498,8 +499,6 @@ class OpenAICompatibleTeacher(TeacherAdapter):
                             "overall wall-clock deadline exceeded during body read"
                         )
                 body = b"".join(chunks)
-                # Fully read within the deadline; hand a complete response to the
-                # parser. The connection is released when the ``with`` block exits.
                 return httpx.Response(
                     status_code=resp.status_code,
                     headers=resp.headers,
@@ -508,6 +507,209 @@ class OpenAICompatibleTeacher(TeacherAdapter):
                 )
         finally:
             client.close()
+
+    def _post_raw_socket(self, url, payload, headers, deadline, on_attempt=None):
+        """Owned, cancellable HTTP/1.1 POST over a raw socket (M2-003/M2-007).
+
+        Design rationale (addresses the reviewer's real-network findings):
+
+        - M2-003: ``httpx``'s connect/read timeouts reset per phase, so a provider
+          that trickles header bytes within each read window runs far past the
+          overall deadline. Here EVERY blocking operation — connect, send and each
+          recv for headers and body — is bounded by the remaining wall-clock budget,
+          and on expiry the socket is actually closed (``finally``), so no phase and
+          no abandoned reader can outlive the deadline.
+
+        - M2-007: the connection is opened BEFORE the admission boundary, outside the
+          router's dispatch lock, so a slow connect never blocks a concurrent
+          disable. The actual ``sock.sendall`` (the authoritative send) is handed to
+          ``on_attempt`` and executed WHILE the dispatch lock is held, re-checking
+          both the authoritative enabled state and the deadline immediately before
+          the bytes are written. A disable that returned 200 therefore guarantees no
+          POST is ever written afterwards; a disable during connect revokes the
+          unsent attempt. The lock is released before the response is read."""
+        import httpx
+
+        parts = urlsplit(url)
+        host = parts.hostname or "127.0.0.1"
+        port = parts.port or (443 if parts.scheme == "https" else 80)
+        path = parts.path or "/"
+        if parts.query:
+            path += "?" + parts.query
+
+        body = json.dumps(payload).encode("utf-8")
+        req_headers = dict(headers)
+        req_headers.setdefault("Content-Type", "application/json")
+        req_headers["Host"] = parts.netloc.split("@")[-1]
+        req_headers["Content-Length"] = str(len(body))
+        req_headers["Accept"] = "application/json"
+        req_headers["Connection"] = "close"
+        request_line = f"POST {path} HTTP/1.1\r\n"
+        header_block = "".join(f"{k}: {v}\r\n" for k, v in req_headers.items())
+        raw_request = (request_line + header_block + "\r\n").encode("ascii") + body
+
+        remaining = deadline - time.perf_counter()
+        if remaining <= 0:
+            raise httpx.TimeoutException("overall deadline exceeded before connect")
+
+        sock = socket.create_connection(
+            (host, port), timeout=min(self.connect_timeout, remaining)
+        )
+        try:
+            if parts.scheme == "https":
+                ctx = ssl.create_default_context()
+                sock = ctx.wrap_socket(sock, server_hostname=host)
+
+            def _send() -> None:
+                rem = deadline - time.perf_counter()
+                if rem <= 0:
+                    raise httpx.TimeoutException(
+                        "overall deadline exceeded before sending request"
+                    )
+                sock.settimeout(rem)
+                sock.sendall(raw_request)
+
+            # Admission + send coupled under the router dispatch lock (M2-007). When
+            # no guard is supplied (direct adapter use), send immediately.
+            if on_attempt is not None:
+                admitted = on_attempt(deadline - time.perf_counter(), send=_send)
+                if not admitted:
+                    raise _AttemptNotAdmitted(
+                        "attempt not admitted at the send boundary (request budget "
+                        "exhausted, workflow disabled, or admission deadline exceeded)"
+                    )
+            else:
+                _send()
+
+            status_code, resp_headers, resp_body = self._recv_http_response(sock, deadline)
+            return httpx.Response(
+                status_code=status_code,
+                headers=resp_headers,
+                content=resp_body,
+                request=httpx.Request("POST", url),
+            )
+        finally:
+            try:
+                sock.close()
+            except OSError:
+                pass
+
+    def _recv_http_response(self, sock, deadline):
+        """Read a full HTTP/1.1 response from ``sock`` under the wall-clock
+        ``deadline``, honouring Content-Length, chunked transfer-encoding and
+        connection-close framing, and the response-byte cap. Any recv that would
+        block past the deadline raises :class:`httpx.TimeoutException`."""
+        import httpx
+
+        def _recv(max_bytes: int) -> bytes:
+            rem = deadline - time.perf_counter()
+            if rem <= 0:
+                raise httpx.TimeoutException(
+                    "overall wall-clock deadline exceeded while reading response"
+                )
+            sock.settimeout(rem)
+            try:
+                return sock.recv(max_bytes)
+            except (socket.timeout, TimeoutError):
+                # The recv window equalled the remaining budget, so the deadline has
+                # now passed: surface it as a timeout rather than looping.
+                raise httpx.TimeoutException(
+                    "overall wall-clock deadline exceeded while reading response"
+                )
+
+        buf = b""
+        while b"\r\n\r\n" not in buf:
+            chunk = _recv(65536)
+            if not chunk:
+                raise httpx.HTTPError("connection closed before response headers")
+            buf += chunk
+            if len(buf) > self.max_response_bytes:
+                raise httpx.HTTPError(
+                    f"provider response headers exceeded max_response_bytes "
+                    f"{self.max_response_bytes}"
+                )
+        head, _, rest = buf.partition(b"\r\n\r\n")
+        lines = head.split(b"\r\n")
+        try:
+            status_code = int(lines[0].split(b" ")[1])
+        except (IndexError, ValueError) as exc:
+            raise httpx.HTTPError(f"malformed status line: {lines[0][:80]!r}") from exc
+        resp_headers: dict[str, str] = {}
+        for line in lines[1:]:
+            if b":" in line:
+                k, v = line.split(b":", 1)
+                resp_headers[k.strip().decode("latin-1").lower()] = v.strip().decode("latin-1")
+
+        body = rest
+        te = resp_headers.get("transfer-encoding", "").lower()
+        if "chunked" in te:
+            body = self._read_chunked(sock, rest, deadline, _recv)
+        elif "content-length" in resp_headers:
+            try:
+                n = int(resp_headers["content-length"])
+            except ValueError:
+                n = 0
+            while len(body) < n:
+                chunk = _recv(min(65536, n - len(body)))
+                if not chunk:
+                    break
+                body += chunk
+                if len(body) > self.max_response_bytes:
+                    raise httpx.HTTPError(
+                        f"provider response exceeded max_response_bytes "
+                        f"{self.max_response_bytes}"
+                    )
+        else:
+            # Connection-close framing: read until EOF (bounded by the deadline).
+            while True:
+                chunk = _recv(65536)
+                if not chunk:
+                    break
+                body += chunk
+                if len(body) > self.max_response_bytes:
+                    raise httpx.HTTPError(
+                        f"provider response exceeded max_response_bytes "
+                        f"{self.max_response_bytes}"
+                    )
+        return status_code, resp_headers, body
+
+    def _read_chunked(self, sock, initial, deadline, _recv):
+        """Decode a chunked transfer-encoding body under the wall-clock deadline."""
+        import httpx
+
+        buf = initial
+        out = b""
+        while True:
+            while b"\r\n" not in buf:
+                chunk = _recv(65536)
+                if not chunk:
+                    return out
+                buf += chunk
+                if len(out) + len(buf) > self.max_response_bytes:
+                    raise httpx.HTTPError(
+                        f"provider response exceeded max_response_bytes "
+                        f"{self.max_response_bytes}"
+                    )
+            size_line, _, buf = buf.partition(b"\r\n")
+            try:
+                size = int(size_line.split(b";")[0].strip() or b"0", 16)
+            except ValueError as exc:
+                raise httpx.HTTPError("malformed chunk size") from exc
+            if size == 0:
+                break
+            while len(buf) < size + 2:
+                chunk = _recv(65536)
+                if not chunk:
+                    return out + buf[:size]
+                buf += chunk
+                if len(out) + len(buf) > self.max_response_bytes:
+                    raise httpx.HTTPError(
+                        f"provider response exceeded max_response_bytes "
+                        f"{self.max_response_bytes}"
+                    )
+            out += buf[:size]
+            buf = buf[size + 2:]
+        return out
 
     def _parse(self, resp, labels: Sequence[str], latency_ms: float) -> TeacherResult:
         try:

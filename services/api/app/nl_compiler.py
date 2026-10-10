@@ -57,21 +57,38 @@ _COND_GAP = (
 # a structured, non-executable predicate. An unrecognised condition is REJECTED
 # (never silently dropped). The prompt/labels are fixed server vocabulary.
 #
-# The "<state> <part>" alternative requires strict adjacency ("open hood") so that
-# an imperative actuation with a determiner ("open its hood") is NOT mistaken for
-# a state condition — that form is handled as an unsupported action below.
+# Grammar rule (M2-001): a condition is written PART-FIRST ("hood open",
+# "hood is open", "lights on"). The verb-first form ("open hood") is deliberately
+# NOT a condition — it is an imperative actuation handled as an unsupported action
+# below. This clean separation stops an action clause such as "then open hood"
+# being silently reinterpreted as a hood-open state condition (the reviewed
+# defect). Document: to verify a state, use "<part> [is] <state>".
 _VISUAL_CONDITIONS: tuple[tuple[re.Pattern, str], ...] = (
-    (re.compile(rf"\b(?:hood|bonnet)\b{_COND_GAP}\s+(?:open|up|raised|popped)\b"
-                r"|\b(?:open|raised|popped)\s+(?:hood|bonnet)\b"),
+    (re.compile(rf"\b(?:hood|bonnet)\b{_COND_GAP}\s+(?:open|up|raised|popped)\b"),
      "the vehicle hood is open"),
-    (re.compile(rf"\b(?:trunk|boot|tailgate)\b{_COND_GAP}\s+open\b"
-                r"|\bopen\s+(?:trunk|boot|tailgate)\b"),
+    (re.compile(rf"\b(?:trunk|boot|tailgate)\b{_COND_GAP}\s+open\b"),
      "the vehicle trunk is open"),
-    (re.compile(rf"\bdoor\b{_COND_GAP}\s+open\b|\bopen\s+door\b"),
+    (re.compile(rf"\bdoor\b{_COND_GAP}\s+open\b"),
      "a vehicle door is open"),
     (re.compile(rf"\b(?:head)?lights?\b{_COND_GAP}\s+(?:on|flashing|lit)\b"),
      "the vehicle lights are on"),
 )
+
+# Condition-candidate vocabulary (part-first). Any vehicle part next to a state
+# word is a *candidate* visual condition, whether or not it is one of the four
+# supported ones above. Counting candidates lets the compiler reject a request
+# that smuggles a SECOND condition ("hood open and trunk up") rather than keeping
+# only the first recognised one and silently dropping the rest (M2-001).
+_COND_PART = (
+    r"(?:hood|bonnet|trunk|boot|tailgate|door|doors|window|windows|light|lights"
+    r"|headlight|headlights|roof|sunroof|wiper|wipers|mirror|mirrors|wheel|wheels"
+    r"|tyre|tyres|tire|tires)"
+)
+_COND_STATE = (
+    r"(?:open|up|raised|popped|closed|shut|down|lowered|on|off|lit|flashing"
+    r"|running|idling|cracked|broken|folded)"
+)
+_COND_CANDIDATE = re.compile(rf"\b{_COND_PART}\b{_COND_GAP}\s+\b{_COND_STATE}\b")
 
 # Connectives that introduce a condition clause. Their presence means the user
 # asked for an extra check; if it is not a recognised visual condition the
@@ -118,13 +135,16 @@ _UNSUPPORTED_ACTION = re.compile(
 )
 
 # Imperative actuation of a vehicle part ("open its hood", "pop the trunk",
-# "close the door"). This is a physical action the product cannot perform and
-# must be rejected rather than silently downgraded to a notification (M2-001). The
-# determiner between the verb and the part ("its"/"the"/...) distinguishes this
-# from the state condition "hood open", which the whitelist above matches.
+# "close the door", "open hood"). This is a physical action the product cannot
+# perform and must be rejected rather than silently downgraded to a notification
+# (M2-001). The verb-FIRST order is what marks an actuation; an optional
+# determiner ("its"/"the"/...) may sit between the verb and the part. A state
+# condition is written part-first ("hood open") and therefore never matches here,
+# so "then open hood" is correctly rejected as an unsupported action instead of
+# being read as a hood-open condition.
 _PART_ACTUATION = re.compile(
     r"\b(?:open|close|re-?open|re-?close|raise|lower|shut|pop|slam|lift|unlatch|"
-    r"latch|release)\s+(?:its|their|the|a|an)\s+"
+    r"latch|release)\s+(?:(?:its|their|the|a|an)\s+)?"
     r"(?:hood|bonnet|trunk|boot|tailgate|door|doors|window|windows|engine|"
     r"light|lights|headlights?|wiper|wipers|horn|roof|sunroof)\b"
 )
@@ -161,6 +181,33 @@ _NEG_TRIGGER = re.compile(
 )
 
 _TIME_UNITS = r"(?:second|sec|minute|min|hour|hr)s?"
+
+# Malformed duration notation that must be REJECTED rather than mis-parsed
+# (M2-001). A leading-dot fraction (".5 minutes") and a signed/negative value
+# ("-5 minutes") are not accepted: the previous digit-greedy regex silently read
+# ".5 minutes" and "-5 minutes" as 300 s. A well-formed "2.5 minutes" keeps a
+# digit before the dot and is NOT flagged here.
+_BAD_DURATION = re.compile(
+    r"(?:-\s*\d+(?:\.\d+)?|(?<!\d)\.\d+)\s*" + _TIME_UNITS
+)
+
+# A supported action clause (create_notification is the ONLY action). It is used
+# to split the instruction into a trigger/condition clause and an action clause so
+# that visual conditions and durations are only recognised in the trigger clause
+# (M2-001): "create an alert for 5 minutes" must NOT donate its "5 minutes" to a
+# dwell rule, and "then open hood" (no supported action) stays in the trigger
+# clause where the actuation check rejects it. Note: bare "alert"/"log"/"record"
+# are deliberately excluded so "log it"/"record it" fall through to rejection.
+_ACTION_PHRASE = re.compile(
+    r"\b(?:create|raise|send|make|generate|issue|produce|give|show|display|post|"
+    r"trigger|fire)\s+(?:me\s+)?(?:an?\s+|the\s+)?"
+    r"(?:alert|notification|notice|warning|message)s?\b"
+    r"|\bnotify(?:\s+(?:me|us))?\b"
+    r"|\bwarn(?:\s+(?:me|us))?\b"
+    r"|\balert\s+(?:me|us)\b"
+    r"|\bflag\s+(?:it|this|the\s+event|the\s+vehicle|the\s+car)\b"
+    r"|\blet\s+(?:me|us)\s+know\b|\btell\s+(?:me|us)\b|\breport\s+(?:it|this)\b"
+)
 
 # Upper-bound / non-lower-bound duration comparison for a dwell rule. The dwell
 # engine only expresses a MINIMUM dwell ("for N" / "longer than N"); an upper
@@ -338,8 +385,34 @@ def _trigger_families(text: str) -> list[str]:
     return fams
 
 
+def _split_action(low: str) -> tuple[str, str]:
+    """Split ``low`` into (trigger_part, action_leftover) around the supported
+    action clause (M2-001).
+
+    - If a supported action phrase is found at the start (only filler precedes it),
+      it is action-first and the trigger clause is the suffix.
+    - Otherwise it is a trailing action and the trigger clause is the prefix; the
+      text after the matched phrase (``action_leftover``) must be filler-only or
+      the request carries unsupported content in the action clause.
+    - If no supported action phrase is found, the whole text is the trigger clause
+      (``action_leftover`` empty); an unsupported/absent action is caught by the
+      actuation/delivery/data checks and the residual-token backstop."""
+    m = _ACTION_PHRASE.search(low)
+    if m is None:
+        return low, ""
+    before = low[: m.start()]
+    before_tokens = re.findall(r"[a-z0-9]+", before)
+    if not before_tokens or all(t in _FILLER for t in before_tokens):
+        # action-first: trigger clause is everything after the action phrase.
+        return low[m.end():], before
+    # trailing action: trigger clause is the prefix; validate the action tail.
+    return low[: m.start()], low[m.end():]
+
+
 def _parse_duration_seconds(text: str) -> float | None:
-    m = re.search(r"(\d+(?:\.\d+)?)\s*(second|sec|minute|min|hour|hr)s?", text)
+    # Anchored: the number must be a complete non-negative token (no leading dot,
+    # no sign); malformed notation is rejected earlier via ``_BAD_DURATION``.
+    m = re.search(r"(?<![\d.])(\d+(?:\.\d+)?)\s*(second|sec|minute|min|hour|hr)s?", text)
     if not m:
         return None
     value = float(m.group(1))
@@ -433,6 +506,13 @@ def compile_text(text: str, source_id: int, zones: list[dict]) -> CompileResult:
         return CompileResult(False, errors=["instruction is too long (max 2000 chars)"])
     low = raw.lower()
 
+    # Separate the action clause from the trigger/condition clause so conditions
+    # and durations are recognised ONLY where they belong (M2-001). ``trigger_part``
+    # is what the trigger/zone/condition/duration parsers see; ``action_leftover``
+    # is any text attached to the action beyond the supported phrase and must be
+    # filler-only.
+    trigger_part, action_leftover = _split_action(low)
+
     errors: list[str] = []
     warnings: list[str] = []
 
@@ -455,7 +535,8 @@ def compile_text(text: str, source_id: int, zones: list[dict]) -> CompileResult:
 
     # Trigger: exactly one family is allowed. Alternatives/conjunctions such as
     # "enters or exits" are rejected rather than silently reduced to one (M2-001).
-    families = _trigger_families(low)
+    # Parsed on the trigger clause so action-clause words never create a family.
+    families = _trigger_families(trigger_part)
     trigger_type: str | None = None
     if not families:
         errors.append(
@@ -471,7 +552,7 @@ def compile_text(text: str, source_id: int, zones: list[dict]) -> CompileResult:
     else:
         trigger_type = families[0]
 
-    zone_id, zone_name, zone_warn, zone_err = _match_zone(low, zones)
+    zone_id, zone_name, zone_warn, zone_err = _match_zone(trigger_part, zones)
     warnings += zone_warn
     errors += zone_err
 
@@ -479,25 +560,57 @@ def compile_text(text: str, source_id: int, zones: list[dict]) -> CompileResult:
     # trip on words inside a zone name.
     residual = low.replace(zone_name, " ") if zone_name else low
 
+    # Any content attached to the action clause beyond the supported phrase (e.g.
+    # "create an alert FOR 5 MINUTES", a stray recipient) is unsupported and must be
+    # rejected, not silently absorbed — in particular an alert's trailing duration
+    # must never be read as the dwell duration (M2-001).
+    action_tokens = [t for t in re.findall(r"[a-z0-9]+", action_leftover) if t not in _FILLER]
+    if action_tokens:
+        errors.append(
+            "unsupported content in the action clause: "
+            + ", ".join(f"'{t}'" for t in dict.fromkeys(action_tokens))
+            + "; the only supported action is an in-app alert/notification"
+        )
+
     duration_seconds = None
     threshold = None
     if trigger_type == "dwell_in_zone":
         # An upper-bound duration ("less than 10 minutes") cannot be expressed by
         # the minimum-dwell engine and must be rejected, not turned into a >= rule.
-        if _UPPER_BOUND_DURATION.search(low):
+        if _UPPER_BOUND_DURATION.search(trigger_part):
             errors.append(
                 "only a minimum dwell duration is supported (e.g. 'for 10 minutes' "
                 "or 'longer than 10 minutes'), not an upper bound"
             )
-        duration_seconds = _parse_duration_seconds(low)
-        if duration_seconds is None:
-            errors.append("dwell rule needs a duration, e.g. 'for 10 minutes'")
+        # Malformed duration notation (".5 minutes", "-5 minutes") is rejected
+        # rather than silently read as 300 s (M2-001).
+        if _BAD_DURATION.search(trigger_part):
+            errors.append(
+                "could not parse the dwell duration; use a whole or decimal number "
+                "of seconds/minutes/hours (e.g. 'for 5 minutes'), not a fractional "
+                "'.5' or a negative value"
+            )
+        else:
+            duration_seconds = _parse_duration_seconds(trigger_part)
+            if duration_seconds is None:
+                errors.append("dwell rule needs a duration, e.g. 'for 10 minutes'")
     if trigger_type == "object_count_exceeded":
-        threshold, count_warn, count_err = _parse_count(low)
-        warnings += count_warn
-        errors += count_err
-        if threshold is None and not count_err:
-            errors.append("count rule needs a threshold, e.g. 'more than 3 cars'")
+        # A request with more than one count comparison ("more than 3 or more than
+        # 5 cars") is ambiguous and is rejected rather than matching an accidental
+        # "3 or more" span (M2-001).
+        comparisons = re.findall(rf"\b{_COMPARATORS}\s+\d+", trigger_part)
+        if len(comparisons) > 1:
+            errors.append(
+                "more than one count comparison was specified "
+                f"({', '.join(c.strip() for c in comparisons)}); specify a single "
+                "count threshold"
+            )
+        else:
+            threshold, count_warn, count_err = _parse_count(trigger_part)
+            warnings += count_warn
+            errors += count_err
+            if threshold is None and not count_err:
+                errors.append("count rule needs a threshold, e.g. 'more than 3 cars'")
 
     # Duration placement (M2-001). A duration ("for N minutes") is only meaningful
     # for a dwell rule. On an enter/exit/count trigger the engine has no field for
@@ -507,7 +620,7 @@ def compile_text(text: str, source_id: int, zones: list[dict]) -> CompileResult:
     if (
         trigger_type is not None
         and trigger_type != "dwell_in_zone"
-        and _parse_duration_seconds(low) is not None
+        and _parse_duration_seconds(trigger_part) is not None
     ):
         errors.append(
             "a duration ('for N minutes') only applies to a dwell rule "
@@ -517,7 +630,7 @@ def compile_text(text: str, source_id: int, zones: list[dict]) -> CompileResult:
     # Ambiguous multiple durations ("5 minutes or 10 minutes") cannot be
     # represented by the single-threshold dwell engine and are rejected rather
     # than silently using the first value (M2-001).
-    _durations = re.findall(rf"\d+(?:\.\d+)?\s*{_TIME_UNITS}", low)
+    _durations = re.findall(rf"\d+(?:\.\d+)?\s*{_TIME_UNITS}", trigger_part)
     if len(_durations) > 1:
         errors.append(
             "more than one duration was specified "
@@ -527,23 +640,28 @@ def compile_text(text: str, source_id: int, zones: list[dict]) -> CompileResult:
 
     # Visual condition handling (M2-001): preserve a single positive recognised
     # condition; reject negation, multiple conditions, and unrecognised clauses.
-    conditions = _match_visual_conditions(low)
-    had_condition_marker = any(m in low for m in _CONDITION_MARKERS)
-    negated = bool(_NEGATION_NEAR_STATE.search(low) or _CLOSED_STATE.search(low))
+    # ``candidates`` counts EVERY part-next-to-state clause (supported or not), so a
+    # smuggled second condition ("hood open and trunk up") is rejected instead of
+    # keeping only the first recognised one. Parsed on the trigger clause so an
+    # action-clause verb is never read as a condition.
+    conditions = _match_visual_conditions(trigger_part)
+    candidates = _COND_CANDIDATE.findall(trigger_part)
+    had_condition_marker = any(m in trigger_part for m in _CONDITION_MARKERS)
+    negated = bool(_NEGATION_NEAR_STATE.search(trigger_part) or _CLOSED_STATE.search(trigger_part))
     visual_predicate: dict | None = None
-    if negated and (conditions or had_condition_marker):
+    if negated and (candidates or had_condition_marker):
         errors.append(
             "negated visual conditions (e.g. 'hood not open') are not supported; "
             "state the positive condition to verify"
         )
-    elif len(conditions) > 1:
+    elif len(candidates) > 1:
         errors.append(
-            "more than one visual condition was requested "
-            f"({'; '.join(conditions)}); specify a single visual condition"
+            "more than one visual condition was requested; specify a single "
+            "visual condition (supported: hood/trunk/door open, lights on)"
         )
-    elif len(conditions) == 1:
+    elif len(conditions) == 1 and len(candidates) == 1:
         visual_predicate = _build_predicate(conditions[0])
-    elif had_condition_marker:
+    elif candidates or had_condition_marker:
         # A requested condition clause that is not a supported visual condition is
         # rejected rather than silently dropped (M2-AC1).
         errors.append(
@@ -593,7 +711,7 @@ def compile_text(text: str, source_id: int, zones: list[dict]) -> CompileResult:
     # and must be rejected rather than compiled into a partial rule. Skipped when
     # the class/zone could not be resolved (the specific errors above are clearer).
     if object_class is not None and not zone_err:
-        leftover = _residual_tokens(low, zone_name)
+        leftover = _residual_tokens(trigger_part, zone_name)
         if leftover:
             errors.append(
                 "unsupported or unrecognized phrasing: "

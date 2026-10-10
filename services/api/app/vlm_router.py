@@ -287,24 +287,30 @@ class VlmRouter:
         # returns False so the adapter stops before sending (M2-AC4).
         guard_state = {"invoked": False, "granted": 0, "revoked": False, "deadline": False}
 
-        def _attempt_guard(remaining: float | None = None) -> bool:
-            # M2-007: the authoritative approval recheck and the admission of an
-            # outbound attempt must be ONE atomic boundary, serialized with a
-            # workflow disable. The API disable handler commits ``enabled=False``
-            # under ``dispatch_admission_lock``; by taking the same lock here
-            # around the ``admit()`` read AND the budget grant, a disable can only
-            # land fully before this boundary (admit reads False -> revoked, no
-            # request) or fully after it (the attempt was already admitted). The
-            # previous code read approval OUTSIDE any lock, so a disable could
-            # commit and return 200 between the read and the grant, then still
-            # admit one HTTP POST (the reviewed race). The lock is NOT held during
-            # the actual inference/transport, only across this decision.
+        def _attempt_guard(
+            remaining: float | None = None,
+            send: Callable[[], None] | None = None,
+        ) -> bool:
+            # M2-007: the authoritative approval recheck AND the actual outbound
+            # send must be ONE atomic boundary, serialized with a workflow disable.
+            # The API disable handler commits ``enabled=False`` under
+            # ``dispatch_admission_lock``; by taking the same lock here around the
+            # ``admit()`` read AND the ``send()`` (the bytes hitting the socket), a
+            # disable can only land fully before this boundary (admit reads False ->
+            # revoked, nothing sent) or fully after it (the request bytes were
+            # already written). The connection is opened by the caller OUTSIDE this
+            # lock, so a slow connect never blocks a disable; only the brief write
+            # is serialized. The lock is released before the response is awaited, so
+            # it is never held across inference. The previous code granted the
+            # budget and returned, then wrote the request OUTSIDE any lock, so a
+            # disable could commit and return 200 before the delayed write and the
+            # POST still went out (the reviewed race).
             #
             # M2-003: admission is itself bounded by the caller's overall deadline.
-            # ``remaining`` (supplied by the real adapter) caps how long we wait for
-            # the admission lock; if contention holds it past the deadline we give
-            # up WITHOUT sending, instead of blocking indefinitely and then posting
-            # a late request past expiry (the reviewed ~152ms repro).
+            # ``remaining`` caps how long we wait for the admission lock; if
+            # contention holds it past the deadline we give up WITHOUT sending, and
+            # ``send`` re-checks the deadline immediately before writing, so a late
+            # request is never emitted after expiry.
             from app.pipeline import dispatch_admission_lock  # lazy: avoids cycle
 
             if remaining is None:
@@ -325,7 +331,14 @@ class VlmRouter:
                     used_now = self._budget_used.get(task_key, 0)
                     if used_now >= budget:
                         return False
-                    self._budget_used[task_key] = used_now + 1
+                # Perform the real send while still holding the admission lock
+                # (M2-007). If it raises (pre-send deadline / transport failure) no
+                # budget or attempt is accounted and the exception propagates to the
+                # adapter, which maps it to a non-confirming timeout/error.
+                if send is not None:
+                    send()
+                with self._lock:
+                    self._budget_used[task_key] = self._budget_used.get(task_key, 0) + 1
                     self.counters.outbound_attempts += 1
                     guard_state["granted"] += 1
             finally:
