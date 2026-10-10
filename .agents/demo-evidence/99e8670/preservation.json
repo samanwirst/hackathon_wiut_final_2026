@@ -1,0 +1,28 @@
+{
+  "base_sha": "088b17aded860bd5d926600573184c883919d20e",
+  "branch": "feature/demo-safe",
+  "hashes": {
+    ".agents/STATE.md": "363f89fa751aabdd580c3a0afbf6853a69de3834caa2db3e34a78f8c27ae9a7d",
+    ".agents/HANDOFF.md": "0ac910180e814603bb14da3c25d38f4935f0947d5c4b4239e3e84f95e29ac3ea",
+    ".agents/reviews/M2.md": "26f28fd65d914fc6fac3a905a4f13de17cba220baffbdd41ef1502d0261c61dd",
+    "docs/TRACEABILITY.md": "715dc918778d5b77798154a9fd41df648e9fba840d13ebf3937aaf6e0dbe3a38",
+    ".agents/runtime/state.json": "57b262f277d57d1f6212e7101cb2b6e5648222d821bdd3dd2721d541fe360155",
+    "services/api/app/nl_compiler.py": "9bdc024343b7af9635d99f0309d470b3920d06e18bfea7c8036f28bcf85f5265",
+    "services/api/app/teacher.py": "2e5d67ed45227c81b3351b1b6812263379d2eda312dd6e27c4a52d78dd168c63",
+    "services/api/app/vlm_router.py": "38dbe5803994bec876648d72fad5141270933a38aba75188b5ccd1f67714b39c",
+    "services/api/app/actions.py": "46ca5b6ef9e9a7f2875bcf6449c4188001bec701f4bb042995ed5e67086c6e0d"
+  },
+  "checked_hashes": {
+    ".agents/STATE.md": "363f89fa751aabdd580c3a0afbf6853a69de3834caa2db3e34a78f8c27ae9a7d",
+    ".agents/HANDOFF.md": "0ac910180e814603bb14da3c25d38f4935f0947d5c4b4239e3e84f95e29ac3ea",
+    ".agents/reviews/M2.md": "26f28fd65d914fc6fac3a905a4f13de17cba220baffbdd41ef1502d0261c61dd",
+    "docs/TRACEABILITY.md": "715dc918778d5b77798154a9fd41df648e9fba840d13ebf3937aaf6e0dbe3a38",
+    ".agents/runtime/state.json": "57b262f277d57d1f6212e7101cb2b6e5648222d821bdd3dd2721d541fe360155",
+    "services/api/app/nl_compiler.py": "9bdc024343b7af9635d99f0309d470b3920d06e18bfea7c8036f28bcf85f5265",
+    "services/api/app/teacher.py": "2e5d67ed45227c81b3351b1b6812263379d2eda312dd6e27c4a52d78dd168c63",
+    "services/api/app/vlm_router.py": "38dbe5803994bec876648d72fad5141270933a38aba75188b5ccd1f67714b39c",
+    "services/api/app/actions.py": "46ca5b6ef9e9a7f2875bcf6449c4188001bec701f4bb042995ed5e67086c6e0d"
+  },
+  "unchanged": true,
+  "feature_visionflow_sha": "088b17aded860bd5d926600573184c883919d20e"
+}

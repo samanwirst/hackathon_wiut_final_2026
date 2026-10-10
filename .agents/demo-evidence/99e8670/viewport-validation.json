@@ -1,0 +1,36 @@
+{
+  "target_sha": "99e8670216a8aa9161cfb2517a2e5b4b955edd0b",
+  "viewports": [
+    {
+      "viewport": 1440,
+      "document": 1440,
+      "passed": true
+    },
+    {
+      "viewport": 1280,
+      "document": 1280,
+      "passed": true
+    },
+    {
+      "viewport": 1024,
+      "document": 1024,
+      "passed": true
+    },
+    {
+      "viewport": 390,
+      "document": 1011,
+      "passed": false
+    }
+  ],
+  "known_limitations": [
+    {
+      "severity": "P2",
+      "scope": "Phone layout after a real source is selected",
+      "reproduction": "Select the uploaded 960x540 recording at viewport width 390px; the zone/builder grid expands the page to 1011px.",
+      "workaround": "Use the validated desktop viewport (1024px or wider) for this demo."
+    }
+  ],
+  "legacy_processing_completed": true,
+  "local_actions": 2,
+  "teacher_http_requests": 0
+}

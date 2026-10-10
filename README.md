@@ -1,8 +1,8 @@
 # VisionFlow AI — WIUT Hackathon Final 2026
 
-Visual AI automation for automotive operations: upload a video (or connect a
-camera), draw a zone, describe a condition, and get real detections turned into
-events, evidence, and authorized actions. Track: Computer Vision.
+Visual AI automation for automotive operations: upload a recorded video, draw a
+zone, configure a supported geometric condition, review its JSON and approve
+real events, evidence and local notifications. Track: Computer Vision.
 
 The product's innovation is **cost-efficient visual analytics inspired by
 OpenVector**: cheap detection and tracking run continuously at a configured
@@ -19,7 +19,7 @@ The official task is in [docs/source/README.md](docs/source/README.md);
 product requirements in [docs/PRD.md](docs/PRD.md);
 architecture in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
-## Current state (M1 recovery cycle)
+## Accepted geometric engine (M1)
 
 Working end-to-end pipeline: **MP4 upload → YOLO11n detection + ByteTrack
 tracking → polygon-zone temporal events (enter / exit / dwell / count) →
@@ -36,8 +36,9 @@ risky custom egress transport, so only the local `create_notification` action
 ships. See [.agents/reviews/M1.md](.agents/reviews/M1.md) and
 [docs/TRACEABILITY.md](docs/TRACEABILITY.md).
 
-VLM routing/caching is assigned to M2, verified teacher-to-student learning
-to M3, and measured baseline comparisons to M4. These stages are pending.
+M2's experimental VLM routing/compiler implementation remains BLOCKED.
+Verified teacher-to-student learning in M3 and measured comparisons in M4
+have not started.
 The [architecture audit](docs/VISUAL_ANALYTICS_AUDIT.md) and
 [milestone acceptance criteria](docs/PRD.md#16-acceptance-criteria) define
 the remaining work. No VLM savings or held-out quality result is established.
@@ -49,6 +50,11 @@ control platform for recorded video with the experimental M2 paths locked off
 in the backend. See the [Demo Guide](docs/DEMO_GUIDE.md) for the exact startup,
 data provenance, the seven-minute script, and the supported/disabled/unverified
 matrix.
+
+The [independent demo evidence](.agents/demo-evidence/99e8670/VALIDATION.md)
+records 195 passing tests, the production build, real YOLO smoke and the actual
+desktop approval/event/evidence journey. Use a desktop viewport of at least
+1024px; a known phone layout issue is documented there.
 
 Demo-safe mode (`VISIONFLOW_DEMO_SAFE=true`, the default) is enforced
 server-side, not just in the UI:
@@ -91,8 +97,10 @@ npm install
 NEXT_PUBLIC_API_URL=http://localhost:8000 npm run dev
 ```
 
-Open http://localhost:3000: upload an MP4, Select it, draw a zone on the
-first-frame snapshot, create + enable a workflow, press Process.
+Open http://localhost:3000: upload an MP4, select it, draw a zone on the
+first-frame snapshot, save a draft, review the validated JSON, click
+**Approve & activate**, then **Run**. For an isolated, preflighted demo, follow
+[the Demo Guide](docs/DEMO_GUIDE.md#3-local-startup-loopback-only-isolated-data).
 
 ## Tests
 

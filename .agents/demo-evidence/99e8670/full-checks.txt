@@ -1,0 +1,80 @@
+python3 scripts/check_structure.py
+Repository scaffold: OK
+NOTE: original FINAL_TASK_WIUT_HACKATHON.pdf has not been provided.
+services/api/.venv/bin/python -m pytest tests/ -q
+........................................................................ [ 36%]
+........................................................................ [ 73%]
+...................................................                      [100%]
+=============================== warnings summary ===============================
+services/api/.venv/lib/python3.14/site-packages/fastapi/testclient.py:1
+  /home/samanwirst/Desktop/hackathon_wiut_final_2026/services/api/.venv/lib/python3.14/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+services/api/app/main.py:48
+  /home/samanwirst/Desktop/hackathon_wiut_final_2026/services/api/app/main.py:48: DeprecationWarning:
+          on_event is deprecated, use lifespan event handlers instead.
+
+          Read more about it in the
+          [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+
+    @app.on_event("startup")
+
+services/api/.venv/lib/python3.14/site-packages/fastapi/applications.py:4745
+  /home/samanwirst/Desktop/hackathon_wiut_final_2026/services/api/.venv/lib/python3.14/site-packages/fastapi/applications.py:4745: DeprecationWarning:
+          on_event is deprecated, use lifespan event handlers instead.
+
+          Read more about it in the
+          [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+
+    return self.router.on_event(event_type)  # ty: ignore[deprecated]
+
+tests/integration/test_m1_fixes.py::test_interrupted_before_dispatch_resumes_on_retry
+  /home/samanwirst/Desktop/hackathon_wiut_final_2026/services/api/.venv/lib/python3.14/site-packages/_pytest/threadexception.py:58: PytestUnhandledThreadExceptionWarning: Exception in thread Thread-18 (_process_source)
+
+  Traceback (most recent call last):
+    File "/usr/lib/python3.14/threading.py", line 1082, in _bootstrap_inner
+      self._context.run(self.run)
+      ~~~~~~~~~~~~~~~~~^^^^^^^^^^
+    File "/usr/lib/python3.14/threading.py", line 1024, in run
+      self._target(*self._args, **self._kwargs)
+      ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    File "/home/samanwirst/Desktop/hackathon_wiut_final_2026/services/api/app/pipeline.py", line 606, in _process_source
+      _dispatch_action(session, wf, row)
+      ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+    File "/home/samanwirst/Desktop/hackathon_wiut_final_2026/tests/integration/test_m1_fixes.py", line 344, in crashing_dispatch
+      raise SystemExit("simulated crash after event+evidence commit")
+  SystemExit: simulated crash after event+evidence commit
+
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+    warnings.warn(pytest.PytestUnhandledThreadExceptionWarning(msg))
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+195 passed, 4 warnings in 16.41s
+cd apps/web && npm run build
+npm notice run visionflow-web@0.1.0 build
+npm notice run next build
+   ▲ Next.js 15.5.27
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 2.0s
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/4) ...
+   Generating static pages (1/4)
+   Generating static pages (2/4)
+   Generating static pages (3/4)
+ ✓ Generating static pages (4/4)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                 Size  First Load JS
+┌ ○ /                                    8.71 kB         111 kB
+└ ○ /_not-found                            992 B         104 kB
++ First Load JS shared by all             103 kB
+  ├ chunks/255-ce8c7c75002f810b.js       46.5 kB
+  ├ chunks/4bd1b696-c023c6e3521b1417.js  54.2 kB
+  └ other shared chunks (total)          1.89 kB
+
+
+○  (Static)  prerendered as static content

@@ -1,0 +1,10 @@
+{
+  "full-checks.txt": {
+    "source_sha256": "26e32af587e9387f9d1d2dc15a6ef94a9080a1e9541058a6165f7da1acb07831",
+    "normalization": "trailing whitespace and terminal carriage returns only"
+  },
+  "real-yolo-smoke.txt": {
+    "source_sha256": "253477f8eaadba6c5d7629269841ee9d0cb4a5111245dc69e92c4f7d04214059",
+    "normalization": "trailing whitespace and terminal carriage returns only"
+  }
+}

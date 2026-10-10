@@ -24,11 +24,12 @@ Enforced server-side, not just in the UI (minimal, flag-gated guards; no backend
 redesign; compiler / Teacher transport / router / detector / tracker / event /
 dispatch engine algorithms unchanged):
 
-- `config.py`: added `DEMO_SAFE` (`_env_bool`, default true) + two message
+- `config.py`: added `DEMO_SAFE` (`_demo_safe_from_env`, default true) + two message
   constants.
 - `main.py`:
   - `POST /api/workflows/compile` returns a visible unavailable `CompileResponse`
-    **without importing/calling `nl_compiler`** — no prompt reaches the grammar.
+    **without calling `nl_compiler`** — no prompt reaches the grammar. The
+    compiler module is imported at startup.
   - `POST /api/workflows` and `POST /api/workflows/{id}/enable` reject (`403`)
     any workflow carrying a `visual_predicate`.
   - `GET /api/metrics` and `GET /api/vlm/stats` report `disabled_demo_safe`
@@ -240,5 +241,8 @@ plus the detector / tracker / event / zone engine and the controller.
   any builder change clears a pending re-enable review; Edit preserves a 1.5s
   dwell; a legacy visual rule shows unavailable (no Edit/arm, disable + View JSON
   only); run/arm/edit blocked during analysis; no page-wide overflow at 390px.
-- The QA harness/journey live under `.agents/runtime/` (gitignored); the
-  controller maintains them. QA and push remain the controller's responsibility.
+- Independent verification of the exact handoff `99e8670`, reproducible QA
+  harnesses and the known loaded-source phone overflow are recorded in
+  [demo evidence](demo-evidence/99e8670/VALIDATION.md). The supported show path
+  uses desktop widths 1024/1280/1440px. The earlier 390px check concerned a
+  loading/empty source and does not establish phone readiness.

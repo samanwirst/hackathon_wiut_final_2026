@@ -1,0 +1,6 @@
+{
+  "target_sha": "99e8670216a8aa9161cfb2517a2e5b4b955edd0b",
+  "command": "NEXT_PUBLIC_API_URL=http://127.0.0.1:8092 OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 VISIONFLOW_DEMO_SAFE=true make smoke",
+  "exit_code": 0,
+  "seconds": 6.428815601000679
+}

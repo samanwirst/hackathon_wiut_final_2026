@@ -1,0 +1,18 @@
+{
+  "VALIDATION.md": "2aac179288983eaf730012b6118e36eb4abb6a54663dcfef9c20e5320c2e3bc3",
+  "browser_journey.mjs": "21b73045f78072cb7edc170c4e62b35a852b3f7c6b4ede452400dd6068230402",
+  "check-result.json": "1bf0a3180b370960224a37b6864448808a01afb385f8f254a50dd7ba6a6d9413",
+  "evidence-desktop.png": "023c25920791f2dadf1f6db1fa703284a5fe095cda9403b840edf1bf77d09a07",
+  "fixture-manifest.json": "a108841aab0938eaba53ad2620931435339325b23da7920f87f7f4d54c29ad36",
+  "full-checks.txt": "35f2a50893c28202cd58c073f3b7d16b02ce4e0c4f9a96f15584a890a1e8be68",
+  "journey.json": "835bb6a82b3a0b5803fe4d2191cce4b2f7d889eb73e7d105184a023f509994d3",
+  "preservation.json": "f22677d67ba918fac6a855f9b0068fd3fd6b72825ffb8ec9f26a84b4a809a731",
+  "raw-output-sha256.json": "176bc4af41b1986a086d3073d844ed28bad152c07f0343271dc5c34214bbf751",
+  "real-yolo-smoke.txt": "253477f8eaadba6c5d7629269841ee9d0cb4a5111245dc69e92c4f7d04214059",
+  "smoke-result.json": "43015c3ad5ec142aac21c23c0b3deb6f1172f24639ec31510749f351849a0ab3",
+  "start_browser_servers.py": "f8bf8f04f7d2b69d4a7c9a464cef9ab2f2056a3a299ee8e56e0d237d1e36d165",
+  "teacher-egress.json": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+  "viewport-validation.json": "d036e928bbbdccb495bc1cccae66e2ad09f4de7cb2f115a5166d4e8cae61c543",
+  "viewport_probe.mjs": "5fdabebc97c1a4a600fa14288eb791be1a462828781c5c3bfd22005f4713c4da",
+  "workspace-desktop.png": "a045ccbd443175338f12b8f8bc3489d933cd17752dd69943838278e80737f41c"
+}

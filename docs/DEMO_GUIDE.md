@@ -57,19 +57,29 @@ paths; the original M2 tests opt out with an explicit fixture.
 
 No credentials and no GPU are required. Run everything on loopback with an
 isolated data directory so the demo never touches real data, and **without**
-the autopilot/orchestrator.
+the autopilot/orchestrator. Ports 8000 and 3000 must be free for these commands.
+
+Use a desktop browser at least **1024px wide**; 1024/1280/1440px were checked.
+At 390px, selecting a real source still expands the zone workspace horizontally
+(known P2). Phone readiness is not claimed. Public deployment, the presentation
+deck, and a recorded backup remain submission tasks outside this local demo.
 
 ### Backend
 
 ```sh
 # from the repo root
+# preflight also downloads/caches the weights used below
+make smoke
 export VISIONFLOW_DATA_DIR="$(mktemp -d /tmp/visionflow-demo.XXXX)"
 export VISIONFLOW_DEMO_SAFE=true
+export DETECTOR_MODEL="$PWD/services/api/yolo11n.pt"
+export OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2
 services/api/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 \
   --app-dir services/api
 ```
 
-The first processing run downloads YOLO11n weights (~5.6 MB) automatically.
+The preflight smoke downloads YOLO11n weights automatically if missing. Keep
+the cached model ready before the timed presentation.
 API docs: http://127.0.0.1:8000/docs
 
 ### Frontend
@@ -102,9 +112,14 @@ The live demo defines the rule **before** running anything — a run requires an
 approved, enabled geometric rule on the selected source, and the UI guides you
 there if one is missing.
 
+Name **Startup mode** on the first slide. Suggested opening: “VisionFlow is a
+recorded-video control platform for service-centre managers. Today we prove
+zone events, evidence and approved local notifications; the learning pipeline
+is planned.” The pilot below is a proposal, not a partner commitment.
+
 | Time | Beat | On screen |
 | --- | --- | --- |
-| 0:00–0:45 (45s) | **Problem** — manual service-bay monitoring is slow and undocumented. | Dashboard; "Demo-safe · verified" + capability chips. |
+| 0:00–0:45 (45s) | **Startup mode; problem** — manual service-bay monitoring is slow and undocumented. | First slide naming the mode, then dashboard; "Demo-safe · verified" + capability chips. |
 | 0:45–1:30 (45s) | **Product & customer** — recorded-video control platform for service ops. | Lede + architecture note. |
 | 1:30–2:00 (30s) | **Upload / select** the demo clip (`demo_bus_private_crop.mp4`). | Video sources card. |
 | 2:00–2:40 (40s) | **Draw the zone** — a "Service Bay A" polygon on the first frame. | Zone workspace. |
@@ -152,8 +167,10 @@ services/api/.venv/bin/python -m pytest tests/integration/test_demo_safe.py -q
 ```
 
 Record actual results; do not claim a pass that was not run. See
-[.agents/DEMO_HANDOFF.md](../.agents/DEMO_HANDOFF.md) for the executed results of
-this deliverable.
+[the independent validation](../.agents/demo-evidence/99e8670/VALIDATION.md)
+for exact commands, receipts, screenshots and the desktop browser journey at
+`99e8670`. The implementation history is in
+[.agents/DEMO_HANDOFF.md](../.agents/DEMO_HANDOFF.md).
 
 ## 6. Pre-show checklist
 
@@ -163,4 +180,5 @@ this deliverable.
 - [ ] `data/demo/demo_bus_private_crop.mp4` generated (or a judge's MP4 ready).
 - [ ] Header shows **Demo-safe · verified** (the backend reported `demo_safe:true`).
 - [ ] `make check` and `make smoke` pass on the target machine.
+- [ ] Desktop viewport is at least 1024px; weights cached before the presentation.
 - [ ] No autopilot/orchestrator running; no public deployment.

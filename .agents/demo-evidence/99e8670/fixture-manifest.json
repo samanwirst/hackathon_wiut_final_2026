@@ -1,0 +1,19 @@
+{
+  "fixture": "data/demo/demo_bus_private_crop.mp4",
+  "sha256": "3521fe25192c35a201bdf75682c9a351ff1a259aff961df40ea0e26b1fdfcf37",
+  "source_asset": "ultralytics/assets/bus.jpg",
+  "source_sha256": "c02019c4979c191eb739ddd944445ef408dad5679acab6fd520ef9d434bfbc63",
+  "crop_xyxy": [
+    350,
+    220,
+    755,
+    665
+  ],
+  "synthetic_motion": true,
+  "width": 960,
+  "height": 540,
+  "fps": 30.0,
+  "frames": 180,
+  "ultralytics_version": "8.4.175",
+  "python": "3.14.7"
+}
