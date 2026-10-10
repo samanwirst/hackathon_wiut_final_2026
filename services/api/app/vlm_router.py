@@ -288,21 +288,32 @@ class VlmRouter:
         guard_state = {"invoked": False, "granted": 0, "revoked": False}
 
         def _attempt_guard() -> bool:
-            # M2-007: recheck authoritative approval at the transport boundary
-            # before admitting an outbound attempt. A workflow disabled after
-            # routing began must not disclose a new image to the provider.
-            if admit is not None and not admit():
-                guard_state["invoked"] = True
-                guard_state["revoked"] = True
-                return False
-            with self._lock:
-                guard_state["invoked"] = True
-                used_now = self._budget_used.get(task_key, 0)
-                if used_now >= budget:
+            # M2-007: the authoritative approval recheck and the admission of an
+            # outbound attempt must be ONE atomic boundary, serialized with a
+            # workflow disable. The API disable handler commits ``enabled=False``
+            # under ``dispatch_admission_lock``; by taking the same lock here
+            # around the ``admit()`` read AND the budget grant, a disable can only
+            # land fully before this boundary (admit reads False -> revoked, no
+            # request) or fully after it (the attempt was already admitted). The
+            # previous code read approval OUTSIDE any lock, so a disable could
+            # commit and return 200 between the read and the grant, then still
+            # admit one HTTP POST (the reviewed race). The lock is NOT held during
+            # the actual inference/transport, only across this decision.
+            from app.pipeline import dispatch_admission_lock  # lazy: avoids cycle
+
+            with dispatch_admission_lock:
+                if admit is not None and not admit():
+                    guard_state["invoked"] = True
+                    guard_state["revoked"] = True
                     return False
-                self._budget_used[task_key] = used_now + 1
-                self.counters.outbound_attempts += 1
-                guard_state["granted"] += 1
+                with self._lock:
+                    guard_state["invoked"] = True
+                    used_now = self._budget_used.get(task_key, 0)
+                    if used_now >= budget:
+                        return False
+                    self._budget_used[task_key] = used_now + 1
+                    self.counters.outbound_attempts += 1
+                    guard_state["granted"] += 1
             return True
 
         try:

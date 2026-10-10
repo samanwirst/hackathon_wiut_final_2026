@@ -151,3 +151,27 @@ Limitations unchanged: real Teacher visual inference remains **UNVERIFIED** (no
 unconfirmed interrupted visual candidate is marked interrupted rather than
 re-routed (no frame is available during recovery). The abandoned over-deadline
 request is a bounded daemon worker whose late response is never consumed.
+
+## M2 exceptional recovery (2026-10-10)
+
+Addresses the four P1 defects re-reproduced at the frozen final-review snapshot
+`a93d983dd89b31e329689b09726c5a1cfbf4dbb5` (base
+`2127d207a7bf2e1401d40e5ad82d926eb0f66a57`). The controller replayed the
+reviewer's original reproductions at that commit: all four reproduced. The
+assertions below characterize the **desired** behaviour. Full suite: **140
+passed** (`services/api/.venv/bin/python -m pytest tests/ -q
+--ignore=tests/orchestrator`), +17 tests vs. the prior pass; no frontend changes.
+
+| ID | Defect (reproduced at `a93d983`) | Fix | Evidence |
+| --- | --- | --- | --- |
+| M2-001 | Heuristic fallthrough still accepted unconsumed semantics: `does not enter`→entry, `less than 10 minutes`→dwell≥600s, `delete the video`→notification, a second named zone / an extra visual condition (`and leaking oil`) / an unknown `if its …` clause silently dropped | `app/nl_compiler.py`: reject negated triggers (`_NEG_TRIGGER`), upper-bound dwell durations (`_UPPER_BOUND_DURATION`), data-management actions (`_DATA_ACTION`), and >1 named zone (`_match_zone`); added `if its/if the/…` condition markers; added an anchored **residual-token backstop** (`_residual_tokens`) that rejects any meaningful token not consumed by a recognised grammar element. Supported class/zone/temporal/positive-visual intent preserved | `tests/unit/test_nl_compiler.py::test_delete_video_action_rejected`, `test_negated_trigger_rejected`, `test_upper_bound_dwell_duration_rejected`, `test_alternative_zones_rejected`, `test_extra_visual_condition_rejected`, `test_unknown_if_condition_rejected`, `test_single_named_zone_among_many_still_ok`, `test_longer_than_dwell_still_ok` |
+| M2-003 | A returned `timeout` released the concurrency slot while the abandoned daemon worker was still reading the body: at concurrency 1, four sequential trickling requests produced four active workers | `app/teacher.py`: `_ConcurrencySlot` holds the bounded-semaphore permit; on an over-deadline abandon the slot is **deferred** and a reaper releases it only after the worker truly finishes (and drops the response to bound retention). The semaphore therefore caps active transport workers/body-reads even across timeouts; preflight rejection still consumes zero HTTP budget | `tests/unit/test_transport.py::test_timeout_does_not_free_capacity_for_concurrent_workers` (genuine httpx + MockTransport trickle), existing `test_phase_compliant_trickle_exceeds_overall_deadline`, `test_fast_streamed_response_still_confirms` |
+| M2-007 | The transport-boundary approval read ran OUTSIDE any lock, so a disable could commit/return 200 between the read and the grant, then still admit one HTTP POST | `app/vlm_router.py` `_attempt_guard`: the authoritative `admit()` read AND the budget grant are now one atomic boundary under `dispatch_admission_lock` (the same lock the API disable commits under). A disable lands fully before (→ revoked, no request) or fully after (→ already admitted); the lock is NOT held during inference | `tests/integration/test_m2_visual.py::test_disable_cannot_interleave_during_transport_admission` (exact interleaving: disable BLOCKS during the admission boundary), existing `test_disable_before_route_cancels_without_teacher_call` |
+| M2-008 | Pydantic lax coercion turned `confidence: true`→`1.0` and `"0.9"`→`0.9`, authorizing an action | `app/teacher.py` `_ProviderResponse`: a `mode="before"` validator requires an actual JSON number — rejects booleans (an `int` subclass), strings, NaN and infinities before the `[0,1]` bounds apply. Valid numeric/int confidence and the optional-for-`unknown` path preserved | `tests/unit/test_teacher.py::test_boolean_confidence_rejected`, `test_false_confidence_rejected`, `test_numeric_string_confidence_rejected`, `test_nan_confidence_rejected`, `test_infinity_confidence_rejected`, `test_integer_confidence_still_valid`; boundary: `tests/integration/test_m2_visual.py::test_boolean_confidence_cannot_fire_action` |
+
+Limitations: real Teacher visual inference, foveated gains and VLM cost savings
+remain **UNVERIFIED** (no `VLM_BASE_URL`/GPU). M2-003 cancellation is cooperative
+— the abandoned worker is joined by its reaper (bounded by the production
+`read_timeout` for a stalled connection); a perfectly-paced infinite trickle
+would hold one permit until its body ends. No credentials were needed for this
+mocked-transport/security recovery.

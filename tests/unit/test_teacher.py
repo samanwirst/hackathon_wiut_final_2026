@@ -217,6 +217,80 @@ def test_at_minimum_confidence_confirms(monkeypatch):
     assert r.confirmed is True
 
 
+# -- M2-008: confidence must be an actual JSON number (no coercion) ------------
+
+def test_boolean_confidence_rejected(monkeypatch):
+    # `true` must NOT be coerced to 1.0 and confirm an action (the reproduction).
+    t = make_teacher()
+    monkeypatch.setattr(
+        httpx, "post",
+        lambda *a, **k: _Resp(200, _envelope('{"label": "yes", "confidence": true}')),
+    )
+    r = t.classify(b"img", "q", ["yes", "no"])
+    assert r.status == "invalid_response"
+    assert r.confirmed is False
+    assert r.confidence is None
+
+
+def test_false_confidence_rejected(monkeypatch):
+    t = make_teacher()
+    monkeypatch.setattr(
+        httpx, "post",
+        lambda *a, **k: _Resp(200, _envelope('{"label": "yes", "confidence": false}')),
+    )
+    r = t.classify(b"img", "q", ["yes", "no"])
+    assert r.status == "invalid_response"
+    assert r.confirmed is False
+
+
+def test_numeric_string_confidence_rejected(monkeypatch):
+    # "0.9" is a string, not a JSON number — it must not confirm.
+    t = make_teacher()
+    monkeypatch.setattr(
+        httpx, "post",
+        lambda *a, **k: _Resp(200, _envelope('{"label": "yes", "confidence": "0.9"}')),
+    )
+    r = t.classify(b"img", "q", ["yes", "no"])
+    assert r.status == "invalid_response"
+    assert r.confirmed is False
+
+
+def test_nan_confidence_rejected(monkeypatch):
+    # json.loads parses NaN by default; a non-finite confidence must be rejected.
+    t = make_teacher()
+    monkeypatch.setattr(
+        httpx, "post",
+        lambda *a, **k: _Resp(200, _envelope('{"label": "yes", "confidence": NaN}')),
+    )
+    r = t.classify(b"img", "q", ["yes", "no"])
+    assert r.status == "invalid_response"
+    assert r.confirmed is False
+
+
+def test_infinity_confidence_rejected(monkeypatch):
+    t = make_teacher()
+    monkeypatch.setattr(
+        httpx, "post",
+        lambda *a, **k: _Resp(200, _envelope('{"label": "yes", "confidence": Infinity}')),
+    )
+    r = t.classify(b"img", "q", ["yes", "no"])
+    assert r.status == "invalid_response"
+    assert r.confirmed is False
+
+
+def test_integer_confidence_still_valid(monkeypatch):
+    # A genuine JSON integer (1) is a number and remains valid.
+    t = make_teacher(min_confidence=0.5)
+    monkeypatch.setattr(
+        httpx, "post",
+        lambda *a, **k: _Resp(200, _envelope('{"label": "yes", "confidence": 1}')),
+    )
+    r = t.classify(b"img", "q", ["yes", "no"])
+    assert r.status == "ok"
+    assert r.confidence == 1.0
+    assert r.confirmed is True
+
+
 # -- M2-003: one overall deadline bounds queue, attempts and backoff ----------
 
 def test_backoff_bounded_by_deadline(monkeypatch):

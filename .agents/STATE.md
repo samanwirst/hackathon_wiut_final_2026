@@ -2,33 +2,33 @@
 
 Updated: 2026-10-10. Branch: `feature/visionflow`.
 
-## Current gate: M2 BLOCKED
+## Current gate: M2 exceptional recovery — fixed, awaiting review
 
 - M1 remains accepted at `390b337cc1f58504864ba27a23a96c1e811b358d`,
   report branch `review/M1-r3`, with its documented P2 risks.
-- Latest M2 implementation: `6d71843f6ba58ccc06c1ca8a057526262676c3e7`.
-- Exact tested/reviewed snapshot: `a93d983dd89b31e329689b09726c5a1cfbf4dbb5`.
-- Final independent verdict: **CHANGES_REQUIRED / FAIL** on `review/M2-r3`.
-- Controller phase: **BLOCKED — two normal fix cycles exhausted**.
-- M2 is not accepted. M3 and M4 have not started. No further implementation or
-  review cycle was launched after the final verdict.
+- Prior frozen review snapshot: `a93d983dd89b31e329689b09726c5a1cfbf4dbb5`
+  (base `2127d207a7bf2e1401d40e5ad82d926eb0f66a57`) — all four P1s reproduced.
+- The ONE authorized exceptional recovery implemented fixes for the four P1s
+  below; implementation SHA recorded in `.agents/HANDOFF.md`.
+- Full local suite: **140 passed** (`pytest tests/ --ignore=tests/orchestrator`),
+  +17 desired-behaviour regressions. M3/M4 not started; awaits a passing M2 gate.
 
-Read [the consolidated M2 report](reviews/M2.md) for exact reproductions,
+Read [the consolidated M2 report](reviews/M2.md) for the earlier reproductions,
 commands, line references, passed portions and limitations.
 
-## Remaining findings
+## Findings addressed in this recovery
 
-- **M2-001, P1:** Unsupported/negated NL conditions and actions silently compile
-  into different rules; e.g. “does not enter”, “less than 10 minutes”, and
-  “delete the video”.
-- **M2-003, P1:** Timed-out daemon HTTP workers continue after releasing the
-  semaphore; four unfinished requests overlapped with configured concurrency one.
-- **M2-007, P1:** An earlier approval read can admit a new image request after
-  API disable has returned. The later local action is correctly cancelled.
-- **M2-008, P1:** Boolean confidence is coerced to 1.0 and can authorize an
-  action; numeric strings also pass the supposedly strict schema.
-- **M2-009, P2:** Completed deduplication results evade the bounded TTL/LRU
-  cache and are retained indefinitely.
+- **M2-001, P1 — FIXED:** anchored grammar + residual-token backstop rejects
+  negated triggers, upper-bound dwell, data-deletion actions, multiple named
+  zones, extra/unknown visual conditions; supported intent preserved.
+- **M2-003, P1 — FIXED:** a timed-out request no longer frees the concurrency
+  slot; a deferred slot + reaper caps active transport workers to max_concurrency.
+- **M2-007, P1 — FIXED:** approval read + outbound admission are one atomic
+  boundary under `dispatch_admission_lock`; a committed disable cannot admit a
+  new Teacher request mid-route.
+- **M2-008, P1 — FIXED:** `confidence` must be an actual JSON number; booleans,
+  strings, NaN and infinities are rejected and cannot authorize an action.
+- **M2-009, P2 — NOT in scope** for this exceptional recovery (P1-only).
 
 ## Actual verification
 

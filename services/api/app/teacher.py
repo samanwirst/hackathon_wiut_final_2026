@@ -27,6 +27,7 @@ from __future__ import annotations
 import base64
 import json
 import logging
+import math
 import re
 import time
 from abc import ABC, abstractmethod
@@ -34,7 +35,7 @@ from typing import Callable, Literal, Sequence
 
 import threading
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
 from app import config
 
@@ -78,12 +79,34 @@ class _ProviderResponse(BaseModel):
     ``confidence`` is optional *here* because an explicit ``unknown`` answer may
     omit it; a *classified* label, however, must carry a confidence or it is
     downgraded to ``invalid_response`` in :meth:`OpenAICompatibleTeacher._parse`
-    (M2-AC3)."""
+    (M2-AC3).
+
+    ``confidence`` must be an *actual* JSON number (M2-008). Pydantic's default
+    lax coercion would turn ``true`` into ``1.0`` and ``"0.9"`` into ``0.9``,
+    letting a malformed provider answer authorize an action. A ``mode="before"``
+    validator rejects booleans (``True``/``False`` are ``int`` subclasses in
+    Python), strings, NaN and infinities *before* the numeric bounds are applied,
+    so only a finite JSON number in ``[0, 1]`` can ever confirm."""
 
     model_config = ConfigDict(extra="forbid")
 
     label: str
     confidence: float | None = Field(default=None, ge=0.0, le=1.0, allow_inf_nan=False)
+
+    @field_validator("confidence", mode="before")
+    @classmethod
+    def _require_json_number(cls, v):
+        if v is None:
+            return v
+        # bool is a subclass of int: reject it explicitly so ``true`` cannot be
+        # coerced to 1.0. Reject strings (incl. numeric strings) and any other
+        # non-numeric type, and reject non-finite numbers.
+        if isinstance(v, bool) or not isinstance(v, (int, float)):
+            raise ValueError("confidence must be a JSON number (not a boolean or string)")
+        f = float(v)
+        if not math.isfinite(f):
+            raise ValueError("confidence must be a finite number")
+        return f
 
 
 # A router-supplied guard invoked immediately before every outbound HTTP attempt
@@ -91,6 +114,39 @@ class _ProviderResponse(BaseModel):
 # transport boundary and returns False when no budget remains, so a retry that
 # would exceed the budget is never sent.
 AttemptGuard = Callable[[], bool]
+
+
+class _ConcurrencySlot:
+    """A single-owner handle on one bounded-semaphore permit (M2-003).
+
+    The permit is released exactly once. When an outbound request is abandoned
+    at the wall-clock deadline while its transport worker is still active, the
+    slot is *deferred*: ``classify`` must NOT release it, and a reaper releases
+    it only once the worker has truly finished. This keeps the number of active
+    transport workers/body-reads bounded by ``max_concurrency`` even across
+    timeouts — a returned ``timeout`` never frees capacity while its request is
+    still in flight."""
+
+    def __init__(self, semaphore: "threading.BoundedSemaphore") -> None:
+        self._semaphore = semaphore
+        self._lock = threading.Lock()
+        self._released = False
+        self._deferred = False
+
+    def release(self) -> None:
+        with self._lock:
+            if not self._released:
+                self._released = True
+                self._semaphore.release()
+
+    def defer(self) -> None:
+        with self._lock:
+            self._deferred = True
+
+    @property
+    def deferred(self) -> bool:
+        with self._lock:
+            return self._deferred
 
 
 class TeacherAdapter(ABC):
@@ -264,7 +320,10 @@ class OpenAICompatibleTeacher(TeacherAdapter):
         def _remaining() -> float:
             return deadline - time.perf_counter()
 
-        # Bound semaphore acquisition by the remaining deadline.
+        # Bound semaphore acquisition by the remaining deadline. A slot that is
+        # still held by an abandoned-but-active worker (M2-003) keeps capacity
+        # occupied, so a burst while one request is in flight correctly fails to
+        # acquire here and returns ``timeout`` without starting a second worker.
         acquire_budget = _remaining()
         if acquire_budget <= 0 or not self._semaphore.acquire(timeout=acquire_budget):
             return TeacherResult(
@@ -272,6 +331,7 @@ class OpenAICompatibleTeacher(TeacherAdapter):
                 latency_ms=_elapsed_ms(),
                 error="overall deadline exceeded before acquiring Teacher concurrency slot",
             )
+        slot = _ConcurrencySlot(self._semaphore)
 
         last: TeacherResult | None = None
         # Bounded attempts: each outbound attempt consults the router budget
@@ -306,7 +366,7 @@ class OpenAICompatibleTeacher(TeacherAdapter):
                 try:
                     resp = self._post_with_deadline(
                         f"{self.api_base}/chat/completions",
-                        payload, headers, attempt_timeout, deadline,
+                        payload, headers, attempt_timeout, deadline, slot,
                     )
                 except httpx.TimeoutException as exc:
                     last = TeacherResult(
@@ -351,13 +411,17 @@ class OpenAICompatibleTeacher(TeacherAdapter):
                     if backoff > 0:
                         time.sleep(backoff)
         finally:
-            self._semaphore.release()
+            # Release the concurrency slot — UNLESS an abandoned worker is still
+            # active (M2-003): its reaper owns the release so capacity is not
+            # freed while a transport request is still in flight.
+            if not slot.deferred:
+                slot.release()
         return last or TeacherResult(
             status="error", model=self.model, prompt_version=self.prompt_version,
             error="no response",
         )
 
-    def _post_with_deadline(self, url, payload, headers, attempt_timeout, deadline):
+    def _post_with_deadline(self, url, payload, headers, attempt_timeout, deadline, slot):
         """Execute one POST bounded by the overall wall-clock ``deadline`` (M2-003).
 
         httpx's phase timeouts reset per read, so a provider that trickles small
@@ -365,8 +429,19 @@ class OpenAICompatibleTeacher(TeacherAdapter):
         run the (blocking) request — connection, transfer and full-body read — in
         a daemon worker and wait only until the remaining wall-clock budget. If it
         has not finished by the deadline the request is abandoned and a late
-        response is rejected (raised as a timeout), never consumed. The existing
-        bounded queue, retries and backoff in :meth:`classify` are preserved."""
+        response is rejected (raised as a timeout), never consumed.
+
+        Crucially, when the worker is abandoned it is STILL ACTIVE. We must not
+        free the concurrency slot yet, or a burst of callers would each start a
+        fresh worker while the previous ones keep reading bodies — exceeding the
+        configured ``max_concurrency`` (the reviewed defect). Instead we ``defer``
+        the slot and hand its release to a small reaper that joins the worker (so
+        the body read finishes or its connection/read-timeout fires), drops the
+        response to bound retention, and only then releases the permit. The
+        bounded semaphore therefore caps the number of outstanding transport
+        workers and in-flight body reads even across timeouts. Retries/backoff in
+        :meth:`classify` are preserved; a deadline hit leaves no remaining budget,
+        so no retry starts another worker behind an abandoned one."""
         import httpx
 
         box: dict = {}
@@ -384,9 +459,26 @@ class OpenAICompatibleTeacher(TeacherAdapter):
         remaining = deadline - time.perf_counter()
         worker.join(timeout=max(0.0, remaining))
         if worker.is_alive():
-            # Deadline hit while the request/body was still in flight: abandon the
-            # daemon worker (bounded by the semaphore + router budget) and reject
-            # any response that arrives after the deadline.
+            # Deadline hit while the request/body was still in flight. Keep the
+            # concurrency slot occupied until the worker truly finishes: a reaper
+            # joins it, discards any late response (never consumed), and releases
+            # the permit. This bounds active workers/body-reads to max_concurrency.
+            slot.defer()
+
+            def _reap() -> None:
+                try:
+                    worker.join()
+                finally:
+                    resp = box.get("resp")
+                    close = getattr(resp, "close", None)
+                    if callable(close):
+                        try:
+                            close()
+                        except Exception:  # noqa: BLE001
+                            pass
+                    slot.release()
+
+            threading.Thread(target=_reap, daemon=True).start()
             raise httpx.TimeoutException(
                 "overall wall-clock deadline exceeded during request/response"
             )

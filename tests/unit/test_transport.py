@@ -12,6 +12,7 @@ This does NOT verify real visual inference — the provider is mocked — but it
 exercise the real streaming/body-read path rather than a fake response object."""
 
 import json
+import threading
 import time
 
 import httpx
@@ -105,3 +106,63 @@ def test_fast_streamed_response_still_confirms(monkeypatch):
     assert r.status == "ok"
     assert r.confirmed is True
     assert done_box["n"] == 1
+
+
+# -- M2-003: a returned timeout must not free capacity while the request is
+# still in flight. At concurrency 1, four sequential trickling requests must
+# never produce more than ONE active transport worker/body-read. --------------
+
+def test_timeout_does_not_free_capacity_for_concurrent_workers(monkeypatch):
+    lock = threading.Lock()
+    release = threading.Event()
+    state = {"active": 0, "peak": 0, "started": 0}
+    body = json.dumps(
+        {"choices": [{"message": {"content": '{"label":"yes","confidence":0.9}'}}]}
+    ).encode()
+
+    class Stream(httpx.SyncByteStream):
+        def __iter__(self):
+            with lock:
+                state["active"] += 1
+                state["started"] += 1
+                state["peak"] = max(state["peak"], state["active"])
+            try:
+                for byte in body:
+                    if release.wait(0.02):
+                        yield body
+                        break
+                    yield bytes([byte])
+            finally:
+                with lock:
+                    state["active"] -= 1
+
+        def close(self):
+            pass
+
+    def post(url, **kwargs):
+        with httpx.Client(
+            transport=httpx.MockTransport(lambda req: httpx.Response(200, stream=Stream())),
+            timeout=kwargs.pop("timeout"),
+        ) as client:
+            return client.post(url, **kwargs)
+
+    monkeypatch.setattr(httpx, "post", post)
+    teacher = OpenAICompatibleTeacher(
+        "https://qa.invalid/v1", "", "qa-vlm", "v1",
+        overall_timeout=0.06, read_timeout=0.05, max_retries=0, max_concurrency=1,
+    )
+    try:
+        statuses = [
+            teacher.classify(b"img", "hood open?", ["yes", "no"]).status
+            for _ in range(4)
+        ]
+        # All four deadline out (non-confirming), but capacity was never freed
+        # while a worker remained in flight: at most one active/started worker.
+        assert statuses == ["timeout"] * 4
+        assert state["peak"] <= 1, state
+        assert state["started"] <= 1, state
+    finally:
+        release.set()
+        deadline = time.monotonic() + 2
+        while state["active"] and time.monotonic() < deadline:
+            time.sleep(0.005)

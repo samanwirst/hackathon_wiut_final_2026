@@ -64,6 +64,7 @@ _CONDITION_MARKERS = (
     "confirm that", "confirm whether",
     "with its", "with their", "with the", "while its", "while the",
     "whose", "having its", "having their", "that has", "that is",
+    "if its", "if their", "if the", "if it", "provided that", "as long as",
 )
 
 # Negation adjacent to a visual state word ("hood not open", "lights not on") or
@@ -104,6 +105,122 @@ _EXTERNAL_DELIVERY = re.compile(
     r"\b(webhook|https?|post to|call the api|slack|telegram|e-?mails?|sms|"
     r"text message|phone|call the)\b"
 )
+
+# Data-management actions (delete/erase recordings, evidence, events, ...). These
+# are not supported and must NOT be silently downgraded to a notification (the
+# "delete the video" reproduction, M2-001).
+_DATA_ACTION = re.compile(
+    r"\b(delete|remove|erase|wipe|purge|destroy|drop|discard|clear)\b"
+    r"(?:\s+\w+){0,3}?\s+"
+    r"\b(video|videos|recording|recordings|footage|clip|clips|evidence|event|"
+    r"events|file|files|data|notification|notifications|workflow|workflows|source|frame|frames)\b"
+)
+
+# Negated trigger: "does not enter", "never exits", "doesn't stay", ... The engine
+# fires on the positive occurrence of a trigger, so a negated trigger cannot be
+# expressed and must be rejected rather than silently turned into the positive
+# rule ("does not enter" -> entry) (M2-001).
+_TRIGGER_WORD_STEMS = sorted(
+    {w.split()[0] for w in (_ENTER_WORDS + _EXIT_WORDS + _DWELL_WORDS)},
+    key=len, reverse=True,
+)
+_NEG_TRIGGER = re.compile(
+    r"\b(?:not|never|without|does\s+not|do\s+not|did\s+not|doesn['’]?t|don['’]?t|"
+    r"didn['’]?t|isn['’]?t|aren['’]?t|won['’]?t|no\s+longer)\b"
+    r"(?:\s+\w+){0,2}?\s+"
+    r"\b(?:" + "|".join(re.escape(s) for s in _TRIGGER_WORD_STEMS) + r")\b"
+)
+
+_TIME_UNITS = r"(?:second|sec|minute|min|hour|hr)s?"
+
+# Upper-bound / non-lower-bound duration comparison for a dwell rule. The dwell
+# engine only expresses a MINIMUM dwell ("for N" / "longer than N"); an upper
+# bound ("less than N minutes", "within N minutes") cannot be represented and is
+# rejected rather than silently turned into a >= rule (M2-001).
+_UPPER_BOUND_DURATION = re.compile(
+    r"\b(?:less than|under|within|at most|no more than|fewer than|shorter than|"
+    r"up to|below|no longer than|maximum of|max)\b(?:\s+\w+){0,2}?\s+"
+    r"\d+(?:\.\d+)?\s*" + _TIME_UNITS
+)
+
+# Comparator vocabulary used to strip consumed count/duration phrases from the
+# residual-token check below.
+_COMPARATORS = (
+    r"(?:more than|greater than|at least|at most|no more than|fewer than|"
+    r"less than|over|exceeds?|up to|under|within|minimum of|maximum of|"
+    r"longer than|shorter than|no longer than|below)"
+)
+
+# Scaffolding / command vocabulary that carries no unsupported semantics. Any
+# token that is NOT consumed by a recognised grammar element AND is not in this
+# set makes the request fall outside the supported grammar and is rejected
+# (M2-001: reject every unconsumed token rather than compiling a partial rule).
+# Deliberately excludes semantic words (not/never/without/no/and-of-conditions),
+# which must surface as rejections.
+_FILLER = {
+    "a", "an", "the", "me", "my", "our", "we", "us", "i", "you", "your",
+    "when", "whenever", "if", "once", "while", "as", "then", "there", "here",
+    "that", "this", "these", "those",
+    "is", "are", "was", "were", "be", "been", "being", "am",
+    "in", "into", "to", "at", "on", "of", "for", "from", "by", "with", "within",
+    "and", "or", "than",
+    "please", "kindly", "just", "also", "still", "now",
+    "do", "does", "did", "should", "shall", "will", "would", "can", "could",
+    "may", "must",
+    "it", "its", "their", "them", "they",
+    "create", "creates", "make", "makes", "raise", "raises", "generate",
+    "send", "sends", "give", "show", "display", "log", "logs",
+    "alert", "alerts", "alerting", "notify", "notifies", "notification",
+    "notifications", "warn", "warns", "warning",
+    "flag", "flags", "tell", "tells", "let", "know", "report", "reports",
+    "trigger", "triggers", "fire", "fires",
+    "something", "anything", "somebody", "someone",
+}
+
+
+def _residual_tokens(low: str, zone_name: str) -> list[str]:
+    """Return meaningful tokens NOT consumed by any recognised grammar element.
+
+    Everything the compiler understands (class, trigger, zone, duration/count,
+    the supported visual condition, condition markers, scaffolding) is blanked
+    out; whatever survives and is not scaffolding means the request used phrasing
+    outside the supported grammar and must be rejected (M2-001)."""
+    work = list(low)
+
+    def blank(a: int, b: int) -> None:
+        for i in range(a, b):
+            work[i] = " "
+
+    def blank_re(pattern: str) -> None:
+        for m in re.finditer(pattern, low):
+            blank(*m.span())
+
+    if zone_name:
+        start = low.find(zone_name)
+        while start != -1:
+            blank(start, start + len(zone_name))
+            start = low.find(zone_name, start + len(zone_name))
+    blank_re(r"\bvehicles?\b")
+    for w in _CLASS_SYNONYMS:
+        blank_re(rf"\b{re.escape(w)}\b")
+    for w in _ENTER_WORDS + _EXIT_WORDS + _DWELL_WORDS:
+        blank_re(rf"\b{re.escape(w)}\b")
+    blank_re(rf"\b{_COMPARATORS}\s+\d+(?:\.\d+)?")
+    blank_re(rf"\b{_COMPARATORS}\b")
+    blank_re(rf"\d+(?:\.\d+)?\s*{_TIME_UNITS}")
+    blank_re(r"\b\d+\s*(?:or more|or above)\b")
+    blank_re(r"\b(?:number of|count of|how many)\b")
+    blank_re(r"\d+\s*\+")
+    for pat, _ in _VISUAL_CONDITIONS:
+        blank_re(pat.pattern)
+    for marker in _CONDITION_MARKERS:
+        blank_re(re.escape(marker))
+    # Vehicle-state vocabulary (used by the visual conditions and negation checks).
+    blank_re(r"\b(?:hood|bonnet|trunk|boot|tailgate|door|doors|lights?|headlights?)\b")
+    blank_re(r"\b(?:open|up|raised|popped|closed|shut|down|lowered|lit|flashing)\b")
+    blank_re(r"\b(?:on|off)\b")
+    text = "".join(work)
+    return [t for t in re.findall(r"[a-z0-9]+", text) if t not in _FILLER]
 
 
 def _match_visual_conditions(text: str) -> list[str]:
@@ -245,14 +362,20 @@ def _parse_count(text: str) -> tuple[int | None, list[str], list[str]]:
 
 
 def _match_zone(text: str, zones: list[dict]) -> tuple[int | None, str, list[str], list[str]]:
-    """Return (zone_id, matched_name, warnings, errors). zones: [{'id','name'}]."""
+    """Return (zone_id, matched_name, warnings, errors). zones: [{'id','name'}].
+
+    More than one named zone (e.g. "Service Bay A or Service Bay B") is rejected
+    rather than silently reduced to the first match (M2-001)."""
     if not zones:
         return None, "", [], ["no zones exist for this source — draw a zone first"]
-    # explicit name match
-    for z in zones:
-        name = z["name"].lower()
-        if name and name in text:
-            return z["id"], name, [], []
+    present = [z for z in zones if z["name"].lower() and z["name"].lower() in text]
+    if len(present) > 1:
+        names = ", ".join(f"'{z['name']}'" for z in present)
+        return None, "", [], [
+            f"more than one zone was named ({names}); specify a single zone"
+        ]
+    if len(present) == 1:
+        return present[0]["id"], present[0]["name"].lower(), [], []
     if len(zones) == 1:
         return zones[0]["id"], zones[0]["name"].lower(), [
             f"assuming zone '{zones[0]['name']}' (the only zone)"
@@ -285,6 +408,14 @@ def compile_text(text: str, source_id: int, zones: list[dict]) -> CompileResult:
             f"(one of {sorted(SUPPORTED_CLASSES)})"
         )
 
+    # A negated trigger ("does not enter", "never exits") cannot be expressed and
+    # must be rejected, never silently compiled into the positive rule (M2-001).
+    if _NEG_TRIGGER.search(low):
+        errors.append(
+            "a negated trigger (e.g. 'does not enter') is not supported; describe "
+            "the positive event to detect (enter, exit, dwell, or count)"
+        )
+
     # Trigger: exactly one family is allowed. Alternatives/conjunctions such as
     # "enters or exits" are rejected rather than silently reduced to one (M2-001).
     families = _trigger_families(low)
@@ -314,6 +445,13 @@ def compile_text(text: str, source_id: int, zones: list[dict]) -> CompileResult:
     duration_seconds = None
     threshold = None
     if trigger_type == "dwell_in_zone":
+        # An upper-bound duration ("less than 10 minutes") cannot be expressed by
+        # the minimum-dwell engine and must be rejected, not turned into a >= rule.
+        if _UPPER_BOUND_DURATION.search(low):
+            errors.append(
+                "only a minimum dwell duration is supported (e.g. 'for 10 minutes' "
+                "or 'longer than 10 minutes'), not an upper bound"
+            )
         duration_seconds = _parse_duration_seconds(low)
         if duration_seconds is None:
             errors.append("dwell rule needs a duration, e.g. 'for 10 minutes'")
@@ -372,6 +510,11 @@ def compile_text(text: str, source_id: int, zones: list[dict]) -> CompileResult:
             "that action is not available (physical actuation / external dispatch); "
             "only in-app notifications are supported"
         )
+    if _DATA_ACTION.search(low):
+        errors.append(
+            "deleting or modifying stored videos, recordings or evidence is not a "
+            "supported action; only in-app notifications are supported"
+        )
     if (
         re.search(r"\b(python|javascript|shell|bash|source code|exec|eval)\b", low)
         or (re.search(r"\b(run|execute|invoke)\b", low)
@@ -380,6 +523,21 @@ def compile_text(text: str, source_id: int, zones: list[dict]) -> CompileResult:
         errors.append(
             "executing code, scripts, or shell commands is not supported"
         )
+
+    # Final backstop (M2-001): after extracting every supported element, no
+    # meaningful token may remain. Anything left means the request used phrasing
+    # outside the supported grammar (an extra condition, an unknown clause, ...)
+    # and must be rejected rather than compiled into a partial rule. Skipped when
+    # the class/zone could not be resolved (the specific errors above are clearer).
+    if object_class is not None and not zone_err:
+        leftover = _residual_tokens(low, zone_name)
+        if leftover:
+            errors.append(
+                "unsupported or unrecognized phrasing: "
+                + ", ".join(f"'{t}'" for t in dict.fromkeys(leftover))
+                + "; rephrase using the supported grammar "
+                "(class, enter/exit/dwell/count, zone, optional single visual condition)"
+            )
 
     if errors:
         return CompileResult(

@@ -14,16 +14,18 @@ Covered acceptance:
 - M2-AC4/AC5: router counters/VlmCall rows reflect calls; stats endpoints work.
 """
 
+import threading
 import time
 
 import cv2
+import httpx
 import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 
 from app import pipeline
 from app.main import app
-from app.teacher import TeacherAdapter, TeacherResult
+from app.teacher import OpenAICompatibleTeacher, TeacherAdapter, TeacherResult
 from app.vlm_router import VlmRouter, set_router
 from visionflow_vision.detector import BaseDetectorTracker
 from visionflow_vision.events import TrackedObject
@@ -392,5 +394,164 @@ def test_disable_before_route_cancels_without_teacher_call(client, video_path):
         assert ev.action_status == "cancelled"
         # The disable prevented the provider request entirely: no image disclosed.
         assert stub.calls == 0
+    finally:
+        session.close()
+
+
+# -- M2-007 (exceptional recovery): disable is serialized with the ACTUAL provider
+# admission. The reviewed race paused AFTER the authoritative approval read: a
+# disable returned 200, then one HTTP POST still started. With the fix the
+# approval read and admission are one boundary under dispatch_admission_lock, so a
+# disable attempted during that boundary BLOCKS and cannot admit a late request.
+
+def test_disable_cannot_interleave_during_transport_admission(client, video_path, monkeypatch):
+    from app.db import TrackEvent, Workflow, get_session
+
+    source, zone = _setup_source_zone(client, video_path, "race1.mp4")
+    wf_json = _make_visual_workflow(client, source, zone).json()
+    assert client.post(f"/api/workflows/{wf_json['id']}/enable").status_code == 200
+
+    teacher = OpenAICompatibleTeacher(
+        "https://qa.invalid/v1", "", "qa-vlm", "v1", overall_timeout=5, max_retries=0
+    )
+    set_router(VlmRouter(teacher_provider=lambda: teacher, sample_interval_s=0, cooldown_s=0))
+
+    posts = []
+
+    def mock_post(url, **kwargs):
+        posts.append(time.monotonic())
+        return httpx.Response(
+            200,
+            json={"choices": [{"message": {"content": '{"label":"yes","confidence":0.9}'}}]},
+        )
+
+    monkeypatch.setattr(httpx, "post", mock_post)
+
+    at_guard = threading.Event()
+    release = threading.Event()
+    orig_enabled = pipeline._workflow_enabled
+    calls = {"n": 0}
+
+    def paused_enabled(wf_id):
+        # call 1: route-admission read. call 2: the transport-boundary guard,
+        # held under dispatch_admission_lock by the fix. Pause there (holding the
+        # lock) so a concurrent disable must serialize behind the admission.
+        calls["n"] += 1
+        val = orig_enabled(wf_id)
+        if calls["n"] == 2:
+            at_guard.set()
+            assert release.wait(5)
+        return val
+
+    monkeypatch.setattr(pipeline, "_workflow_enabled", paused_enabled)
+
+    routed = []
+
+    def worker():
+        session = get_session()
+        try:
+            wf = session.get(Workflow, wf_json["id"])
+            ev = TrackEvent(
+                source_id=source["id"], workflow_id=wf.id, track_id=1,
+                type="object_entered_zone", class_name="car", video_timestamp=1.0,
+                confidence=0.9, detail="candidate", dedupe_key="race-admit-1",
+                action_status="pending",
+            )
+            session.add(ev)
+            session.commit()
+            frame = np.full((240, 320, 3), 40, dtype=np.uint8)
+            objs = [TrackedObject(track_id=1, class_name="car", confidence=0.9,
+                                  x1=10, y1=10, x2=60, y2=60)]
+            routed.append(pipeline._route_visual(session, wf, ev, frame, objs))
+        finally:
+            session.close()
+
+    t = threading.Thread(target=worker)
+    t.start()
+    disable_result = {}
+    disable_done = threading.Event()
+    try:
+        assert at_guard.wait(5)
+
+        def do_disable():
+            resp = client.post(f"/api/workflows/{wf_json['id']}/disable")
+            disable_result["status"] = resp.status_code
+            disable_result["at"] = time.monotonic()
+            disable_done.set()
+
+        dt = threading.Thread(target=do_disable)
+        dt.start()
+        # While the admission boundary holds the lock, disable must NOT complete
+        # and no HTTP request may have started.
+        time.sleep(0.3)
+        assert not disable_done.is_set(), "disable completed during admission boundary"
+        assert posts == []
+        release.set()
+        assert disable_done.wait(5)
+        dt.join(5)
+    finally:
+        release.set()
+    t.join(5)
+    assert not t.is_alive()
+
+    # Exactly one admitted POST, and it was admitted BEFORE the disable could
+    # commit/return — a disable can no longer slip in between the approval read
+    # and the request to admit a late image disclosure.
+    assert len(posts) == 1
+    assert disable_result.get("status") == 200
+    assert posts[0] < disable_result["at"]
+    assert routed == [True]
+
+
+# -- M2-008 (exceptional recovery): a boolean confidence must not authorize an
+# action across the full provider -> router -> event -> local-action boundary.
+
+def test_boolean_confidence_cannot_fire_action(client, video_path, monkeypatch):
+    from app.db import Notification, TrackEvent, Workflow, get_session
+
+    source, zone = _setup_source_zone(client, video_path, "bool1.mp4")
+    wf_json = _make_visual_workflow(client, source, zone).json()
+    assert client.post(f"/api/workflows/{wf_json['id']}/enable").status_code == 200
+
+    teacher = OpenAICompatibleTeacher(
+        "https://qa.invalid/v1", "", "qa-vlm", "v1", max_retries=0
+    )
+    monkeypatch.setattr(
+        httpx, "post",
+        lambda *a, **k: httpx.Response(
+            200,
+            json={"choices": [{"message": {"content": '{"label":"yes","confidence":true}'}}]},
+        ),
+    )
+    set_router(VlmRouter(teacher_provider=lambda: teacher, sample_interval_s=0, cooldown_s=0))
+
+    session = get_session()
+    try:
+        wf = session.get(Workflow, wf_json["id"])
+        ev = TrackEvent(
+            source_id=source["id"], workflow_id=wf.id, track_id=1,
+            type="object_entered_zone", class_name="car", video_timestamp=1.0,
+            confidence=0.9, detail="candidate", dedupe_key="bool-action-1",
+            action_status="pending",
+        )
+        session.add(ev)
+        session.commit()
+        ev_id = ev.id
+
+        frame = np.full((240, 320, 3), 40, dtype=np.uint8)
+        objs = [TrackedObject(track_id=1, class_name="car", confidence=0.9,
+                              x1=10, y1=10, x2=60, y2=60)]
+        confirmed = pipeline._route_visual(session, wf, ev, frame, objs)
+        if confirmed:  # must not happen; dispatch only on a valid confirmation
+            pipeline._dispatch_action(session, wf, ev)
+
+        assert confirmed is False
+        session.refresh(ev)
+        assert ev.visual_status == "invalid_response"
+        assert ev.visual_confidence is None
+        assert ev.action_status == "skipped_visual"
+        assert (
+            session.query(Notification).filter(Notification.event_id == ev_id).count() == 0
+        )
     finally:
         session.close()

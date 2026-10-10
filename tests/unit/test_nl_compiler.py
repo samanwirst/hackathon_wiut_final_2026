@@ -215,3 +215,89 @@ def test_plain_more_than_count_still_exclusive():
     r = compile_text("tell me when more than 3 cars are in Service Bay A", 1, ZONES)
     assert r.ok, r.errors
     assert r.draft["trigger"]["threshold"] == 3
+
+
+# -- M2-001 (exceptional recovery): anchored grammar rejects unconsumed semantics
+# Each of these reproduced as an HTTP 200 ok=true draft at the frozen snapshot;
+# the desired behaviour is a rejection with NO draft.
+
+TWO_ZONES = [{"id": 1, "name": "Service Bay A"}, {"id": 2, "name": "Service Bay B"}]
+
+
+def test_delete_video_action_rejected():
+    # "delete the video" must NOT become a create_notification draft.
+    r = compile_text("When a car enters Service Bay A, delete the video", 1, ZONES)
+    assert not r.ok
+    assert r.draft is None
+    assert any("delet" in e.lower() or "unsupported" in e.lower() for e in r.errors)
+
+
+def test_negated_trigger_rejected():
+    # "does not enter" must NOT silently become an entry rule.
+    r = compile_text(
+        "When a car does not enter Service Bay A, create an alert", 1, ZONES
+    )
+    assert not r.ok
+    assert r.draft is None
+    assert any("negat" in e.lower() for e in r.errors)
+
+
+def test_upper_bound_dwell_duration_rejected():
+    # "less than 10 minutes" must NOT become a dwell >= 600s rule.
+    r = compile_text(
+        "When a car stays in Service Bay A for less than 10 minutes, create an alert",
+        1, ZONES,
+    )
+    assert not r.ok
+    assert r.draft is None
+    assert any("minimum dwell" in e.lower() or "upper bound" in e.lower() for e in r.errors)
+
+
+def test_alternative_zones_rejected():
+    # Two named zones must be rejected, not reduced to the first match.
+    r = compile_text(
+        "When a car enters Service Bay A or Service Bay B, create an alert", 1, TWO_ZONES
+    )
+    assert not r.ok
+    assert r.draft is None
+    assert any("more than one zone" in e.lower() for e in r.errors)
+
+
+def test_extra_visual_condition_rejected():
+    # A supported condition ("hood open") plus an unsupported extra ("leaking oil")
+    # must be rejected, not silently reduced to only the hood-open predicate.
+    r = compile_text(
+        "When a car enters Service Bay A with its hood open and leaking oil, create an alert",
+        1, ZONES,
+    )
+    assert not r.ok
+    assert r.draft is None
+    assert any("leaking" in e.lower() or "unsupported" in e.lower() for e in r.errors)
+
+
+def test_unknown_if_condition_rejected():
+    # "if its engine is running" is not a supported visual condition.
+    r = compile_text(
+        "When a car enters Service Bay A if its engine is running, create an alert",
+        1, ZONES,
+    )
+    assert not r.ok
+    assert r.draft is None
+    assert any("condition" in e.lower() or "unsupported" in e.lower() for e in r.errors)
+
+
+def test_single_named_zone_among_many_still_ok():
+    # Regression guard: naming exactly one of several zones still compiles.
+    r = compile_text("alert me when a car enters Service Bay B", 1, TWO_ZONES)
+    assert r.ok, r.errors
+    assert r.draft["trigger"]["zone_id"] == 2
+
+
+def test_longer_than_dwell_still_ok():
+    # Regression guard: a lower-bound dwell phrasing is preserved.
+    r = compile_text(
+        "notify when a car stays in Service Bay A longer than 5 minutes", 1, ZONES
+    )
+    assert r.ok, r.errors
+    assert r.draft["trigger"]["type"] == "dwell_in_zone"
+    assert r.draft["trigger"]["duration_seconds"] == 300.0
