@@ -2,84 +2,86 @@
 
 Updated: 2026-10-10. Branch: `feature/visionflow`.
 
-## Current stage
+## Current gate: M2 BLOCKED
 
-M1 accepted with documented P2 risks at `390b337`, report `review/M1-r3`.
-M2 implementation committed as `c746fc0`; frozen review target `36e7ca84d4fe2048cd9c21522e2adfbfc5174798`.
-Controller checks: 111 tests passed, frontend build and real YOLO smoke passed.
+- M1 remains accepted at `390b337cc1f58504864ba27a23a96c1e811b358d`,
+  report branch `review/M1-r3`, with its documented P2 risks.
+- Latest M2 implementation: `6d71843f6ba58ccc06c1ca8a057526262676c3e7`.
+- Exact tested/reviewed snapshot: `a93d983dd89b31e329689b09726c5a1cfbf4dbb5`.
+- Final independent verdict: **CHANGES_REQUIRED / FAIL** on `review/M2-r3`.
+- Controller phase: **BLOCKED — two normal fix cycles exhausted**.
+- M2 is not accepted. M3 and M4 have not started. No further implementation or
+  review cycle was launched after the final verdict.
 
-M2 review-fix pass CYCLE 2 (2026-10-10): the five re-opened/new P1 defects
-(M2-001, M2-003, M2-004, M2-006, M2-007) are FIXED in `app/nl_compiler.py`,
-`app/teacher.py`, `app/vlm_router.py`, `app/pipeline.py` (+db status comments),
-with +18 added tests. Tests WERE executed this session: **123 passed**
-(`.venv/bin/python -m pytest tests/ -q --ignore=tests/orchestrator`). Git is
-blocked in the sandbox: the controller must commit and fill the exact
-implementation SHA (no SHA is fabricated). Base for this pass:
-`2127d207a7bf2e1401d40e5ad82d926eb0f66a57`. No frontend change this cycle;
-controller should still run the frontend build + real-YOLO smoke.
+Read [the consolidated M2 report](reviews/M2.md) for exact reproductions,
+commands, line references, passed portions and limitations.
 
-M2 fixes summary: strict NL grammar now rejects negation, unsupported
-actions, alternative triggers, appearance attributes and converts inclusive
-counts (M2-001); Teacher enforces a cancellable wall-clock deadline across
-transport + body read (M2-003); router accounts real-adapter attempts only via
-the transport guard so a local preflight rejection costs no budget (M2-004);
-recovery resumes a persisted confirmation once and marks unconfirmed candidates
-interrupted (M2-006); provider admission re-checks workflow disable and records
-cancelled with no Teacher call (M2-007).
+## Remaining findings
 
-Prior block: M2's controller parent was interrupted, the orphaned review
-exceeded the 1,200-second limit, and no complete structured review was
-returned. M2 is not yet accepted; M3/M4 have not started.
-Report: `.agents/reviews/M2.md`, pushed on `review/M2`.
+- **M2-001, P1:** Unsupported/negated NL conditions and actions silently compile
+  into different rules; e.g. “does not enter”, “less than 10 minutes”, and
+  “delete the video”.
+- **M2-003, P1:** Timed-out daemon HTTP workers continue after releasing the
+  semaphore; four unfinished requests overlapped with configured concurrency one.
+- **M2-007, P1:** An earlier approval read can admit a new image request after
+  API disable has returned. The later local action is correctly cancelled.
+- **M2-008, P1:** Boolean confidence is coerced to 1.0 and can authorize an
+  action; numeric strings also pass the supposedly strict schema.
+- **M2-009, P2:** Completed deduplication results evade the bounded TTL/LRU
+  cache and are retained indefinitely.
 
-PRD v1.2, `docs/VLM_ARCHITECTURE.md` and `docs/METRICS.md` preserve the
-self-hosted Vast.ai/vLLM contract, foveated/full-frame/ROI experiment and
-actual rental measurement gates. Real Teacher and all unexecuted benchmarks
-remain UNVERIFIED. No GPU was rented or public endpoint deployed.
+## Actual verification
 
-## Existing implementation and evidence
+Controller `make check`: **143 tests passed, four warnings**, structure check
+passed, frontend production build passed. Controller `make smoke`: real YOLO
+processed 30 frames, emitted a bus-entry event at 4.2 seconds/confidence 0.76,
+served JPEG evidence and persisted a local notification; mean detector inference
+60.4 ms. This uses synthetic motion of photographic content and is a limited
+smoke measurement, not held-out model accuracy or a VLM savings comparison.
 
-- Real sampled YOLO11n/ByteTrack, polygon enter/exit/dwell/count state machines.
-- MP4 upload, disabled-by-default workflow approval, SQLite events/evidence,
-  local notification actions, Next.js upload/zone/workflow/timeline UI.
-- Last application gate: 69 tests passed; frontend production build passed.
-- Controller real-YOLO smoke: 30 analyzed frames, bus confidence 0.76,
-  enter at 4.2 s, served JPEG, persisted notification, 55.6 ms mean frame
-  inference. Preliminary synthetic-motion photographic sample, not a
-  held-out quality or cost benchmark.
-- Independent QA verified the unchanged 69-test suite using a disclosed
-  temporary asyncio heartbeat in its restricted TestClient environment.
-- Four reproduced P1 gaps: disable/dispatch race; ambiguous webhook replay
-  after delivery interruption; DNS rebinding; premature decode reported done.
-- P2 CI dependency gap remains documented; it is outside this focused pass.
+Independent QA: **143 tests passed, four warnings** using the disclosed
+runner-only 10 ms asyncio heartbeat in the restricted TestClient environment;
+seven focused characterization tests reproduced material defects; frontend
+build and fixture-based component handlers passed. No full browser test ran.
+All four exceptional M1 P1 recovery regressions remain covered and pass.
 
-## Architecture steering preserved
+## Recovery audit
 
-`docs/VISUAL_ANALYTICS_AUDIT.md` audits the current snapshot. PRD section 16
-and TRACEABILITY now contain M2-AC1..5, M3-AC1..6 and M4-AC1..4.
+The original M2 review completed its 111-test command, then returned no final
+structured result. Controller-parent interruption removed its 1,200-second
+supervision; the orphan reviewer exceeded that limit and was terminated. The
+logs do not establish the reason for no further model/transport output.
 
-- M2: cheap continuous vision -> temporal candidate -> selected frame/ROI ->
-  budgeted Teacher; sampling, in-flight dedupe, versioned cache and counters.
-- M3: Teacher labels -> human verification -> frozen embeddings -> fitted
-  Student; session-held-out metrics, shadow, gated manual activation,
-  Teacher fallback and working rollback.
-- M4: real paired baseline/routed/Student runs on identical held-out inputs;
-  actual usage, latency and quality; no invented savings percentages.
-- No VLM provider credential is configured. Provider interfaces and honest
-  fallbacks can be implemented; real Teacher capabilities remain unverified
-  until access is configured. Development-agent login is not a Teacher key.
+The user authorized **ONE exceptional review-only recovery**, completed in
+602 seconds against original target `36e7ca84d4fe2048cd9c21522e2adfbfc5174798`.
+Original implementation `c746fc098afd69dedc9cab54d6262e589212abc0` and handoff
+remain intact in history. That review returned CHANGES_REQUIRED, permitting
+the normal bounded policy: two focused Claude fixes and two exact-commit
+reviews. The last review completed in 923 seconds and still found four P1s.
+The controller stopped at its limit, without a synthesized PASS or extra cycle.
 
-## Orchestration and delivery limits
+Claude completed the fixes and regression tests; the controller committed
+those artifacts when the agent left committing to it after compound Bash
+commands were denied. No additional implementation call was used to recover
+commits. Runtime checkpoints, original handoffs, logs and hashed reproductions
+are preserved under ignored `.agents/runtime/`; they are not public artifacts.
 
-`scripts/orchestrate.py` alone schedules sequential Claude/Codex CLI calls.
-It preserves exact-SHA reviews and interrupted checkpoints, never merges
-main, and protects independent reports/source brief/controller code from
-implementation-agent edits. Normal limit: two fixes per milestone.
-`--exceptional-m1-recovery` grants the single approved extra M1 pass only;
-counters persist and repeated resume cannot grant more attempts.
+## Architecture and unverified capabilities
 
-CPU-only, limited RAM; existing dependencies are installed. No public
-production deployment, robot operation, purchases or new paid service
-activation is authorized. Public deployment awaits explicit approval of a
-concrete prepared result. No API auth/deployment/live camera yet. Current
-Ultralytics/model/data licensing limitations are in `docs/LICENSES.md`.
+PRD section 16, `docs/VLM_ARCHITECTURE.md`, and `docs/METRICS.md` retain the
+OpenVector-inspired cheap detector/tracker/temporal path, event-selected
+Teacher inputs, sampling/deduplication/caching/budgets, self-hosted compatible
+adapter, Teacher -> verified data -> frozen embeddings -> Student plan,
+held-out/shadow/manual activation/rollback, and identical-input comparisons.
+
+The user-authorized unavailable-provider fallback remains disclosed. No GPU
+instance is connected and no external VLM API key is required at this stage.
+Real Teacher inference/labels and quality, full-frame/ROI/foveated performance,
+Student held-out evaluation, GPU activity/throughput, actual Vast.ai rental
+costs and savings remain **UNVERIFIED**. Foveated strategy selection is planned;
+ROI selection and full-frame fallback are implemented. No measured percentage
+of savings is claimed. M3/M4 implementation awaits a passing M2 gate.
+
+No main merge, force push, hardware operation, GPU rental, purchase, new paid
+service or public deployment occurred. Public deployment still requires the
+explicit approval specified in the original goal.
