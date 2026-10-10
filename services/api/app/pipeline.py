@@ -146,6 +146,16 @@ def _build_engines(session, source: VideoSource) -> list[tuple[Workflow, ZoneEve
     )
     for wf in workflows:
         dsl = wf.dsl
+        # Demo-safe guard: a Teacher-routed visual-predicate workflow is NEVER
+        # armed in demo mode, even if it was enabled through a pre-demo NL path or
+        # inserted as a legacy row. It is refused (skipped) — not silently coerced
+        # into a geometric rule — so zero Teacher admission can occur (M2-AC2).
+        if config.DEMO_SAFE and dsl.get("visual_predicate"):
+            logger.info(
+                "demo-safe: skipping visual-predicate workflow %s (no Teacher admission)",
+                wf.id,
+            )
+            continue
         zone_row = session.get(ZoneRow, dsl["trigger"]["zone_id"])
         if zone_row is None or zone_row.source_id != source.id:
             logger.warning("workflow %s references missing zone; skipping", wf.id)

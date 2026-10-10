@@ -80,6 +80,38 @@ VLM_CACHE_MAX_ENTRIES = int(os.environ.get("VLM_CACHE_MAX_ENTRIES", "512"))
 THREAD_COUNT = int(os.environ.get("VISIONFLOW_THREADS", "2"))
 
 
+# --- Demo-safe mode (DEMO task) --------------------------------------------
+# Default TRUE. Demo-safe mode enforces the demo's safety boundary in the
+# BACKEND (not just the UI):
+#   * the natural-language compiler is never invoked (M2-001 is unresolved);
+#   * Teacher-routed visual-predicate workflows cannot be created, enabled, or
+#     processed — zero Teacher admission even if a VLM endpoint is configured or
+#     a legacy visual workflow row is already enabled. Such a workflow is
+#     refused, never silently coerced into a geometric rule;
+#   * VLM stats report an explicit disabled state WITHOUT instantiating a real
+#     Teacher adapter.
+# Set VISIONFLOW_DEMO_SAFE=false to exercise the historical M2 experimental
+# paths (the original M2 tests opt out with an explicit fixture).
+def _env_bool(name: str, default: bool) -> bool:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() in ("1", "true", "yes", "on")
+
+
+DEMO_SAFE = _env_bool("VISIONFLOW_DEMO_SAFE", True)
+
+DEMO_SAFE_COMPILE_MESSAGE = (
+    "Natural-language compilation is unavailable in demo-safe mode. Build the "
+    "rule with the guided controls, then review the server-validated JSON before "
+    "activation."
+)
+DEMO_SAFE_VISUAL_MESSAGE = (
+    "Teacher-routed visual-predicate workflows are disabled in demo-safe mode. "
+    "Only the real geometric detector / tracker / zone rules run in this demo."
+)
+
+
 def ensure_dirs() -> None:
     for d in (UPLOAD_DIR, SNAPSHOT_DIR, EVIDENCE_DIR):
         d.mkdir(parents=True, exist_ok=True)

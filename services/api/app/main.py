@@ -219,6 +219,16 @@ def compile_workflow(body: CompileRequest, session: Session = Depends(db)):
     (M2-AC1). Deterministic rule-based compiler (no text-model credentials).
     Unsupported/ambiguous requests are rejected; the draft is never saved or
     enabled here and no code is generated or executed."""
+    # Demo-safe: return a visible unavailable response WITHOUT importing or
+    # invoking nl_compiler, so no prompt (including the unresolved M2-001 cases)
+    # can ever reach the compiler grammar in this demo.
+    if config.DEMO_SAFE:
+        return CompileResponse(
+            ok=False,
+            draft=None,
+            errors=[config.DEMO_SAFE_COMPILE_MESSAGE],
+            explanation=config.DEMO_SAFE_COMPILE_MESSAGE,
+        )
     _source_or_404(session, body.source_id)
     zones = [
         {"id": z.id, "name": z.name}
@@ -250,6 +260,8 @@ def compile_workflow(body: CompileRequest, session: Session = Depends(db)):
 @app.post("/api/workflows", response_model=WorkflowOut, status_code=201)
 def create_workflow(dsl: WorkflowDSL, session: Session = Depends(db)):
     _source_or_404(session, dsl.source_id)
+    if config.DEMO_SAFE and dsl.visual_predicate is not None:
+        raise HTTPException(403, config.DEMO_SAFE_VISUAL_MESSAGE)
     zone = session.get(Zone, dsl.trigger.zone_id)
     if zone is None or zone.source_id != dsl.source_id:
         raise HTTPException(422, "trigger.zone_id does not belong to source_id")
@@ -281,6 +293,10 @@ def enable_workflow(workflow_id: int, session: Session = Depends(db)):
     wf = session.get(Workflow, workflow_id)
     if wf is None:
         raise HTTPException(404, "workflow not found")
+    # Demo-safe: a visual-predicate workflow (e.g. a legacy row created before the
+    # demo) can never be armed, so it cannot admit a Teacher call at processing.
+    if config.DEMO_SAFE and (wf.dsl or {}).get("visual_predicate"):
+        raise HTTPException(403, config.DEMO_SAFE_VISUAL_MESSAGE)
     WorkflowDSL.model_validate(wf.dsl)  # re-validate before arming
     wf.enabled = True
     session.commit()
@@ -374,14 +390,26 @@ def metrics(session: Session = Depends(db)):
         "detector_model": config.DETECTOR_MODEL,
         "detector_device": config.DETECTOR_DEVICE,
         "process_fps": config.PROCESS_FPS,
-        "vlm": get_router().stats(),
+        # Demo-safe: report disabled without instantiating the router/Teacher.
+        "vlm": (
+            {
+                "status": "disabled_demo_safe",
+                "teacher_available": False,
+                "reason": config.DEMO_SAFE_VISUAL_MESSAGE,
+            }
+            if config.DEMO_SAFE
+            else get_router().stats()
+        ),
     }
 
 
 @app.get("/api/vlm/stats")
 def vlm_stats(session: Session = Depends(db)):
-    """Live router counters plus persisted per-decision aggregates (M2-AC5)."""
-    router = get_router()
+    """Live router counters plus persisted per-decision aggregates (M2-AC5).
+
+    In demo-safe mode the live block reports an explicit disabled state and the
+    real router/Teacher is never instantiated; persisted historical rows (if any)
+    are still summarized read-only."""
     rows = session.query(VlmCall).all()
     persisted: dict[str, int] = {}
     for r in rows:
@@ -390,8 +418,17 @@ def vlm_stats(session: Session = Depends(db)):
     for r in rows:
         if r.teacher_status:
             teacher_statuses[r.teacher_status] = teacher_statuses.get(r.teacher_status, 0) + 1
+    if config.DEMO_SAFE:
+        live = {
+            "status": "disabled_demo_safe",
+            "teacher_provider": "disabled",
+            "teacher_available": False,
+            "reason": config.DEMO_SAFE_VISUAL_MESSAGE,
+        }
+    else:
+        live = get_router().stats()
     return {
-        "live": router.stats(),
+        "live": live,
         "persisted_by_route_status": persisted,
         "persisted_by_teacher_status": teacher_statuses,
         "total_decisions": len(rows),

@@ -23,8 +23,22 @@ import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 
-from app import pipeline
+from app import config, pipeline
 from app.main import app
+
+
+@pytest.fixture(autouse=True)
+def _experimental_m2_mode():
+    """These are the historical M2 experimental tests: they exercise NL compile
+    and Teacher-routed visual predicates, which the demo-safe backend disables by
+    default. Opt explicitly into the pre-demo behavior (DEMO_SAFE=False) without
+    weakening any original assertion."""
+    prev = config.DEMO_SAFE
+    config.DEMO_SAFE = False
+    try:
+        yield
+    finally:
+        config.DEMO_SAFE = prev
 from app.teacher import OpenAICompatibleTeacher, TeacherAdapter, TeacherResult
 from app.vlm_router import VlmRouter, set_router
 from visionflow_vision.detector import BaseDetectorTracker

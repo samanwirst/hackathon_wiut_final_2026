@@ -1,30 +1,37 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
+/* ----------------------------------------------------------------- types */
+
 type Source = {
   id: number;
+  type: string;
   name: string;
   status: string;
   error: string | null;
   width: number | null;
   height: number | null;
+  frame_count: number | null;
   frames_processed: number;
   avg_inference_ms: number | null;
 };
 
 type Zone = { id: number; source_id: number; name: string; polygon: [number, number][] };
 
-type VisualPredicate = {
-  prompt: string;
-  labels: string[];
-  expected_label: string;
-  description?: string;
-  sample_interval_seconds?: number | null;
-  cooldown_seconds?: number | null;
-  budget?: number | null;
+type Trigger = { type: string; zone_id: number; duration_seconds?: number | null; threshold?: number | null };
+
+type Dsl = {
+  name: string;
+  source_id: number;
+  object_class: string;
+  trigger: Trigger;
+  action: { type: string; config: Record<string, unknown> };
+  visual_predicate?: unknown;
+  cooldown_seconds: number;
+  requires_approval: boolean;
 };
 
 type Workflow = {
@@ -32,15 +39,13 @@ type Workflow = {
   source_id: number;
   name: string;
   enabled: boolean;
-  dsl: {
-    object_class: string;
-    trigger: { type: string; zone_id: number; duration_seconds?: number; threshold?: number };
-    visual_predicate?: VisualPredicate | null;
-  };
+  dsl: Dsl;
 };
 
-type Event = {
+type TrackEventT = {
   id: number;
+  source_id: number;
+  workflow_id: number;
   type: string;
   class_name: string | null;
   track_id: number | null;
@@ -50,115 +55,152 @@ type Event = {
   evidence_url: string | null;
   action_status: string;
   visual_status: string | null;
-  visual_label: string | null;
-  visual_confidence: number | null;
   created_at: string;
 };
 
-type Notification = { id: number; event_id: number; title: string; message: string; created_at: string };
+type NotificationT = { id: number; event_id: number; title: string; message: string; created_at: string };
 
-type CompileResponse = {
-  ok: boolean;
-  draft: {
-    name: string;
-    object_class: string;
-    trigger: { type: string; zone_id: number; duration_seconds?: number; threshold?: number };
-    visual_predicate?: VisualPredicate | null;
-  } | null;
-  errors: string[];
-  warnings: string[];
-  explanation: string;
-};
+type ReviewTarget = { workflowId: number; dsl: Dsl; kind: "new" | "reenable" };
 
-type VlmStats = {
-  live: {
-    calls: number;
-    outbound_attempts: number;
-    cache_hits: number;
-    cache_misses: number;
-    suppressed_budget: number;
-    suppressed_cooldown: number;
-    suppressed_sampling: number;
-    failed: number;
-    confirmed: number;
-    unknown: number;
-    teacher_provider: string;
-    teacher_available: boolean;
-  };
-  total_decisions: number;
-};
-
-const TRIGGER_TYPES = [
-  { value: "object_entered_zone", label: "Object enters zone" },
-  { value: "object_exited_zone", label: "Object exits zone" },
-  { value: "dwell_in_zone", label: "Object stays in zone (dwell)" },
-  { value: "object_count_exceeded", label: "Object count exceeds threshold" },
+const TRIGGERS = [
+  { value: "object_entered_zone", label: "Object enters the zone" },
+  { value: "object_exited_zone", label: "Object exits the zone" },
+  { value: "dwell_in_zone", label: "Object stays in the zone (dwell ≥ seconds)" },
+  { value: "object_count_exceeded", label: "Count in zone strictly exceeds a threshold" },
 ];
 
 const CLASSES = ["car", "truck", "bus", "motorcycle", "bicycle", "person"];
+
+/* ----------------------------------------------------------------- icons */
+
+const I = {
+  logo: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  ),
+  upload: (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M17 8l-5-5-5 5" /><path d="M12 3v12" />
+    </svg>
+  ),
+  video: (
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="5" width="15" height="14" rx="2" /><path d="m17 9 5-3v12l-5-3" />
+    </svg>
+  ),
+  zone: (
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 7l9-4 9 4-9 4-9-4Z" /><path d="M3 7v10l9 4 9-4V7" />
+    </svg>
+  ),
+  play: (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
+  ),
+  check: (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+  ),
+  edit: (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
+  ),
+  info: (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" /></svg>
+  ),
+  alert: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" /><path d="M12 9v4" /><path d="M12 17h.01" /></svg>
+  ),
+  close: (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
+  ),
+  shield: (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" /></svg>
+  ),
+  bell: (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></svg>
+  ),
+  list: (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M8 6h13" /><path d="M8 12h13" /><path d="M8 18h13" /><path d="M3 6h.01" /><path d="M3 12h.01" /><path d="M3 18h.01" /></svg>
+  ),
+};
+
+/* ----------------------------------------------------------------- component */
 
 export default function Home() {
   const [sources, setSources] = useState<Source[]>([]);
   const [zones, setZones] = useState<Zone[]>([]);
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
-  const [events, setEvents] = useState<Event[]>([]);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [vlmStats, setVlmStats] = useState<VlmStats | null>(null);
+  const [events, setEvents] = useState<TrackEventT[]>([]);
+  const [notifications, setNotifications] = useState<NotificationT[]>([]);
   const [selectedSource, setSelectedSource] = useState<number | null>(null);
+  const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [busy, setBusy] = useState(false);
 
-  // NL compile state
-  const [nlText, setNlText] = useState("When a car enters Service Bay A, create an alert");
-  const [compileResult, setCompileResult] = useState<CompileResponse | null>(null);
-  const [visualPredicate, setVisualPredicate] = useState<VisualPredicate | null>(null);
-
-  // zone drawing state
+  // zone drawing
   const [drawing, setDrawing] = useState(false);
   const [points, setPoints] = useState<[number, number][]>([]);
   const [zoneName, setZoneName] = useState("Service Bay A");
   const imgRef = useRef<HTMLImageElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // workflow form state
-  const [wfName, setWfName] = useState("Car entered bay");
+  // rule builder
+  const [wfName, setWfName] = useState("Car entered Service Bay A");
   const [wfClass, setWfClass] = useState("car");
   const [wfTrigger, setWfTrigger] = useState("object_entered_zone");
   const [wfZone, setWfZone] = useState<number | null>(null);
   const [wfDuration, setWfDuration] = useState(10);
   const [wfThreshold, setWfThreshold] = useState(2);
+  const [review, setReview] = useState<ReviewTarget | null>(null);
+  const [editNote, setEditNote] = useState<string | null>(null);
+
+  // evidence modal
+  const [modalEvent, setModalEvent] = useState<TrackEventT | null>(null);
+
+  const builderRef = useRef<HTMLDivElement>(null);
+
+  const current = sources.find((s) => s.id === selectedSource) || null;
+  const isProcessing = current?.status === "processing";
 
   const apiError = async (r: Response) => {
-    let detail = `${r.status}`;
+    let detail = `request failed (${r.status})`;
     try {
       const body = await r.json();
       detail = typeof body.detail === "string" ? body.detail : JSON.stringify(body.detail);
-    } catch {}
+    } catch {
+      /* keep default */
+    }
     setError(detail);
   };
 
   const refresh = useCallback(async () => {
     try {
-      const [s, e, n, v] = await Promise.all([
+      const [s, n] = await Promise.all([
         fetch(`${API}/api/sources`).then((r) => r.json()),
-        fetch(`${API}/api/events?limit=50`).then((r) => r.json()),
-        fetch(`${API}/api/notifications?limit=20`).then((r) => r.json()),
-        fetch(`${API}/api/vlm/stats`).then((r) => r.json()),
+        fetch(`${API}/api/notifications?limit=100`).then((r) => r.json()),
       ]);
       setSources(s);
-      setEvents(e);
       setNotifications(n);
-      setVlmStats(v);
       if (selectedSource) {
-        const [z, w] = await Promise.all([
+        const [z, w, e] = await Promise.all([
           fetch(`${API}/api/zones?source_id=${selectedSource}`).then((r) => r.json()),
           fetch(`${API}/api/workflows?source_id=${selectedSource}`).then((r) => r.json()),
+          fetch(`${API}/api/events?source_id=${selectedSource}&limit=100`).then((r) => r.json()),
         ]);
         setZones(z);
         setWorkflows(w);
+        setEvents(e);
+      } else {
+        setZones([]);
+        setWorkflows([]);
+        setEvents([]);
       }
+      setLoaded(true);
+      setError((prev) => (prev && prev.startsWith("Cannot reach") ? null : prev));
     } catch {
-      setError(`API unreachable at ${API}`);
+      setError(`Cannot reach the API at ${API}. Is the backend running?`);
+      setLoaded(true);
     }
   }, [selectedSource]);
 
@@ -168,59 +210,56 @@ export default function Home() {
     return () => clearInterval(t);
   }, [refresh]);
 
-  const upload = async (file: File) => {
-    setUploading(true);
-    setError(null);
-    const form = new FormData();
-    form.append("file", file);
-    const r = await fetch(`${API}/api/sources/upload`, { method: "POST", body: form });
-    setUploading(false);
-    if (!r.ok) return apiError(r);
-    const s = await r.json();
-    setSelectedSource(s.id);
-    refresh();
-  };
+  // Switching source clears any in-progress draft/approval, drawing and edit note.
+  useEffect(() => {
+    setReview(null);
+    setEditNote(null);
+    setPoints([]);
+    setDrawing(false);
+    setWfZone(null);
+  }, [selectedSource]);
+
+  /* -------------------------------------------------- canvas overlay */
 
   const drawOverlay = useCallback(() => {
     const canvas = canvasRef.current;
     const img = imgRef.current;
-    if (!canvas || !img) return;
-    canvas.width = img.clientWidth;
-    canvas.height = img.clientHeight;
-    const ctx = canvas.getContext("2d")!;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (!canvas || !img || !img.clientWidth) return;
+    const w = img.clientWidth;
+    const h = img.clientHeight;
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.clearRect(0, 0, w, h);
 
-    // saved zones
     for (const z of zones) {
-      ctx.strokeStyle = "#f59e0b";
+      ctx.strokeStyle = "#4f8cff";
+      ctx.fillStyle = "rgba(79, 140, 255, 0.14)";
       ctx.lineWidth = 2;
       ctx.beginPath();
-      z.polygon.forEach(([x, y], i) => {
-        const px = x * canvas.width;
-        const py = y * canvas.height;
-        i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
-      });
+      z.polygon.forEach(([x, y], i) => (i === 0 ? ctx.moveTo(x * w, y * h) : ctx.lineTo(x * w, y * h)));
       ctx.closePath();
-      ctx.stroke();
-      ctx.fillStyle = "rgba(245, 158, 11, 0.15)";
       ctx.fill();
+      ctx.stroke();
+      const [lx, ly] = z.polygon[0];
+      ctx.fillStyle = "#4f8cff";
+      ctx.font = "600 12px system-ui";
+      ctx.fillText(z.name, lx * w + 6, ly * h + 16);
     }
 
-    // in-progress polygon
     if (points.length > 0) {
-      ctx.strokeStyle = "#3b82f6";
+      ctx.strokeStyle = "#a78bfa";
       ctx.lineWidth = 2;
+      ctx.setLineDash([5, 4]);
       ctx.beginPath();
-      points.forEach(([x, y], i) => {
-        const px = x * canvas.width;
-        const py = y * canvas.height;
-        i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
-      });
+      points.forEach(([x, y], i) => (i === 0 ? ctx.moveTo(x * w, y * h) : ctx.lineTo(x * w, y * h)));
       ctx.stroke();
+      ctx.setLineDash([]);
       for (const [x, y] of points) {
-        ctx.fillStyle = "#3b82f6";
+        ctx.fillStyle = "#a78bfa";
         ctx.beginPath();
-        ctx.arc(x * canvas.width, y * canvas.height, 4, 0, Math.PI * 2);
+        ctx.arc(x * w, y * h, 4, 0, Math.PI * 2);
         ctx.fill();
       }
     }
@@ -230,12 +269,45 @@ export default function Home() {
     drawOverlay();
   }, [drawOverlay]);
 
+  // Keep the overlay aligned with the snapshot on any container/viewport resize.
+  useEffect(() => {
+    const img = imgRef.current;
+    if (!img) return;
+    const ro = new ResizeObserver(() => drawOverlay());
+    ro.observe(img);
+    window.addEventListener("resize", drawOverlay);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", drawOverlay);
+    };
+  }, [drawOverlay, selectedSource]);
+
   const canvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!drawing || !canvasRef.current) return;
     const rect = canvasRef.current.getBoundingClientRect();
     const x = (e.clientX - rect.left) / rect.width;
     const y = (e.clientY - rect.top) / rect.height;
     setPoints((p) => [...p, [Math.min(1, Math.max(0, x)), Math.min(1, Math.max(0, y))]]);
+  };
+
+  /* -------------------------------------------------- actions */
+
+  const upload = async (file: File) => {
+    setUploading(true);
+    setError(null);
+    const form = new FormData();
+    form.append("file", file);
+    try {
+      const r = await fetch(`${API}/api/sources/upload`, { method: "POST", body: form });
+      if (!r.ok) return apiError(r);
+      const s = await r.json();
+      setSelectedSource(s.id);
+      await refresh();
+    } catch {
+      setError("Upload failed — the API may be unreachable.");
+    } finally {
+      setUploading(false);
+    }
   };
 
   const saveZone = async () => {
@@ -251,44 +323,21 @@ export default function Home() {
     refresh();
   };
 
-  const compile = async () => {
-    if (!selectedSource) {
-      setError("select a source first");
-      return;
-    }
-    setError(null);
-    const r = await fetch(`${API}/api/workflows/compile`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ source_id: selectedSource, text: nlText }),
-    });
-    if (!r.ok) return apiError(r);
-    const body: CompileResponse = await r.json();
-    setCompileResult(body);
-  };
+  // Any builder edit invalidates a pending (unapproved) new draft so no stale
+  // approval can be submitted against outdated parameters.
+  const touchBuilder = () => setReview((rt) => (rt?.kind === "new" ? null : rt));
 
-  const applyDraft = () => {
-    const d = compileResult?.draft;
-    if (!d) return;
-    setWfName(d.name);
-    setWfClass(d.object_class);
-    setWfTrigger(d.trigger.type);
-    setWfZone(d.trigger.zone_id);
-    if (d.trigger.duration_seconds) setWfDuration(Math.round(d.trigger.duration_seconds));
-    if (d.trigger.threshold) setWfThreshold(d.trigger.threshold);
-    setVisualPredicate(d.visual_predicate ?? null);
-  };
-
-  const createWorkflow = async () => {
+  const saveDraft = async () => {
     if (!selectedSource || !wfZone) {
-      setError("select a source and a zone first");
+      setError("Pick a zone for this rule first.");
       return;
     }
     setError(null);
+    setBusy(true);
     const trigger: Record<string, unknown> = { type: wfTrigger, zone_id: wfZone };
     if (wfTrigger === "dwell_in_zone") trigger.duration_seconds = wfDuration;
     if (wfTrigger === "object_count_exceeded") trigger.threshold = wfThreshold;
-    const payload: Record<string, unknown> = {
+    const payload = {
       name: wfName,
       source_id: selectedSource,
       object_class: wfClass,
@@ -296,23 +345,66 @@ export default function Home() {
       action: { type: "create_notification", config: { title: wfName } },
       cooldown_seconds: 10,
     };
-    if (visualPredicate) payload.visual_predicate = visualPredicate;
-    const r = await fetch(`${API}/api/workflows`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+    try {
+      const r = await fetch(`${API}/api/workflows`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!r.ok) return apiError(r);
+      const wf: Workflow = await r.json();
+      setReview({ workflowId: wf.id, dsl: wf.dsl, kind: "new" });
+      setEditNote(null);
+      await refresh();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const approve = async () => {
+    if (!review) return;
+    setBusy(true);
+    try {
+      const r = await fetch(`${API}/api/workflows/${review.workflowId}/enable`, { method: "POST" });
+      if (!r.ok) return apiError(r);
+      setReview(null);
+      await refresh();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const disableWorkflow = async (wf: Workflow) => {
+    const r = await fetch(`${API}/api/workflows/${wf.id}/disable`, { method: "POST" });
     if (!r.ok) return apiError(r);
-    setVisualPredicate(null);
-    setCompileResult(null);
+    setReview((rt) => (rt?.workflowId === wf.id ? null : rt));
     refresh();
   };
 
-  const toggleWorkflow = async (wf: Workflow) => {
-    const action = wf.enabled ? "disable" : "enable";
-    const r = await fetch(`${API}/api/workflows/${wf.id}/${action}`, { method: "POST" });
-    if (!r.ok) return apiError(r);
-    refresh();
+  const reviewEnable = (wf: Workflow) => {
+    setReview({ workflowId: wf.id, dsl: wf.dsl, kind: "reenable" });
+    builderRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const editWorkflow = async (wf: Workflow) => {
+    if (isProcessing) return;
+    if (wf.enabled) {
+      const r = await fetch(`${API}/api/workflows/${wf.id}/disable`, { method: "POST" });
+      if (!r.ok) return apiError(r);
+    }
+    setWfName(wf.name);
+    setWfClass(wf.dsl.object_class);
+    setWfTrigger(wf.dsl.trigger.type);
+    setWfZone(wf.dsl.trigger.zone_id);
+    if (wf.dsl.trigger.duration_seconds) setWfDuration(Math.round(wf.dsl.trigger.duration_seconds));
+    if (wf.dsl.trigger.threshold) setWfThreshold(wf.dsl.trigger.threshold);
+    setReview(null);
+    setEditNote(
+      `Editing “${wf.name}”. The previous rule (#${wf.id}) has been disabled; its past ` +
+        `events and evidence are preserved. Saving creates a new reviewed version.`,
+    );
+    await refresh();
+    builderRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   const processSource = async (id: number) => {
@@ -322,316 +414,444 @@ export default function Home() {
     refresh();
   };
 
-  const current = sources.find((s) => s.id === selectedSource) || null;
+  /* -------------------------------------------------- derived */
+
+  const sourceEventIds = useMemo(() => new Set(events.map((e) => e.id)), [events]);
+  const scopedNotifications = useMemo(
+    () => (selectedSource ? notifications.filter((n) => sourceEventIds.has(n.event_id)) : notifications),
+    [notifications, selectedSource, sourceEventIds],
+  );
+
+  const ruleSummary = (dsl: Dsl) => {
+    const t = dsl.trigger;
+    let s = `${dsl.object_class} · `;
+    if (t.type === "object_entered_zone") s += "enters zone";
+    else if (t.type === "object_exited_zone") s += "exits zone";
+    else if (t.type === "dwell_in_zone") s += `dwell ≥ ${t.duration_seconds ?? "?"}s`;
+    else if (t.type === "object_count_exceeded") s += `count > ${t.threshold ?? "?"}`;
+    else s += t.type;
+    return s;
+  };
+
+  const progressPct = () => {
+    if (!current) return 0;
+    const total = current.frame_count || 0;
+    if (!total) return current.status === "processing" ? 15 : 0;
+    const analyzed = current.frames_processed || 0;
+    // frames_processed is sampled count; cap for a calm indicator.
+    return Math.min(100, Math.round((analyzed / Math.max(1, total / 6)) * 100));
+  };
+
+  /* -------------------------------------------------- render */
 
   return (
-    <main>
-      <h1>VisionFlow AI</h1>
-      <p className="muted">
-        Upload a video, draw a zone, enable a workflow, process — real detections become events
-        and authorized actions.
-      </p>
-      {error && <div className="error-banner">⚠ {error}</div>}
-
-      <section className="card">
-        <h2>1 · Video sources</h2>
-        <div className="row" style={{ marginBottom: 12 }}>
-          <input
-            type="file"
-            accept="video/mp4"
-            disabled={uploading}
-            onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])}
-          />
-          {uploading && <span className="muted">uploading…</span>}
+    <>
+      <header className="appbar">
+        <div className="appbar-inner">
+          <div className="brand">
+            <div className="brand-mark">{I.logo}</div>
+            <div className="brand-text">
+              <h1>VisionFlow AI</h1>
+              <p>Visual analytics control platform · recorded video</p>
+            </div>
+          </div>
+          <div className="chips">
+            <span className="chip on">{I.shield} Demo-safe</span>
+            <span className="chip planned"><span className="dot" /> NL agent · planned</span>
+            <span className="chip planned"><span className="dot" /> Teacher VLM · unavailable</span>
+            <span className="chip planned"><span className="dot" /> AutoLearn · planned</span>
+            <span className="chip unavailable"><span className="dot" /> Foveated · unverified</span>
+          </div>
         </div>
-        {sources.length > 0 && (
-          <table>
-            <thead>
-              <tr><th>ID</th><th>Name</th><th>Status</th><th>Frames</th><th>Inference</th><th></th></tr>
-            </thead>
-            <tbody>
-              {sources.map((s) => (
-                <tr key={s.id} style={{ background: s.id === selectedSource ? "#1e2430" : undefined }}>
-                  <td>{s.id}</td>
-                  <td>{s.name}</td>
-                  <td>
-                    <span className={`status-${s.status}`}>{s.status}</span>
-                    {s.error && <span className="muted"> — {s.error}</span>}
-                  </td>
-                  <td>{s.frames_processed}</td>
-                  <td>{s.avg_inference_ms ? `${s.avg_inference_ms.toFixed(0)} ms` : "—"}</td>
-                  <td className="row">
-                    <button className="secondary" onClick={() => setSelectedSource(s.id)}>Select</button>
-                    <button
-                      onClick={() => processSource(s.id)}
-                      disabled={s.status === "processing"}
-                    >
-                      {s.status === "processing" ? "Processing…" : "Process"}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </section>
+      </header>
 
-      {current && (
+      <main className="shell">
+        <p className="lede" style={{ marginTop: 0, marginBottom: 20 }}>
+          Select or upload a recorded clip, draw a monitored zone, build a detection rule, review the
+          exact server-validated JSON, then approve it to arm the real detector → tracker → temporal-rule
+          pipeline. Events, evidence frames and local notifications appear below.
+        </p>
+
+        {error && (
+          <div className="banner error">
+            {I.alert}
+            <span>{error}</span>
+            <button className="ghost sm" onClick={() => setError(null)}>Dismiss</button>
+          </div>
+        )}
+
+        {/* 1 · Sources ------------------------------------------------ */}
         <section className="card">
-          <h2>2 · Zones for “{current.name}”</h2>
-          <div className="row" style={{ marginBottom: 10 }}>
-            <input value={zoneName} onChange={(e) => setZoneName(e.target.value)} placeholder="Zone name" />
-            {!drawing ? (
-              <button onClick={() => { setDrawing(true); setPoints([]); }}>Draw zone</button>
-            ) : (
-              <>
-                <button onClick={saveZone} disabled={points.length < 3}>
-                  Save zone ({points.length} pts)
-                </button>
-                <button className="secondary" onClick={() => { setDrawing(false); setPoints([]); }}>
-                  Cancel
-                </button>
-                <span className="muted">click on the image to add polygon points</span>
-              </>
-            )}
+          <div className="card-head">
+            <span className="idx">1</span>
+            <h2>Video sources</h2>
+            <span className="sub">recorded clips only — live camera unavailable</span>
           </div>
-          <div className="canvas-wrap">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              ref={imgRef}
-              src={`${API}/api/sources/${current.id}/snapshot`}
-              alt="first frame"
-              onLoad={drawOverlay}
-            />
-            <canvas ref={canvasRef} onClick={canvasClick} />
+
+          <div className="row" style={{ marginBottom: 14 }}>
+            <label className="secondary" style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "8px 15px", borderRadius: 8, cursor: uploading ? "not-allowed" : "pointer", border: "1px solid var(--border-strong)" }}>
+              {uploading ? <span className="spinner" /> : I.upload}
+              <span>{uploading ? "Uploading…" : "Upload MP4"}</span>
+              <input
+                type="file"
+                accept="video/mp4"
+                disabled={uploading}
+                style={{ display: "none" }}
+                onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])}
+              />
+            </label>
+            <span className="faint">
+              Sample: <code>data/demo/demo_bus.mp4</code> (real photo, synthetic motion). Generate it
+              with <code>make smoke</code> or <code>python scripts/make_demo_video.py</code>, then upload.
+            </span>
           </div>
-          {zones.length > 0 && (
-            <p className="muted">Saved zones: {zones.map((z) => `${z.name} (#${z.id})`).join(", ")}</p>
+
+          {!loaded ? (
+            <div className="empty"><span className="spinner" /><div className="desc">Loading sources…</div></div>
+          ) : sources.length === 0 ? (
+            <div className="empty">
+              {I.video}
+              <div className="title">No video sources yet</div>
+              <div className="desc">Upload an MP4 clip to begin. Detection runs genuine YOLO inference on sampled frames.</div>
+            </div>
+          ) : (
+            <table>
+              <thead>
+                <tr><th>#</th><th>Name</th><th>Status</th><th>Frames</th><th>Inference</th><th /></tr>
+              </thead>
+              <tbody>
+                {sources.map((s) => (
+                  <tr key={s.id} className={`selectable ${s.id === selectedSource ? "selected" : ""}`} onClick={() => setSelectedSource(s.id)}>
+                    <td>{s.id}</td>
+                    <td>{s.name}</td>
+                    <td>
+                      <span className={`badge ${s.status}`}><span className="dot" />{s.status}</span>
+                      {s.error && <div className="faint" style={{ marginTop: 3 }}>{s.error}</div>}
+                    </td>
+                    <td>{s.frames_processed || "—"}{s.frame_count ? ` / ~${s.frame_count}` : ""}</td>
+                    <td>{s.avg_inference_ms ? `${s.avg_inference_ms.toFixed(0)} ms` : "—"}</td>
+                    <td className="row" style={{ justifyContent: "flex-end" }} onClick={(e) => e.stopPropagation()}>
+                      <button className="secondary sm" onClick={() => setSelectedSource(s.id)}>Select</button>
+                      <button className="sm" disabled={s.status === "processing"} onClick={() => processSource(s.id)}>
+                        {s.status === "processing" ? <><span className="spinner" />Processing</> : <>{I.play} Run</>}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+
+          {current && (
+            <div className="hint" style={{ marginTop: 14 }}>
+              {I.info}
+              <span>
+                <strong>{current.name}</strong> selected ({current.width}×{current.height}). Status:{" "}
+                <strong>{current.status}</strong>.{" "}
+                {current.status === "processing"
+                  ? "Processing in progress — rule editing and arming are paused until it completes."
+                  : "Detection samples frames and runs real YOLO; only the demo clip's motion is synthetic."}
+              </span>
+            </div>
+          )}
+
+          {current && isProcessing && (
+            <div className="progress-track"><div className="progress-bar" style={{ width: `${Math.max(10, progressPct())}%` }} /></div>
           )}
         </section>
-      )}
 
-      {current && (
-        <section className="card">
-          <h2>3 · Workflows</h2>
+        {current ? (
+          <div className="grid-2">
+            {/* 2 · Workspace ----------------------------------------- */}
+            <section className="card" style={{ marginBottom: 0 }}>
+              <div className="card-head">
+                <span className="idx">2</span>
+                <h2>Zone workspace</h2>
+                <span className="sub">normalized polygon on first frame</span>
+              </div>
 
-          <div style={{ marginBottom: 16, padding: 12, border: "1px solid #2a3140", borderRadius: 8 }}>
-            <h3 style={{ margin: "0 0 8px" }}>Describe a rule in plain language</h3>
-            <div className="row" style={{ marginBottom: 8 }}>
-              <textarea
-                value={nlText}
-                onChange={(e) => setNlText(e.target.value)}
-                rows={2}
-                style={{ flex: 1, minWidth: 320 }}
-                placeholder="e.g. When a car stays in Service Bay A for more than 10 minutes, create an alert"
-              />
-              <button onClick={compile}>Compile</button>
-            </div>
-            {compileResult && (
-              <div className="muted" style={{ fontSize: 13 }}>
-                {compileResult.ok ? (
+              <div className={`canvas-wrap ${drawing ? "drawing" : ""}`}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  ref={imgRef}
+                  src={`${API}/api/sources/${current.id}/snapshot`}
+                  alt="first frame of the selected video"
+                  onLoad={drawOverlay}
+                />
+                <canvas ref={canvasRef} onClick={canvasClick} />
+                {drawing && <div className="canvas-overlay-hint">Click to add points · {points.length} placed</div>}
+              </div>
+
+              <div className="row" style={{ marginTop: 12 }}>
+                {!drawing ? (
                   <>
-                    <div style={{ color: "#4ade80" }}>✓ {compileResult.explanation}</div>
-                    {compileResult.warnings.map((w, i) => (
-                      <div key={i} style={{ color: "#fbbf24" }}>⚠ {w}</div>
-                    ))}
-                    <button className="secondary" style={{ marginTop: 6 }} onClick={applyDraft}>
-                      Apply draft to form below (review, then create)
-                    </button>
+                    <input value={zoneName} onChange={(e) => setZoneName(e.target.value)} placeholder="Zone name" style={{ flex: 1, minWidth: 140 }} />
+                    <button className="secondary" onClick={() => { setDrawing(true); setPoints([]); }}>{I.zone} Draw zone</button>
                   </>
                 ) : (
-                  <div style={{ color: "#f87171" }}>
-                    ✗ Could not compile:
-                    {compileResult.errors.map((er, i) => (
-                      <div key={i}>• {er}</div>
-                    ))}
-                  </div>
+                  <>
+                    <button className="success" disabled={points.length < 3} onClick={saveZone}>{I.check} Save zone ({points.length})</button>
+                    <button className="ghost" onClick={() => { setPoints([]); }}>Clear points</button>
+                    <button className="ghost" onClick={() => { setDrawing(false); setPoints([]); }}>Cancel</button>
+                  </>
                 )}
               </div>
-            )}
-          </div>
 
-          {visualPredicate && (
-            <div className="muted" style={{ marginBottom: 8, color: "#a78bfa" }}>
-              🔎 Visual predicate attached: “{visualPredicate.prompt}” (expects “
-              {visualPredicate.expected_label}”). Routed to the Teacher VLM on candidate events
-              only.{" "}
-              <button className="secondary" onClick={() => setVisualPredicate(null)}>
-                remove
-              </button>
-            </div>
-          )}
+              {zones.length > 0 && (
+                <div className="tag-list" style={{ marginTop: 12 }}>
+                  {zones.map((z) => (
+                    <span key={z.id} className="badge neutral">{z.name} · #{z.id}</span>
+                  ))}
+                </div>
+              )}
+            </section>
 
-          <div className="row" style={{ marginBottom: 12 }}>
-            <input value={wfName} onChange={(e) => setWfName(e.target.value)} placeholder="Workflow name" />
-            <select value={wfClass} onChange={(e) => setWfClass(e.target.value)}>
-              {CLASSES.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
-            <select value={wfTrigger} onChange={(e) => setWfTrigger(e.target.value)}>
-              {TRIGGER_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-            </select>
-            <select value={wfZone ?? ""} onChange={(e) => setWfZone(Number(e.target.value) || null)}>
-              <option value="">— zone —</option>
-              {zones.map((z) => <option key={z.id} value={z.id}>{z.name}</option>)}
-            </select>
-            {wfTrigger === "dwell_in_zone" && (
-              <label className="muted">
-                dwell s:{" "}
-                <input
-                  type="number" min={1} style={{ width: 70 }}
-                  value={wfDuration} onChange={(e) => setWfDuration(Number(e.target.value))}
-                />
-              </label>
-            )}
-            {wfTrigger === "object_count_exceeded" && (
-              <label className="muted">
-                threshold:{" "}
-                <input
-                  type="number" min={1} style={{ width: 70 }}
-                  value={wfThreshold} onChange={(e) => setWfThreshold(Number(e.target.value))}
-                />
-              </label>
-            )}
-            <button onClick={createWorkflow}>Create (disabled by default)</button>
+            {/* 3 · Rule builder -------------------------------------- */}
+            <section className="card" style={{ marginBottom: 0 }} ref={builderRef}>
+              <div className="card-head">
+                <span className="idx">3</span>
+                <h2>Build & review a rule</h2>
+              </div>
+
+              <div className="hint" style={{ marginBottom: 14 }}>
+                {I.info}
+                <span>
+                  Natural-language compilation is <strong>planned</strong> and disabled in demo-safe mode.
+                  Compose the rule below; the server returns the canonical JSON for you to review before activation.
+                </span>
+              </div>
+
+              {editNote && <div className="hint warn" style={{ marginBottom: 14 }}>{I.edit}<span>{editNote}</span></div>}
+
+              <div className="form-grid">
+                <label className="field">Rule name
+                  <input value={wfName} onChange={(e) => { setWfName(e.target.value); touchBuilder(); }} disabled={isProcessing} />
+                </label>
+                <label className="field">Object class
+                  <select value={wfClass} onChange={(e) => { setWfClass(e.target.value); touchBuilder(); }} disabled={isProcessing}>
+                    {CLASSES.map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </label>
+                <label className="field">Zone
+                  <select value={wfZone ?? ""} onChange={(e) => { setWfZone(Number(e.target.value) || null); touchBuilder(); }} disabled={isProcessing}>
+                    <option value="">— select zone —</option>
+                    {zones.map((z) => <option key={z.id} value={z.id}>{z.name}</option>)}
+                  </select>
+                </label>
+                <label className="field" style={{ gridColumn: "1 / -1" }}>Trigger
+                  <select value={wfTrigger} onChange={(e) => { setWfTrigger(e.target.value); touchBuilder(); }} disabled={isProcessing}>
+                    {TRIGGERS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+                  </select>
+                </label>
+                {wfTrigger === "dwell_in_zone" && (
+                  <label className="field">Dwell seconds (≥)
+                    <input type="number" min={1} value={wfDuration} onChange={(e) => { setWfDuration(Number(e.target.value)); touchBuilder(); }} disabled={isProcessing} />
+                  </label>
+                )}
+                {wfTrigger === "object_count_exceeded" && (
+                  <label className="field">Threshold (count &gt;)
+                    <input type="number" min={1} value={wfThreshold} onChange={(e) => { setWfThreshold(Number(e.target.value)); touchBuilder(); }} disabled={isProcessing} />
+                  </label>
+                )}
+              </div>
+
+              <div className="row end" style={{ marginTop: 14 }}>
+                <button onClick={saveDraft} disabled={isProcessing || busy || !wfZone}>
+                  {busy ? <span className="spinner" /> : null} Save draft for review
+                </button>
+              </div>
+
+              {zones.length === 0 && (
+                <p className="faint" style={{ marginTop: 10, textAlign: "right" }}>Draw a zone first to enable rule creation.</p>
+              )}
+              {isProcessing && (
+                <p className="faint" style={{ marginTop: 10, textAlign: "right" }}>Paused while this source is processing (the frame snapshot would be stale).</p>
+              )}
+
+              {review && (
+                <div className="review">
+                  <div className="review-head" style={{ color: "var(--accent-hover)" }}>
+                    {I.shield}
+                    {review.kind === "new" ? "Review the server-validated draft" : "Review before re-arming"}
+                  </div>
+                  <p className="faint" style={{ marginTop: 0, marginBottom: 10 }}>
+                    This is exactly what the backend validated and will execute — no client logic is trusted.
+                    Approve to arm it (workflow #{review.workflowId}, currently disabled).
+                  </p>
+                  <pre className="code">{JSON.stringify(review.dsl, null, 2)}</pre>
+                  <div className="row end" style={{ marginTop: 12 }}>
+                    <button className="ghost" onClick={() => setReview(null)}>Discard</button>
+                    <button className="success" onClick={approve} disabled={busy || isProcessing}>
+                      {busy ? <span className="spinner" /> : I.check} Approve &amp; activate
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {workflows.length > 0 && (
+                <>
+                  <div className="divider" />
+                  <table>
+                    <thead><tr><th>#</th><th>Rule</th><th>State</th><th /></tr></thead>
+                    <tbody>
+                      {workflows.map((w) => (
+                        <tr key={w.id}>
+                          <td>{w.id}</td>
+                          <td>
+                            {w.name}
+                            <div className="faint">{ruleSummary(w.dsl)}</div>
+                          </td>
+                          <td>
+                            <span className={`badge ${w.enabled ? "enabled" : "disabled"}`}><span className="dot" />{w.enabled ? "armed" : "disabled"}</span>
+                          </td>
+                          <td className="row" style={{ justifyContent: "flex-end" }}>
+                            {w.enabled ? (
+                              <button className="danger sm" onClick={() => disableWorkflow(w)}>Disable</button>
+                            ) : (
+                              <button className="secondary sm" disabled={isProcessing} onClick={() => reviewEnable(w)}>Review &amp; arm</button>
+                            )}
+                            <button className="ghost sm" disabled={isProcessing} onClick={() => editWorkflow(w)}>{I.edit} Edit</button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </>
+              )}
+            </section>
           </div>
-          {workflows.length > 0 && (
+        ) : (
+          loaded && sources.length > 0 && (
+            <section className="card">
+              <div className="empty">
+                {I.zone}
+                <div className="title">Select a source to open the workspace</div>
+                <div className="desc">Pick a clip above to draw zones and build rules.</div>
+              </div>
+            </section>
+          )
+        )}
+
+        {/* 4 · Events ------------------------------------------------ */}
+        <section className="card" style={{ marginTop: 18 }}>
+          <div className="card-head">
+            <span className="idx">4</span>
+            <h2>Event timeline</h2>
+            <span className="sub">{current ? `source #${current.id}` : "select a source"}</span>
+          </div>
+          {!current ? (
+            <div className="empty">{I.list}<div className="title">No source selected</div><div className="desc">Events are scoped to the selected source.</div></div>
+          ) : events.length === 0 ? (
+            <div className="empty">{I.list}<div className="title">No events yet</div><div className="desc">Draw a zone, build and approve a rule, then run the source.</div></div>
+          ) : (
             <table>
-              <thead><tr><th>ID</th><th>Name</th><th>Rule</th><th>Status</th><th></th></tr></thead>
+              <thead>
+                <tr><th>#</th><th>Event</th><th>Video time</th><th>Conf.</th><th>Evidence</th><th>Action</th></tr>
+              </thead>
               <tbody>
-                {workflows.map((w) => (
-                  <tr key={w.id}>
-                    <td>{w.id}</td>
-                    <td>{w.name}</td>
-                    <td className="muted">
-                      {w.dsl.object_class} · {w.dsl.trigger.type}
-                      {w.dsl.trigger.duration_seconds ? ` ≥${w.dsl.trigger.duration_seconds}s` : ""}
-                      {w.dsl.trigger.threshold ? ` >${w.dsl.trigger.threshold}` : ""}
-                      {w.dsl.visual_predicate ? (
-                        <span style={{ color: "#a78bfa" }}> · 🔎 visual</span>
-                      ) : null}
+                {events.map((e) => (
+                  <tr key={e.id}>
+                    <td>{e.id}</td>
+                    <td>{e.detail || e.type}</td>
+                    <td>{e.video_timestamp.toFixed(1)}s</td>
+                    <td>{(e.confidence * 100).toFixed(0)}%</td>
+                    <td>
+                      {e.evidence_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img className="evidence-thumb" src={`${API}${e.evidence_url}`} alt="evidence frame" onClick={() => setModalEvent(e)} />
+                      ) : <span className="faint">—</span>}
                     </td>
-                    <td>{w.enabled ? <span className="status-processed">enabled</span> : <span className="muted">disabled</span>}</td>
-                    <td><button className="secondary" onClick={() => toggleWorkflow(w)}>{w.enabled ? "Disable" : "Enable"}</button></td>
+                    <td>
+                      <span className={`badge ${e.action_status === "done" ? "done" : "neutral"}`}>
+                        {e.action_status === "done" && <span className="dot" />}{e.action_status}
+                      </span>
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           )}
         </section>
-      )}
 
-      <section className="card">
-        <h2>4 · Event timeline</h2>
-        {events.length === 0 ? (
-          <p className="muted">No events yet. Upload, draw a zone, enable a workflow, then Process.</p>
-        ) : (
-          <table>
-            <thead>
-              <tr><th>ID</th><th>Event</th><th>Video time</th><th>Conf</th><th>Visual</th><th>Evidence</th><th>Action</th></tr>
-            </thead>
-            <tbody>
-              {events.map((e) => (
-                <tr key={e.id}>
-                  <td>{e.id}</td>
-                  <td>{e.detail || e.type}</td>
-                  <td>{e.video_timestamp.toFixed(1)}s</td>
-                  <td>{(e.confidence * 100).toFixed(0)}%</td>
-                  <td className="muted">
-                    {e.visual_status ? (
-                      <span style={{ color: e.visual_status === "ok" ? "#4ade80" : "#fbbf24" }}>
-                        {e.visual_status}
-                        {e.visual_label ? ` → ${e.visual_label}` : ""}
-                      </span>
-                    ) : (
-                      "—"
-                    )}
-                  </td>
-                  <td>
-                    {e.evidence_url && (
-                      <a href={`${API}${e.evidence_url}`} target="_blank" rel="noreferrer">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img className="evidence-thumb" src={`${API}${e.evidence_url}`} alt="evidence" />
-                      </a>
-                    )}
-                  </td>
-                  <td>
-                    <span className={e.action_status === "done" ? "status-processed" : "status-failed"}>
-                      {e.action_status}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </section>
-
-      <section className="card">
-        <h2>5 · Notifications (executed actions)</h2>
-        {notifications.length === 0 ? (
-          <p className="muted">No notifications yet.</p>
-        ) : (
-          <table>
-            <thead><tr><th>ID</th><th>Title</th><th>Message</th><th>At</th></tr></thead>
-            <tbody>
-              {notifications.map((n) => (
-                <tr key={n.id}>
-                  <td>{n.id}</td>
-                  <td>{n.title}</td>
-                  <td>{n.message}</td>
-                  <td className="muted">{new Date(n.created_at).toLocaleTimeString()}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </section>
-
-      <section className="card">
-        <h2>6 · Teacher VLM routing (cost-efficient path)</h2>
-        {vlmStats ? (
-          <>
-            <p className="muted">
-              Provider: <strong>{vlmStats.live.teacher_provider}</strong> ·{" "}
-              {vlmStats.live.teacher_available ? (
-                <span className="status-processed">available</span>
-              ) : (
-                <span className="status-failed">
-                  not configured — visual predicates cannot confirm (documented blocker)
-                </span>
-              )}
-            </p>
+        {/* 5 · Notifications ----------------------------------------- */}
+        <section className="card">
+          <div className="card-head">
+            <span className="idx">5</span>
+            <h2>Local notifications</h2>
+            <span className="sub">executed actions — local only, no outbound delivery</span>
+          </div>
+          {scopedNotifications.length === 0 ? (
+            <div className="empty">{I.bell}<div className="title">No notifications yet</div><div className="desc">A confirmed event fires the authorized local notification action.</div></div>
+          ) : (
             <table>
-              <thead>
-                <tr>
-                  <th>Teacher calls</th><th>Outbound attempts</th><th>Cache hits</th><th>Confirmed</th><th>Unknown</th>
-                  <th>Failed</th><th>Suppr. budget</th><th>Suppr. cooldown</th><th>Suppr. sampling</th>
-                </tr>
-              </thead>
+              <thead><tr><th>#</th><th>Title</th><th>Message</th><th>At</th></tr></thead>
               <tbody>
-                <tr>
-                  <td>{vlmStats.live.calls}</td>
-                  <td>{vlmStats.live.outbound_attempts}</td>
-                  <td>{vlmStats.live.cache_hits}</td>
-                  <td>{vlmStats.live.confirmed}</td>
-                  <td>{vlmStats.live.unknown}</td>
-                  <td>{vlmStats.live.failed}</td>
-                  <td>{vlmStats.live.suppressed_budget}</td>
-                  <td>{vlmStats.live.suppressed_cooldown}</td>
-                  <td>{vlmStats.live.suppressed_sampling}</td>
-                </tr>
+                {scopedNotifications.map((n) => (
+                  <tr key={n.id}>
+                    <td>{n.id}</td>
+                    <td>{n.title}</td>
+                    <td className="muted">{n.message}</td>
+                    <td className="faint">{new Date(n.created_at).toLocaleTimeString()}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
-            <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
-              Geometric rules make zero Teacher calls. Teacher calls occur only for a visual
-              predicate on an eligible candidate event, with sampling, cooldown, budget,
-              in-flight dedup and a versioned cache.
-            </p>
-          </>
-        ) : (
-          <p className="muted">No routing stats yet.</p>
-        )}
-      </section>
-    </main>
+          )}
+        </section>
+
+        {/* 6 · Architecture note ------------------------------------- */}
+        <section className="card">
+          <div className="card-head">
+            <span className="idx">6</span>
+            <h2>Architecture &amp; honest status</h2>
+          </div>
+          <p className="muted" style={{ marginTop: 0 }}>
+            VisionFlow follows an OpenVector-inspired hierarchy:{" "}
+            <strong>cheap continuous detection → tracking → temporal zone rules</strong> (the path running
+            in this demo) → a selected future <strong>Teacher VLM</strong> on eligible candidate events →
+            a verified dataset and a lightweight <strong>Student</strong>.
+          </p>
+          <div className="tag-list" style={{ marginTop: 6 }}>
+            <span className="badge enabled"><span className="dot" />Detector + tracker + temporal rules · active</span>
+            <span className="badge visual">NL agent · planned</span>
+            <span className="badge visual">Teacher VLM · unavailable</span>
+            <span className="badge visual">AutoLearn / Student · planned</span>
+            <span className="badge visual">Foveated input · unverified</span>
+          </div>
+          <p className="faint" style={{ marginTop: 12 }}>
+            Zero Teacher calls here reflect the geometric-only path, not a measured cost benchmark. Teacher,
+            Student, foveated inputs and any GPU savings are <strong>UNVERIFIED</strong>; no percentage savings
+            is claimed. Demo-safe mode is enforced server-side: the NL compiler is never invoked and visual
+            predicates cannot reach a provider.
+          </p>
+        </section>
+      </main>
+
+      {/* evidence modal */}
+      {modalEvent && (
+        <div className="modal-backdrop" onClick={() => setModalEvent(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-head">
+              <h3>Evidence · event #{modalEvent.id}</h3>
+              <button className="ghost sm" onClick={() => setModalEvent(null)}>{I.close}</button>
+            </div>
+            <div className="modal-body">
+              {modalEvent.evidence_url && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={`${API}${modalEvent.evidence_url}`} alt="full evidence frame" />
+              )}
+              <div className="meta-grid">
+                <div><div className="k">Event</div><div className="v">{modalEvent.detail || modalEvent.type}</div></div>
+                <div><div className="k">Class</div><div className="v">{modalEvent.class_name ?? "—"}</div></div>
+                <div><div className="k">Track</div><div className="v">{modalEvent.track_id ?? "—"}</div></div>
+                <div><div className="k">Video time</div><div className="v">{modalEvent.video_timestamp.toFixed(2)}s</div></div>
+                <div><div className="k">Confidence</div><div className="v">{(modalEvent.confidence * 100).toFixed(0)}%</div></div>
+                <div><div className="k">Action</div><div className="v">{modalEvent.action_status}</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

@@ -42,6 +42,31 @@ The [architecture audit](docs/VISUAL_ANALYTICS_AUDIT.md) and
 [milestone acceptance criteria](docs/PRD.md#16-acceptance-criteria) define
 the remaining work. No VLM savings or held-out quality result is established.
 
+## Demo-safe build (current deliverable)
+
+The branch `feature/demo-safe` ships a polished, demonstrable **geometric**
+control platform for recorded video with the experimental M2 paths locked off
+in the backend. See the [Demo Guide](docs/DEMO_GUIDE.md) for the exact startup,
+data provenance, the seven-minute script, and the supported/disabled/unverified
+matrix.
+
+Demo-safe mode (`VISIONFLOW_DEMO_SAFE=true`, the default) is enforced
+server-side, not just in the UI:
+
+- the natural-language compiler is **never invoked** (M2-001 remains unresolved);
+- Teacher-routed **visual-predicate** workflows cannot be created, enabled, or
+  processed — zero Teacher admission even with a VLM endpoint configured or a
+  legacy visual row enabled, and they are refused rather than silently coerced
+  into geometric rules;
+- VLM stats report an explicit disabled state **without** instantiating a Teacher.
+
+**M1 is accepted; M2 remains BLOCKED.** This demo is not an M2 acceptance, an M3
+AutoLearn implementation, or a measured-cost result. Teacher, Student, foveated
+input and any GPU savings are UNVERIFIED and no savings percentage is claimed.
+The guided UI builds a rule, shows the exact server-validated JSON, and requires
+a deliberate approval before the real detector → tracker → temporal-rule
+pipeline is armed.
+
 ## Run locally
 
 Requirements: Python 3.11+ (3.14 tested), Node 20+, ~1 GB disk for ML wheels.
