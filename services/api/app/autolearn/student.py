@@ -132,6 +132,10 @@ class StudentClassifier:
         clf._w = np.asarray(s["w"], dtype=np.float32)
         clf._b = float(s["b"])
         clf.fitted = bool(s["fitted"])
+        # Saved training provenance (threshold, class_mapping, encoder/preprocess
+        # identity, dataset/split hashes) so a loader can verify the artifact
+        # matches its registry row before trusting it (C-008/C-009).
+        clf.extra = dict(payload.get("extra") or {})
         return clf
 
 

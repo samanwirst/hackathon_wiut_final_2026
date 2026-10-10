@@ -313,7 +313,7 @@ def gate(version_id: int, session: Session = Depends(db)):
     v = session.get(ModelVersion, version_id)
     if v is None:
         raise HTTPException(404, "version not found")
-    return {"experimental": True, "version": v.version, "gate": service.gate_status(v)}
+    return {"experimental": True, "version": v.version, "gate": service.gate_status(v, session)}
 
 
 # ------------------------------------------------------------------- activation
@@ -384,7 +384,10 @@ def audit(task_id: int, session: Session = Depends(db)):
     return [
         {
             "id": r.id, "sample_id": r.sample_id, "provider_host": r.provider_host,
-            "model": r.model, "image_hash": r.image_hash, "session_id": r.session_id,
+            # ``model`` is the configured alias; ``response_model`` is the actual
+            # provider model/revision; ``method`` the labeling method (C-007).
+            "model": r.model, "response_model": r.response_model, "method": r.method,
+            "image_hash": r.image_hash, "session_id": r.session_id,
             "status": r.status, "latency_ms": r.latency_ms, "created_at": r.created_at,
         }
         for r in rows
