@@ -47,3 +47,22 @@ All timestamps are video time (`frame_idx / fps`) — reproducible, testable.
 M2: NL→DSL compilation, SSE updates, dashboard/timeline pages, service-event
 action. M3: AutoLearn (teacher labels, embeddings, student training, shadow
 mode). M4: deployment, metrics report, demo script.
+
+## M2–M3 visual reasoning plan (operator update 2026-10-10)
+
+Keep the cheap detector/tracker/temporal path; route selected candidate
+frames through sampling, deduplication, strategy-aware cache and call budgets
+to an OpenAI-compatible self-hosted Teacher (`VLM_BASE_URL`, `VLM_MODEL`,
+optional `VLM_API_KEY`). A private Vast.ai/vLLM connection is planned;
+no GPU rental or real Teacher benchmark has been executed.
+
+The configurable input strategies are full frame, detailed ROI crop, and
+foveated context plus detailed ROIs. Foveated processing preserves scene
+context that cropping discards. Full-frame fallback covers context-sensitive
+questions, small objects and unreliable regions. M3 compares strategies on
+the same held-out videos/events; AutoLearn still uses verified labels,
+frozen embeddings, held-out evaluation, shadow, manual activation/rollback.
+
+Detailed interface, security, research attribution and measurement plan:
+[VLM_ARCHITECTURE.md](VLM_ARCHITECTURE.md), PRD sections 6.1/6.2/16/21.
+These are planned experiments, not measured VisionFlow gains.

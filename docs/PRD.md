@@ -1,6 +1,6 @@
 # VisionFlow AI — Product & Technical Requirements
 
-**Version:** 1.1
+**Version:** 1.2
 **Project type:** Automotive Computer Vision / Visual AI Agents  
 **Duration:** 24-hour hackathon  
 **Team:** 3 students  
@@ -203,6 +203,58 @@ Cache entries are never treated as newly verified training labels. ROI
 selection and cloud transmission must be disclosed and consented.
 
 The frontend must not contain authoritative business logic. All event decisions and actions are validated server-side.
+
+### 6.1 Self-hosted Teacher contract (M2–M3)
+
+Target a configurable **OpenAI-compatible self-hosted VLM**, for example
+vLLM serving `Qwen/Qwen2.5-VL-7B-Instruct` on an operator-rented Vast.ai GPU.
+Protocol compatibility does not require an OpenAI account or external
+provider API key. Read `VLM_BASE_URL`, `VLM_MODEL`, and optional `VLM_API_KEY`
+only from server environment/ignored configuration; never send credentials
+to the browser or commit them. Missing endpoint/GPU access selects the
+disclosed unavailable/manual fallback, not invented Teacher predictions.
+
+The provider interface accepts task/schema, selected encoded images, ROI
+coordinates, source/event identity and preprocessing metadata. It returns
+strictly validated Teacher labels or unknown/error, actual usage where
+available, model identity and measured timing. Bound request size, timeout,
+concurrency and total attempts; retry only classified transient failures
+with backoff inside the same call budget. Validation/auth errors must not
+retry indefinitely. Keys, image bytes and unnecessary personal data stay out
+of logs. Prefer a private SSH tunnel or an authenticated TLS gateway; never
+publish an unauthenticated inference server. See
+[the self-hosted/input-router plan](VLM_ARCHITECTURE.md).
+
+### 6.2 Foveated-input experiment (M2 design, M3 evaluation)
+
+Behind one configurable input-strategy interface support:
+
+| Strategy | Visual information retained |
+| --- | --- |
+| `full_frame` | Whole scene with a documented resolution cap. |
+| `roi_crop` | A detailed crop around selected object(s); scene context outside the crop is discarded. |
+| `foveated` | High-resolution important region(s) **plus lower-resolution whole-scene context**, with preserved spatial mapping. |
+
+Foveation is not simply cropping. YOLO boxes, track identity, workflow zones
+and temporal candidate events select important regions; per-frame VLM calls
+are still prohibited outside explicit benchmark mode. An MVP may send a
+low-resolution context image plus labeled high-resolution crops as one
+multimodal request. This is an engineering approximation inspired by the
+paper in section 21, not a claim to reproduce its retinal sampling method.
+
+Preserve an explicit `full_frame` fallback for spatial/context-dependent
+questions, uncertain or invalid ROIs, small objects that downsampling could
+erase, and unsupported multi-image inputs. Record requested/effective
+strategy, fallback reason, dimensions, crop-to-scene coordinates and
+preprocessing version; cache keys must distinguish these inputs.
+
+M3 compares all three strategies on the **same held-out videos/events**,
+ground truth, model/prompt and candidate schedule. Measure event accuracy,
+precision/recall/F1, unknown coverage, actual input tokens where exposed,
+latency and failure cases. Lower pixel counts do not imply proportional
+token reductions or rental/API cost reductions. The paper's reported gains
+are not VisionFlow results. This remains an optimization experiment and
+does not reopen or block the completed M1 recovery.
 
 ## 7. Recommended technology stack
 
@@ -479,6 +531,14 @@ A decorative progress bar or hardcoded Student predictions do not count as AutoL
   exposed. Timeout, invalid response, missing credentials, or request-budget
   exhaustion remain visible and cannot trigger a confirmed visual action.
   Stub adapter tests alone do not verify real Teacher operation.
+- **M2-AC3a:** The adapter targets an operator-configured OpenAI-compatible
+  self-hosted endpoint using `VLM_BASE_URL`, `VLM_MODEL`, optional
+  `VLM_API_KEY`; supports selected images/ROIs, strict structured-label
+  validation, timeouts, bounded transient retries/concurrency and redacted
+  errors. Secure Vast.ai connection instructions are included. No external
+  API key is required for interface implementation. Without GPU access the
+  interface/fallback can be verified separately; real Teacher labeling is
+  explicitly **UNVERIFIED**.
 - **M2-AC4:** Configurable sampling, per-task/source budgets, cooldowns,
   in-flight deduplication, and a bounded versioned cache are exercised.
   Tests prove repeated candidates suppress unnecessary calls, changed
@@ -488,6 +548,13 @@ A decorative progress bar or hardcoded Student predictions do not count as AutoL
   actual calls, hits, misses, suppressed requests, and failures. Webhooks,
   enable/disable, and provider-bound data retain their authorization and
   privacy boundaries. The new-user workflow runs without source edits.
+- **M2-EXP1:** The input-router design has configurable `full_frame`,
+  `roi_crop`, and `foveated` strategies selected from detector/tracker/event
+  regions. Foveated inputs retain coarse scene context and spatial mapping;
+  cropping alone must not be labeled foveation. Full-frame fallback and
+  strategy-aware caching/provenance are designed and tested when implemented.
+  An unfinished strategy is visibly unavailable, never silently simulated.
+  This experiment does not authorize extra implementation/review calls.
 
 ### M3 — Verified teacher-to-student AutoLearn
 
@@ -518,6 +585,19 @@ A decorative progress bar or hardcoded Student predictions do not count as AutoL
   restores a working previous model plus encoder/preprocessing/configuration.
   Activation/rollback history persists across restart; unverified Student
   predictions cannot silently become training labels.
+- **M3-AC7:** Once the self-hosted GPU is available, execute real Teacher
+  labeling through M2's provider interface, verify labels, retrain as needed,
+  and evaluate the Student on the untouched held-out inputs. Until executed,
+  Teacher labels/comparisons are **UNVERIFIED**; manual labels preserve their
+  actual provenance.
+- **M3-EXP1:** An executable comparison protocol evaluates full frame, ROI,
+  and foveated inputs on the identical held-out event/video manifest, fixed
+  Teacher model/prompt, candidate schedule and ground truth. Record accuracy,
+  recall/F1, unknown coverage, input tokens if exposed, actual incurred cost
+  if available, latency and failures (context loss, small objects, missed/
+  clipped ROIs, tracking loss, multi-image limitations). Keep warm/cold cache
+  conditions explicit. Unexecuted runs are **UNVERIFIED**, with no borrowed
+  paper results or linear pixel-to-cost assumptions.
 
 ### M4 — Measured efficiency and deliverable evidence
 
@@ -539,6 +619,16 @@ A decorative progress bar or hardcoded Student predictions do not count as AutoL
   tradeoffs and cold/warm-cache conditions. Savings percentages may be
   calculated only from actual comparable positive baseline measurements;
   no hardcoded savings or substituting fewer calls for measured dollar cost.
+- **M4-AC3a:** For the planned self-hosted deployment use actual Vast.ai
+  rental charges/rates and measured charged wall time, rather than assumed
+  external API token prices. Measure inference p50/p95 latency, GPU activity
+  time/utilization where observable, throughput, processing duration, and
+  cost per processed event with denominators stated. Compare baseline and
+  optimized pipelines on identical held-out inputs and include idle/model-
+  load/training/network/storage costs or explicitly delimit them. Distinguish
+  observed rental cost from an allocated per-run estimate; a fixed rental
+  window may have equal actual cost even if optimized inference is faster.
+  No GPU/rental measurement yet means **UNVERIFIED**, not zero cost.
 - **M4-AC4:** Clean startup/deployment checks, unseen supported-video smoke,
   real authorized actions, evidence/logs, secrets/privacy/license checks,
   and the official frontend/backend/repository/pitch deliverables pass.
@@ -556,7 +646,9 @@ If time is limited:
 4. Reduce the number of event types if necessary.
 5. Use manual labeling as an explicitly disclosed development fallback;
    keep the real Teacher-label acceptance criterion unverified until run.
-6. Defer RTSP, Telegram, GVERA, and advanced foveated vision.
+6. Defer RTSP, Telegram, GVERA, and advanced retinal-model replication.
+   Keep the configurable context-plus-ROI foveated experiment in the
+   M2–M3 plan, with unexecuted comparisons marked UNVERIFIED.
 7. Never replace real functionality with an undisclosed mock.
 
 ## 18. Business and pilot
@@ -608,3 +700,20 @@ A feature is complete only when:
 - Any limitations are explicitly recorded.
 
 A successful build without a working end-to-end demo is not sufficient.
+
+## 21. Research references and attribution
+
+**Andrey Gizdov, Shimon Ullman, Daniel Harari (CVPR 2025).**
+*Seeing More with Less: Human-like Representations in Vision Models*,
+pp. 4408–4417.
+[CVPR poster](https://cvpr.thecvf.com/virtual/2025/poster/33296) ·
+[CVF proceedings entry](https://openaccess.thecvf.com/content/CVPR2025/html/Gizdov_Seeing_More_with_Less_Human-like_Representations_in_Vision_Models_CVPR_2025_paper.html) ·
+[Open-access paper](https://openaccess.thecvf.com/content/CVPR2025/papers/Gizdov_Seeing_More_with_Less_Human-like_Representations_in_Vision_Models_CVPR_2025_paper.pdf).
+
+The work investigates variable-resolution visual inputs inspired by human
+foveation. VisionFlow uses it to motivate retaining important-region detail
+alongside coarse scene context. Our router experiment is a separate design,
+not a reproduced model architecture or measured replication. Neither the
+paper's accuracy/pixel-budget results nor its gains may be presented as
+VisionFlow measurements. All project quality/latency/cost claims require the
+matched held-out experiments defined above.
