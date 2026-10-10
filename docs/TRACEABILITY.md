@@ -85,11 +85,11 @@ Full audit: `docs/VISUAL_ANALYTICS_AUDIT.md`. Planned is not implemented.
 
 | ID | Acceptance requirement | Component / evidence required | Status |
 | --- | --- | --- | --- |
-| M2-AC1 | Strict NL DSL, rejection, manual approval | Compiler/API/UI contracts and boundary tests | planned |
-| M2-AC2 | Cheap temporal candidate events select Teacher frame/ROI; zero calls for geometric rules | Pipeline/router and call-count integration checks | planned |
-| M2-AC3 | Real validated Teacher adapter; visible unknown/error/budget states | Provider interface/fallback tests planned; real self-hosted GPU run UNVERIFIED | planned |
-| M2-AC4 | Sampling, budgets, in-flight dedupe, bounded versioned cache | Call counts and invalidation/suppression tests | planned |
-| M2-AC5 | Actual routing counters, evidence, safe approval/action/data boundaries | API/UI integration and security checks | planned |
+| M2-AC1 | Strict NL DSL, rejection, manual approval | `app/nl_compiler.py`, `/api/workflows/compile`, UI compile box; `tests/unit/test_nl_compiler.py`, `test_m2_visual.py` | implemented |
+| M2-AC2 | Cheap temporal candidate events select Teacher frame/ROI; zero calls for geometric rules | `app/pipeline._route_visual`, `app/vlm_router.py`; `test_geometric_workflow_makes_zero_vlm_calls` | implemented |
+| M2-AC3 | Real validated Teacher adapter; visible unknown/error/budget states | `app/teacher.py` strict validation; `tests/unit/test_teacher.py`; not-confirmed integration tests | implemented (real provider **blocked**: no VLM_BASE_URL configured) |
+| M2-AC4 | Sampling, budgets, in-flight dedupe, bounded versioned cache | `app/vlm_router.py` (`VersionedTTLCache`, budget/cooldown/sampling/dedup); `tests/unit/test_vlm_router.py` | implemented |
+| M2-AC5 | Actual routing counters, evidence, safe approval/action/data boundaries | `VlmCall` rows, `/api/vlm/stats`, `/api/vlm/calls`, `/api/metrics.vlm`, event `visual_*`; UI section 6 | implemented |
 | M3-AC1 | Real Teacher labels, human verification, dataset provenance | Reviewed sample manifest with both classes | planned |
 | M3-AC2 | Session-disjoint splits and no near-duplicate leakage | Split manifest and leakage checks | planned |
 | M3-AC3 | Frozen pretrained embeddings and actually trained saved Student | Reproducible train/save/reload artifacts | planned |
@@ -109,8 +109,8 @@ continues without interruption or additional calls for this experiment.
 
 | ID | Requirement | Evidence required | Status |
 | --- | --- | --- | --- |
-| M2-AC3a | Configurable OpenAI-compatible self-hosted Teacher, VLM env vars, strict labels, bounded timeout/retries/concurrency, secure setup | Adapter/fallback/boundary tests; real vLLM smoke when GPU available | planned |
-| M2-EXP1 | Full frame, ROI, foveated context-plus-ROI interface; full-frame fallback and strategy-aware cache | Input provenance/selection tests; visibly unavailable unfinished strategies | planned |
+| M2-AC3a | Configurable OpenAI-compatible self-hosted Teacher, VLM env vars, strict labels, bounded timeout/retries/concurrency, secure setup | `app/teacher.OpenAICompatibleTeacher` (VLM_BASE_URL/MODEL/API_KEY, connect/read/overall timeouts, bounded retries skipping auth/schema, concurrency semaphore, max image bytes, extra=forbid, data-URL images); `tests/unit/test_teacher.py` | implemented (adapter + boundaries); real vLLM/GPU smoke **UNVERIFIED** (no instance connected) |
+| M2-EXP1 | Full frame, ROI, foveated context-plus-ROI interface; full-frame fallback and strategy-aware cache | Input provenance/selection tests; visibly unavailable unfinished strategies | partial — ROI crop (default) with full-frame fallback for track-less/aggregate candidates and roi_hash in cache key; `foveated`/`full_frame` strategy selector NOT implemented (planned) |
 | M3-AC7 | Real GPU Teacher labels followed by verified-data Student evaluation | Actual labels/model identity and held-out predictions; currently UNVERIFIED | planned |
 | M3-EXP1 | Compare input strategies on the same held-out videos/events | Accuracy/recall, tokens or actual cost, latency, failure cases; unrun results UNVERIFIED | planned |
 | M4-AC3a | Actual Vast.ai rental accounting and GPU/latency/throughput/cost per event | Rental records, charged interval, GPU telemetry and paired input manifest; currently UNVERIFIED | planned |

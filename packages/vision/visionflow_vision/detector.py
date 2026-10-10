@@ -36,6 +36,17 @@ class YoloByteTrackDetector(BaseDetectorTracker):
         classes: list[str] | None = None,
         device: str = "cpu",
     ) -> None:
+        import os
+
+        # Keep CPU inference sequential on the limited-RAM host.
+        threads = int(os.environ.get("VISIONFLOW_THREADS", "2"))
+        try:
+            import torch
+
+            torch.set_num_threads(threads)
+        except Exception:  # noqa: BLE001 — torch optional at import time
+            pass
+
         from ultralytics import YOLO  # deferred: heavy import
 
         self.model = YOLO(model_name)

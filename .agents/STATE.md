@@ -4,23 +4,33 @@ Updated: 2026-10-10. Branch: `feature/visionflow`.
 
 ## Current stage
 
-M1 exceptional recovery cycle COMPLETE, awaiting ONE exact-SHA independent
-review. The four P1 defects from review `cc59523` (`.agents/reviews/M1.md`)
-are resolved:
+M2 COMPLETE (event-routed visual reasoning + NL workflow product), awaiting
+independent review. Base `2127d207`. M1 recovery cycle accepted at that base.
 
-- M1-010: `dispatch_admission_lock` serializes API disable vs worker dispatch
-  admission; a disable completed before dispatch suppresses the queued action
-  explicitly (`cancelled`).
-- M1-011 + M1-012: outbound `send_webhook` removed entirely (no safe egress
-  without a risky custom DNS/TLS transport). Only the local
-  `create_notification` ships; legacy webhook rows rejected at dispatch with no
-  network lookup/delivery. API/UI/docs/tests updated honestly.
-- M1-013: decoded-frame count vs reliable container frame count with
-  `DECODE_MIN_COMPLETENESS` tolerance; a truncated upload is a failed source.
+M2 delivered (PRD §16 M2-AC1..AC5, plus adapter for AC3a):
 
-Gates (2026-10-10): `pytest tests/` 66 passed; frontend production build
-passed; real-YOLO smoke PASS (30 frames analyzed/180 decoded, bus enter t=4.2s
-conf 0.76, evidence+notification persisted). M1-014 (P2 CI deps) out of scope.
+- M2-AC1: deterministic NL→DSL compiler (`app/nl_compiler.py`) +
+  `POST /api/workflows/compile`. Ambiguous/unsupported rejected with reasons;
+  draft saved disabled; explicit enable required; no code generated/executed.
+- M2-AC2: geometric detector/tracker/temporal path unchanged and makes ZERO
+  Teacher calls. A `visual_predicate` routes the triggering object's ROI to the
+  Teacher only on a candidate event (`pipeline._route_visual`).
+- M2-AC3/AC3a: `app/teacher.py` strict adapter. Config by `VLM_BASE_URL`/
+  `VLM_MODEL`/`VLM_API_KEY` (server-only). Strict JSON (`extra=forbid`, bounded
+  finite confidence, declared labels or `unknown`), connect/read/overall
+  timeouts, bounded retries (skipping auth/schema), concurrency semaphore, max
+  image bytes, data-URL images. No creds → `missing_credentials`, never
+  confirms. Real vLLM/GPU smoke UNVERIFIED (no instance connected).
+- M2-AC4: `app/vlm_router.py` — versioned TTL+LRU cache, per-task budget,
+  sampling interval, per-scope cooldown, in-flight dedup; live counters.
+- M2-AC5: `VlmCall` provenance rows, `/api/vlm/stats`, `/api/vlm/calls`,
+  `/api/metrics.vlm`, event `visual_*` fields; UI section 6 shows counters and
+  teacher availability. Webhook removal + enable/disable boundaries preserved.
+
+Gates (2026-10-10): `pytest tests/` **111 passed** (66→111; +45 M2 tests), 4
+pre-existing warnings. Frontend production build passed. Real-YOLO smoke is
+controller-run (sandbox blocks launching the uvicorn server here); the geometric
+dispatch path is logically unchanged for geometric workflows.
 
 ## Existing implementation and evidence
 

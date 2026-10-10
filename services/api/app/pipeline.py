@@ -20,15 +20,23 @@ from app.db import (
     ActionExecution,
     TrackEvent,
     VideoSource,
+    VlmCall,
     Workflow,
     Zone as ZoneRow,
     get_session,
 )
+from app.vlm_router import get_router
 from visionflow_vision.detector import BaseDetectorTracker
 from visionflow_vision.events import EventType, ZoneEventEngine
 from visionflow_vision.zones import Zone
 
 logger = logging.getLogger("visionflow.pipeline")
+
+# Keep CPU inference sequential on the limited-RAM host.
+try:  # pragma: no cover - environment dependent
+    cv2.setNumThreads(config.THREAD_COUNT)
+except Exception:  # noqa: BLE001
+    pass
 
 _running: set[int] = set()
 _running_lock = threading.Lock()
@@ -231,6 +239,121 @@ def _record_source_failure(session, source_id: int, message: str) -> None:
         fresh.close()
 
 
+def _encode_roi(frame, objects, event) -> bytes:
+    """Encode the triggering object's ROI as JPEG bytes for the Teacher.
+
+    Uses the bounding box of the object whose track_id matches the event; for
+    aggregate (track-less) events the whole frame is used. The ROI is the only
+    pixels disclosed to the provider (M2 privacy boundary)."""
+    import numpy as np
+
+    img = frame
+    if event.track_id is not None:
+        match = next((o for o in objects if o.track_id == event.track_id), None)
+        if match is not None:
+            h, w = frame.shape[:2]
+            x1 = max(0, int(match.x1)); y1 = max(0, int(match.y1))
+            x2 = min(w, int(match.x2)); y2 = min(h, int(match.y2))
+            if x2 > x1 and y2 > y1:
+                img = frame[y1:y2, x1:x2]
+    ok, buf = cv2.imencode(".jpg", img)
+    if not ok:
+        raise RuntimeError("failed to encode ROI for visual routing")
+    return bytes(buf)
+
+
+def _route_visual(session, wf: Workflow, event: TrackEvent, frame, objects) -> bool:
+    """Route a candidate event's ROI through the VLM router (M2-AC2/AC3/AC5).
+
+    Returns True if the visual predicate was CONFIRMED (teacher status ok and
+    label == expected), meaning the action may fire. Any suppression, timeout,
+    error, unknown, invalid response or missing credential returns False and the
+    event is recorded as not actioned — a failure can never confirm an action.
+
+    A VlmCall row and the event's visual_* provenance are always persisted."""
+    vp = wf.dsl["visual_predicate"]
+    labels = [str(l) for l in vp["labels"]]
+    expected = str(vp["expected_label"]).strip().lower()
+    task_key = f"src{event.source_id}-wf{wf.id}"
+    router = get_router()
+
+    try:
+        image_bytes = _encode_roi(frame, objects, event)
+        decision = router.route(
+            task_key=task_key,
+            scope=event.dedupe_key,
+            prompt=vp["prompt"],
+            labels=labels,
+            image_bytes=image_bytes,
+            sample_interval_s=vp.get("sample_interval_seconds"),
+            cooldown_s=vp.get("cooldown_seconds"),
+            budget=vp.get("budget"),
+        )
+    except Exception as exc:  # noqa: BLE001 — never crash the pipeline on routing
+        logger.warning("visual routing failed for event %s: %s", event.id, exc)
+        event.visual_status = "error"
+        event.visual_routing = {"error": str(exc)[:300]}
+        event.action_status = "skipped_visual"
+        session.add(
+            VlmCall(
+                event_id=event.id, source_id=event.source_id, workflow_id=wf.id,
+                task_key=task_key, status="failed", reason=str(exc)[:300],
+            )
+        )
+        session.commit()
+        return False
+
+    result = decision.result
+    confirmed = bool(result and result.confirmed and result.label == expected)
+    # Visual status reflects the teacher result when a call/cache/dedup produced
+    # one, otherwise the suppression reason.
+    if result is not None:
+        event.visual_status = result.status
+        event.visual_label = result.label
+        event.visual_confidence = result.confidence
+    else:
+        event.visual_status = decision.status  # suppressed_*
+    event.visual_routing = {
+        "route_status": decision.status,
+        "reason": decision.reason,
+        "roi_hash": decision.roi_hash,
+        "model": result.model if result else None,
+        "prompt_version": result.prompt_version if result else None,
+        "latency_ms": result.latency_ms if result else None,
+        "expected_label": expected,
+        "confirmed": confirmed,
+    }
+    session.add(
+        VlmCall(
+            event_id=event.id,
+            source_id=event.source_id,
+            workflow_id=wf.id,
+            task_key=task_key,
+            status=decision.status,
+            teacher_status=result.status if result else None,
+            model=result.model if result else None,
+            prompt_version=result.prompt_version if result else None,
+            label=result.label if result else None,
+            confidence=result.confidence if result else None,
+            latency_ms=result.latency_ms if result else None,
+            roi_hash=decision.roi_hash,
+            tokens_total=(result.usage or {}).get("total_tokens") if result else None,
+            reason=decision.reason,
+        )
+    )
+    if not confirmed:
+        event.action_status = "skipped_visual"
+        session.commit()
+        logger.info(
+            "event %s visual predicate NOT confirmed (route=%s teacher=%s label=%s); no action",
+            event.id, decision.status, result.status if result else "-",
+            result.label if result else "-",
+        )
+    else:
+        session.commit()
+    return confirmed
+
+
 def _dispatch_action(session, wf: Workflow, event: TrackEvent) -> None:
     """Run the workflow's action for one persisted event.
 
@@ -281,6 +404,16 @@ def _resume_pending_event(session, wf: Workflow, existing: TrackEvent) -> bool:
     )
     if existing.action_status != "pending" or has_execution:
         return True  # already dispatched; keep dedupe, do not re-run
+    # A visual-predicate workflow must never dispatch an action without a
+    # confirmed Teacher result. If an interrupted run left the event pending
+    # before routing completed, leave it visibly pending rather than firing an
+    # unverified action (honest recovery; documented limitation).
+    if wf.dsl.get("visual_predicate"):
+        logger.info(
+            "event %s is a pending visual candidate; not auto-dispatching without confirmation",
+            existing.id,
+        )
+        return True
     logger.info("resuming undispatched action for event %s", existing.id)
     _dispatch_action(session, wf, existing)
     return True
@@ -378,7 +511,15 @@ def _process_source(source_id: int) -> None:
                         frame, objects, engine.zone, row, frame_w, frame_h
                     )
                     session.commit()
-                    _dispatch_action(session, wf, row)
+                    # Geometric rules dispatch immediately and make ZERO VLM
+                    # calls. A workflow carrying a visual_predicate instead routes
+                    # the candidate's ROI to the Teacher and only dispatches the
+                    # action if the predicate is confirmed (M2-AC2/AC3).
+                    if wf.dsl.get("visual_predicate"):
+                        if _route_visual(session, wf, row, frame, objects):
+                            _dispatch_action(session, wf, row)
+                    else:
+                        _dispatch_action(session, wf, row)
                     logger.info("event %s: %s", row.id, ev.detail)
 
             if processed % 25 == 0:

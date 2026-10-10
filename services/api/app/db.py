@@ -84,7 +84,14 @@ class TrackEvent(Base):
     dedupe_key: Mapped[str] = mapped_column(String(255), unique=True)
     evidence_path: Mapped[str | None] = mapped_column(Text, nullable=True)
     action_status: Mapped[str] = mapped_column(String(32), default="pending")
-    # pending | done | failed | cancelled
+    # pending | done | failed | cancelled | skipped_visual
+    # Visual routing provenance (M2). NULL for geometric-only events.
+    visual_status: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    # ok | unknown | error | timeout | invalid_response | missing_credentials
+    # | suppressed_budget | suppressed_cooldown | suppressed_sampling
+    visual_label: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    visual_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    visual_routing: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
@@ -99,6 +106,33 @@ class ActionExecution(Base):
     attempt_count: Mapped[int] = mapped_column(Integer, default=0)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
     executed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class VlmCall(Base):
+    """One VLM router decision for a candidate event (M2-AC5). Persisted for
+    auditable routing provenance and counters; every decision is recorded,
+    including cache hits, suppressed requests and failures."""
+
+    __tablename__ = "vlm_calls"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    event_id: Mapped[int | None] = mapped_column(ForeignKey("track_events.id"), nullable=True)
+    source_id: Mapped[int] = mapped_column(Integer)
+    workflow_id: Mapped[int] = mapped_column(Integer)
+    task_key: Mapped[str] = mapped_column(String(255))
+    status: Mapped[str] = mapped_column(String(32))
+    # called | cache_hit | deduped | suppressed_budget | suppressed_cooldown
+    # | suppressed_sampling | failed | unavailable
+    teacher_status: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    model: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    prompt_version: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    label: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    latency_ms: Mapped[float | None] = mapped_column(Float, nullable=True)
+    roi_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    tokens_total: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
 class Notification(Base):

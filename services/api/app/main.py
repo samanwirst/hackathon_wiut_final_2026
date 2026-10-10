@@ -14,12 +14,13 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 
-from app import config, pipeline
+from app import config, nl_compiler, pipeline
 from app.db import (
     ActionExecution,
     Notification,
     TrackEvent,
     VideoSource,
+    VlmCall,
     Workflow,
     Zone,
     get_session,
@@ -27,6 +28,8 @@ from app.db import (
 )
 from app.schemas import (
     ActionOut,
+    CompileRequest,
+    CompileResponse,
     EventOut,
     NotificationOut,
     SourceOut,
@@ -35,6 +38,7 @@ from app.schemas import (
     ZoneCreate,
     ZoneOut,
 )
+from app.vlm_router import get_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 
@@ -86,6 +90,10 @@ def _event_out(e: TrackEvent) -> EventOut:
         detail=e.detail,
         evidence_url=f"/media/{e.evidence_path}" if e.evidence_path else None,
         action_status=e.action_status,
+        visual_status=e.visual_status,
+        visual_label=e.visual_label,
+        visual_confidence=e.visual_confidence,
+        visual_routing=e.visual_routing,
         created_at=e.created_at,
     )
 
@@ -203,6 +211,40 @@ def list_zones(source_id: int | None = None, session: Session = Depends(db)):
 
 
 # ---------------------------------------------------------------- workflows
+
+
+@app.post("/api/workflows/compile", response_model=CompileResponse)
+def compile_workflow(body: CompileRequest, session: Session = Depends(db)):
+    """Compile a natural-language instruction into a strict, editable DSL draft
+    (M2-AC1). Deterministic rule-based compiler (no text-model credentials).
+    Unsupported/ambiguous requests are rejected; the draft is never saved or
+    enabled here and no code is generated or executed."""
+    _source_or_404(session, body.source_id)
+    zones = [
+        {"id": z.id, "name": z.name}
+        for z in session.query(Zone).filter(Zone.source_id == body.source_id).all()
+    ]
+    result = nl_compiler.compile_text(body.text, body.source_id, zones)
+    draft_model = None
+    if result.ok and result.draft is not None:
+        try:
+            # Final strict validation: the draft must satisfy the same DSL the
+            # save endpoint enforces, or it is downgraded to an error.
+            draft_model = WorkflowDSL.model_validate(result.draft)
+        except Exception as exc:  # noqa: BLE001
+            return CompileResponse(
+                ok=False,
+                errors=[f"draft failed strict validation: {exc}"],
+                warnings=result.warnings,
+                explanation=result.explanation,
+            )
+    return CompileResponse(
+        ok=result.ok and draft_model is not None,
+        draft=draft_model,
+        errors=result.errors,
+        warnings=result.warnings,
+        explanation=result.explanation,
+    )
 
 
 @app.post("/api/workflows", response_model=WorkflowOut, status_code=201)
@@ -332,4 +374,55 @@ def metrics(session: Session = Depends(db)):
         "detector_model": config.DETECTOR_MODEL,
         "detector_device": config.DETECTOR_DEVICE,
         "process_fps": config.PROCESS_FPS,
+        "vlm": get_router().stats(),
     }
+
+
+@app.get("/api/vlm/stats")
+def vlm_stats(session: Session = Depends(db)):
+    """Live router counters plus persisted per-decision aggregates (M2-AC5)."""
+    router = get_router()
+    rows = session.query(VlmCall).all()
+    persisted: dict[str, int] = {}
+    for r in rows:
+        persisted[r.status] = persisted.get(r.status, 0) + 1
+    teacher_statuses: dict[str, int] = {}
+    for r in rows:
+        if r.teacher_status:
+            teacher_statuses[r.teacher_status] = teacher_statuses.get(r.teacher_status, 0) + 1
+    return {
+        "live": router.stats(),
+        "persisted_by_route_status": persisted,
+        "persisted_by_teacher_status": teacher_statuses,
+        "total_decisions": len(rows),
+    }
+
+
+@app.get("/api/vlm/calls")
+def vlm_calls(limit: int = 50, session: Session = Depends(db)):
+    rows = (
+        session.query(VlmCall)
+        .order_by(VlmCall.id.desc())
+        .limit(min(limit, 500))
+        .all()
+    )
+    return [
+        {
+            "id": r.id,
+            "event_id": r.event_id,
+            "source_id": r.source_id,
+            "workflow_id": r.workflow_id,
+            "status": r.status,
+            "teacher_status": r.teacher_status,
+            "model": r.model,
+            "prompt_version": r.prompt_version,
+            "label": r.label,
+            "confidence": r.confidence,
+            "latency_ms": r.latency_ms,
+            "roi_hash": r.roi_hash,
+            "tokens_total": r.tokens_total,
+            "reason": r.reason,
+            "created_at": r.created_at,
+        }
+        for r in rows
+    ]

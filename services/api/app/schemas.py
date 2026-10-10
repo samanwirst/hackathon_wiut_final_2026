@@ -68,12 +68,43 @@ class Action(BaseModel):
         return self
 
 
+class VisualPredicate(BaseModel):
+    """An optional event-routed VLM check (M2). When present, the geometric
+    trigger produces a *candidate*; the triggering object's ROI is sent to the
+    Teacher and the action fires only if the Teacher confirms ``expected_label``.
+    Geometric-only workflows (``visual_predicate`` absent) make zero VLM calls.
+
+    Routing settings are per-workflow overrides of the server defaults. The
+    prompt/labels are fixed server-side vocabulary, never executable code."""
+
+    prompt: str = Field(min_length=3, max_length=500)
+    labels: list[str] = Field(min_length=2, max_length=8)
+    expected_label: str = Field(min_length=1, max_length=64)
+    description: str = Field(default="", max_length=255)
+    # Per-workflow routing overrides (optional). None -> use server config.
+    sample_interval_seconds: float | None = Field(default=None, ge=0, le=3600)
+    cooldown_seconds: float | None = Field(default=None, ge=0, le=86400)
+    budget: int | None = Field(default=None, ge=1, le=100000)
+
+    @model_validator(mode="after")
+    def check_labels(self) -> "VisualPredicate":
+        norm = [l.strip().lower() for l in self.labels if l.strip()]
+        if len(norm) < 2:
+            raise ValueError("visual predicate needs at least two distinct labels")
+        if "unknown" in norm:
+            raise ValueError("'unknown' is reserved; do not include it in labels")
+        if self.expected_label.strip().lower() not in norm:
+            raise ValueError("expected_label must be one of labels")
+        return self
+
+
 class WorkflowDSL(BaseModel):
     name: str = Field(min_length=1, max_length=255)
     source_id: int
     object_class: str
     trigger: Trigger
     action: Action
+    visual_predicate: VisualPredicate | None = None
     cooldown_seconds: float = Field(default=10.0, ge=0, le=86400)
     requires_approval: bool = True
 
@@ -137,6 +168,19 @@ class WorkflowOut(BaseModel):
     created_at: datetime
 
 
+class CompileRequest(BaseModel):
+    source_id: int
+    text: str = Field(min_length=1, max_length=2000)
+
+
+class CompileResponse(BaseModel):
+    ok: bool
+    draft: WorkflowDSL | None = None
+    errors: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+    explanation: str = ""
+
+
 class EventOut(BaseModel):
     id: int
     source_id: int
@@ -149,6 +193,11 @@ class EventOut(BaseModel):
     detail: str
     evidence_url: str | None
     action_status: str
+    # Visual routing provenance (M2-AC5): None for geometric-only events.
+    visual_status: str | None = None
+    visual_label: str | None = None
+    visual_confidence: float | None = None
+    visual_routing: dict | None = None
     created_at: datetime
 
 

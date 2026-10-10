@@ -17,12 +17,26 @@ type Source = {
 
 type Zone = { id: number; source_id: number; name: string; polygon: [number, number][] };
 
+type VisualPredicate = {
+  prompt: string;
+  labels: string[];
+  expected_label: string;
+  description?: string;
+  sample_interval_seconds?: number | null;
+  cooldown_seconds?: number | null;
+  budget?: number | null;
+};
+
 type Workflow = {
   id: number;
   source_id: number;
   name: string;
   enabled: boolean;
-  dsl: { object_class: string; trigger: { type: string; zone_id: number; duration_seconds?: number; threshold?: number } };
+  dsl: {
+    object_class: string;
+    trigger: { type: string; zone_id: number; duration_seconds?: number; threshold?: number };
+    visual_predicate?: VisualPredicate | null;
+  };
 };
 
 type Event = {
@@ -35,10 +49,43 @@ type Event = {
   detail: string;
   evidence_url: string | null;
   action_status: string;
+  visual_status: string | null;
+  visual_label: string | null;
+  visual_confidence: number | null;
   created_at: string;
 };
 
 type Notification = { id: number; event_id: number; title: string; message: string; created_at: string };
+
+type CompileResponse = {
+  ok: boolean;
+  draft: {
+    name: string;
+    object_class: string;
+    trigger: { type: string; zone_id: number; duration_seconds?: number; threshold?: number };
+    visual_predicate?: VisualPredicate | null;
+  } | null;
+  errors: string[];
+  warnings: string[];
+  explanation: string;
+};
+
+type VlmStats = {
+  live: {
+    calls: number;
+    cache_hits: number;
+    cache_misses: number;
+    suppressed_budget: number;
+    suppressed_cooldown: number;
+    suppressed_sampling: number;
+    failed: number;
+    confirmed: number;
+    unknown: number;
+    teacher_provider: string;
+    teacher_available: boolean;
+  };
+  total_decisions: number;
+};
 
 const TRIGGER_TYPES = [
   { value: "object_entered_zone", label: "Object enters zone" },
@@ -55,9 +102,15 @@ export default function Home() {
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [vlmStats, setVlmStats] = useState<VlmStats | null>(null);
   const [selectedSource, setSelectedSource] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+
+  // NL compile state
+  const [nlText, setNlText] = useState("When a car enters Service Bay A, create an alert");
+  const [compileResult, setCompileResult] = useState<CompileResponse | null>(null);
+  const [visualPredicate, setVisualPredicate] = useState<VisualPredicate | null>(null);
 
   // zone drawing state
   const [drawing, setDrawing] = useState(false);
@@ -85,14 +138,16 @@ export default function Home() {
 
   const refresh = useCallback(async () => {
     try {
-      const [s, e, n] = await Promise.all([
+      const [s, e, n, v] = await Promise.all([
         fetch(`${API}/api/sources`).then((r) => r.json()),
         fetch(`${API}/api/events?limit=50`).then((r) => r.json()),
         fetch(`${API}/api/notifications?limit=20`).then((r) => r.json()),
+        fetch(`${API}/api/vlm/stats`).then((r) => r.json()),
       ]);
       setSources(s);
       setEvents(e);
       setNotifications(n);
+      setVlmStats(v);
       if (selectedSource) {
         const [z, w] = await Promise.all([
           fetch(`${API}/api/zones?source_id=${selectedSource}`).then((r) => r.json()),
@@ -195,6 +250,34 @@ export default function Home() {
     refresh();
   };
 
+  const compile = async () => {
+    if (!selectedSource) {
+      setError("select a source first");
+      return;
+    }
+    setError(null);
+    const r = await fetch(`${API}/api/workflows/compile`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ source_id: selectedSource, text: nlText }),
+    });
+    if (!r.ok) return apiError(r);
+    const body: CompileResponse = await r.json();
+    setCompileResult(body);
+  };
+
+  const applyDraft = () => {
+    const d = compileResult?.draft;
+    if (!d) return;
+    setWfName(d.name);
+    setWfClass(d.object_class);
+    setWfTrigger(d.trigger.type);
+    setWfZone(d.trigger.zone_id);
+    if (d.trigger.duration_seconds) setWfDuration(Math.round(d.trigger.duration_seconds));
+    if (d.trigger.threshold) setWfThreshold(d.trigger.threshold);
+    setVisualPredicate(d.visual_predicate ?? null);
+  };
+
   const createWorkflow = async () => {
     if (!selectedSource || !wfZone) {
       setError("select a source and a zone first");
@@ -204,19 +287,23 @@ export default function Home() {
     const trigger: Record<string, unknown> = { type: wfTrigger, zone_id: wfZone };
     if (wfTrigger === "dwell_in_zone") trigger.duration_seconds = wfDuration;
     if (wfTrigger === "object_count_exceeded") trigger.threshold = wfThreshold;
+    const payload: Record<string, unknown> = {
+      name: wfName,
+      source_id: selectedSource,
+      object_class: wfClass,
+      trigger,
+      action: { type: "create_notification", config: { title: wfName } },
+      cooldown_seconds: 10,
+    };
+    if (visualPredicate) payload.visual_predicate = visualPredicate;
     const r = await fetch(`${API}/api/workflows`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: wfName,
-        source_id: selectedSource,
-        object_class: wfClass,
-        trigger,
-        action: { type: "create_notification", config: { title: wfName } },
-        cooldown_seconds: 10,
-      }),
+      body: JSON.stringify(payload),
     });
     if (!r.ok) return apiError(r);
+    setVisualPredicate(null);
+    setCompileResult(null);
     refresh();
   };
 
@@ -326,6 +413,54 @@ export default function Home() {
       {current && (
         <section className="card">
           <h2>3 · Workflows</h2>
+
+          <div style={{ marginBottom: 16, padding: 12, border: "1px solid #2a3140", borderRadius: 8 }}>
+            <h3 style={{ margin: "0 0 8px" }}>Describe a rule in plain language</h3>
+            <div className="row" style={{ marginBottom: 8 }}>
+              <textarea
+                value={nlText}
+                onChange={(e) => setNlText(e.target.value)}
+                rows={2}
+                style={{ flex: 1, minWidth: 320 }}
+                placeholder="e.g. When a car stays in Service Bay A for more than 10 minutes, create an alert"
+              />
+              <button onClick={compile}>Compile</button>
+            </div>
+            {compileResult && (
+              <div className="muted" style={{ fontSize: 13 }}>
+                {compileResult.ok ? (
+                  <>
+                    <div style={{ color: "#4ade80" }}>✓ {compileResult.explanation}</div>
+                    {compileResult.warnings.map((w, i) => (
+                      <div key={i} style={{ color: "#fbbf24" }}>⚠ {w}</div>
+                    ))}
+                    <button className="secondary" style={{ marginTop: 6 }} onClick={applyDraft}>
+                      Apply draft to form below (review, then create)
+                    </button>
+                  </>
+                ) : (
+                  <div style={{ color: "#f87171" }}>
+                    ✗ Could not compile:
+                    {compileResult.errors.map((er, i) => (
+                      <div key={i}>• {er}</div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {visualPredicate && (
+            <div className="muted" style={{ marginBottom: 8, color: "#a78bfa" }}>
+              🔎 Visual predicate attached: “{visualPredicate.prompt}” (expects “
+              {visualPredicate.expected_label}”). Routed to the Teacher VLM on candidate events
+              only.{" "}
+              <button className="secondary" onClick={() => setVisualPredicate(null)}>
+                remove
+              </button>
+            </div>
+          )}
+
           <div className="row" style={{ marginBottom: 12 }}>
             <input value={wfName} onChange={(e) => setWfName(e.target.value)} placeholder="Workflow name" />
             <select value={wfClass} onChange={(e) => setWfClass(e.target.value)}>
@@ -370,6 +505,9 @@ export default function Home() {
                       {w.dsl.object_class} · {w.dsl.trigger.type}
                       {w.dsl.trigger.duration_seconds ? ` ≥${w.dsl.trigger.duration_seconds}s` : ""}
                       {w.dsl.trigger.threshold ? ` >${w.dsl.trigger.threshold}` : ""}
+                      {w.dsl.visual_predicate ? (
+                        <span style={{ color: "#a78bfa" }}> · 🔎 visual</span>
+                      ) : null}
                     </td>
                     <td>{w.enabled ? <span className="status-processed">enabled</span> : <span className="muted">disabled</span>}</td>
                     <td><button className="secondary" onClick={() => toggleWorkflow(w)}>{w.enabled ? "Disable" : "Enable"}</button></td>
@@ -388,7 +526,7 @@ export default function Home() {
         ) : (
           <table>
             <thead>
-              <tr><th>ID</th><th>Event</th><th>Video time</th><th>Conf</th><th>Evidence</th><th>Action</th></tr>
+              <tr><th>ID</th><th>Event</th><th>Video time</th><th>Conf</th><th>Visual</th><th>Evidence</th><th>Action</th></tr>
             </thead>
             <tbody>
               {events.map((e) => (
@@ -397,6 +535,16 @@ export default function Home() {
                   <td>{e.detail || e.type}</td>
                   <td>{e.video_timestamp.toFixed(1)}s</td>
                   <td>{(e.confidence * 100).toFixed(0)}%</td>
+                  <td className="muted">
+                    {e.visual_status ? (
+                      <span style={{ color: e.visual_status === "ok" ? "#4ade80" : "#fbbf24" }}>
+                        {e.visual_status}
+                        {e.visual_label ? ` → ${e.visual_label}` : ""}
+                      </span>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
                   <td>
                     {e.evidence_url && (
                       <a href={`${API}${e.evidence_url}`} target="_blank" rel="noreferrer">
@@ -435,6 +583,51 @@ export default function Home() {
               ))}
             </tbody>
           </table>
+        )}
+      </section>
+
+      <section className="card">
+        <h2>6 · Teacher VLM routing (cost-efficient path)</h2>
+        {vlmStats ? (
+          <>
+            <p className="muted">
+              Provider: <strong>{vlmStats.live.teacher_provider}</strong> ·{" "}
+              {vlmStats.live.teacher_available ? (
+                <span className="status-processed">available</span>
+              ) : (
+                <span className="status-failed">
+                  not configured — visual predicates cannot confirm (documented blocker)
+                </span>
+              )}
+            </p>
+            <table>
+              <thead>
+                <tr>
+                  <th>Teacher calls</th><th>Cache hits</th><th>Confirmed</th><th>Unknown</th>
+                  <th>Failed</th><th>Suppr. budget</th><th>Suppr. cooldown</th><th>Suppr. sampling</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>{vlmStats.live.calls}</td>
+                  <td>{vlmStats.live.cache_hits}</td>
+                  <td>{vlmStats.live.confirmed}</td>
+                  <td>{vlmStats.live.unknown}</td>
+                  <td>{vlmStats.live.failed}</td>
+                  <td>{vlmStats.live.suppressed_budget}</td>
+                  <td>{vlmStats.live.suppressed_cooldown}</td>
+                  <td>{vlmStats.live.suppressed_sampling}</td>
+                </tr>
+              </tbody>
+            </table>
+            <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
+              Geometric rules make zero Teacher calls. Teacher calls occur only for a visual
+              predicate on an eligible candidate event, with sampling, cooldown, budget,
+              in-flight dedup and a versioned cache.
+            </p>
+          </>
+        ) : (
+          <p className="muted">No routing stats yet.</p>
         )}
       </section>
     </main>
