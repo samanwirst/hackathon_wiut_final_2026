@@ -85,3 +85,20 @@ of savings is claimed. M3/M4 implementation awaits a passing M2 gate.
 No main merge, force push, hardware operation, GPU rental, purchase, new paid
 service or public deployment occurred. Public deployment still requires the
 explicit approval specified in the original goal.
+
+## Newly authorized exceptional M2 recovery
+
+The human authorized exactly ONE additional implementation/review cycle for
+M2-001, M2-003, M2-007, M2-008 in final review `a93d983`. Before implementation,
+the controller replayed all four original reviewer reproductions against that
+frozen snapshot: unsupported/negated commands were accepted, four active body
+readers exceeded concurrency one, HTTP started after disable acknowledgment,
+and boolean confidence created a local notification. These are reproduced
+defects, not acceptance passes. Original logs/reproduction hashes are preserved
+in ignored runtime storage.
+
+One Claude pass, full checks/build/real YOLO smoke, and ONE fresh exact-commit
+Codex review are authorized. No retries or further exception cycles; remaining
+P0/P1 or inconclusive review leaves M2 BLOCKED. Only independent PASS permits
+M2 acceptance and automatic M3 advancement. M1 remains accepted and unchanged.
+Real Teacher, foveated performance, and unexecuted savings remain UNVERIFIED.
