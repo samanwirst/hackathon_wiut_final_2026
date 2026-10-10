@@ -21,3 +21,34 @@ jobs:
           python-version: '3.12'
       - name: Check repository structure
         run: make check
+
+  unit-tests:
+    name: Unit tests (vision package + DSL)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install light dependencies
+        run: pip install pydantic pytest -e packages/vision
+      - name: Run unit tests
+        run: pytest tests/unit -q
+
+  web-build:
+    name: Frontend build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install and build
+        working-directory: apps/web
+        run: |
+          npm ci
+          npm run build

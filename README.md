@@ -1,73 +1,83 @@
-# hackathon_wiut_final_2026
+# VisionFlow AI — WIUT Hackathon Final 2026
 
-Каркас проекта WIUT Hackathon. Подготовлены структура репозитория, шаблоны
-документации, инструкции для агентов и CI для проверки структуры.
-Реализация приложений и пакетов ещё не начата.
+Visual AI automation for automotive operations: upload a video (or connect a
+camera), draw a zone, describe a condition, and get real detections turned into
+events, evidence, and authorized actions. Track: Computer Vision.
 
-## Структура
+The official task is in [docs/source/README.md](docs/source/README.md);
+product requirements in [docs/PRD.md](docs/PRD.md);
+architecture in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
-```text
-hackathon_wiut_final_2026/
-├── .github/workflows/ci.yml
-├── .agents/
-│   ├── PROTOCOL.md
-│   ├── STATE.md
-│   ├── HANDOFF.md
-│   └── reviews/{M1,M2,M3,M4}.md
-├── docs/
-│   ├── source/                   # Здесь ожидается FINAL_TASK_WIUT_HACKATHON.pdf
-│   ├── PRD.md
-│   ├── TRACEABILITY.md
-│   ├── ARCHITECTURE.md
-│   ├── METRICS.md
-│   ├── DEMO.md
-│   └── LICENSES.md
-├── apps/web/                     # Next.js
-├── services/api/                 # FastAPI
-├── packages/
-│   ├── vision/                   # CV + tracking
-│   ├── workflows/                # DSL + event engine
-│   ├── autolearn/                # Teacher/student
-│   └── integrations/             # Webhook, CRM, GVERA
-├── tests/{unit,integration,fixtures}/
-├── scripts/check_structure.py
-├── .env.example
-├── .gitignore
-├── docker-compose.yml
-├── Makefile
-├── README.md
-├── CLAUDE.md
-└── AGENTS.md
-```
+## Current state (M1)
 
-Каталоги компонентов содержат README, пустые каталоги тестов — `.gitkeep`,
-поэтому структура сохранится в Git.
+Working end-to-end pipeline: **MP4 upload → YOLO11n detection + ByteTrack
+tracking → polygon-zone temporal events (enter / exit / dwell / count) →
+SQLite persistence + evidence JPEG → authorized action (notification,
+allowlisted webhook) → web UI** (upload, canvas zone drawing, workflow
+builder, event timeline).
 
-## Проверка
+## Run locally
 
-Требуются Python 3 и Make; сторонние зависимости не нужны.
+Requirements: Python 3.11+ (3.14 tested), Node 20+, ~1 GB disk for ML wheels.
+
+### Backend
 
 ```sh
+cd services/api
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+.venv/bin/uvicorn app.main:app --port 8000
+```
+
+First processing run downloads YOLO11n weights (~5.6 MB) automatically.
+API docs: http://localhost:8000/docs
+
+### Frontend
+
+```sh
+cd apps/web
+npm install
+NEXT_PUBLIC_API_URL=http://localhost:8000 npm run dev
+```
+
+Open http://localhost:3000: upload an MP4, Select it, draw a zone on the
+first-frame snapshot, create + enable a workflow, press Process.
+
+## Tests
+
+```sh
+# unit + integration (fast; integration uses a disclosed test-stub detector)
+services/api/.venv/bin/python -m pytest tests/ -q
+
+# end-to-end smoke with REAL YOLO inference (starts its own server)
+services/api/.venv/bin/python scripts/smoke_e2e.py
+
+# demo video from real photographic content (Ultralytics sample photo)
+services/api/.venv/bin/python scripts/make_demo_video.py data/demo/demo_bus.mp4
+
+# repository structure check
 make check
 ```
 
-Альтернатива без Make: `python3 scripts/check_structure.py`.
-CI выполняет ту же проверку при push и pull request.
-Сборка приложений и продуктовые тесты будут добавлены после реализации.
+Configuration variables: see [.env.example](.env.example).
+Licenses and data provenance: [docs/LICENSES.md](docs/LICENSES.md).
 
-## Следующий этап
+## Structure
 
-1. Добавить оригинал `docs/source/FINAL_TASK_WIUT_HACKATHON.pdf`.
-2. Заполнить [PRD](docs/PRD.md) и [TRACEABILITY](docs/TRACEABILITY.md).
-3. Описать решения в [ARCHITECTURE](docs/ARCHITECTURE.md) и реализовать компоненты.
-4. Добавить зависимости, Dockerfile, сервисы Compose и проверки реализации.
+```text
+apps/web/              Next.js UI (M1: single-page flow)
+services/api/          FastAPI backend, SQLite, pipeline worker
+packages/vision/       detection, tracking, zones, temporal event engine
+packages/workflows/    (M2) NL → DSL compilation
+packages/autolearn/    (M3) teacher/student specialization
+packages/integrations/ (M2+) webhook/CRM/GVERA adapters
+tests/                 unit + integration
+scripts/               structure check, demo video builder, e2e smoke
+docs/                  task source, PRD, architecture, traceability, licenses
+.agents/               agent protocol, state, handoffs, reviews
+```
 
-`.env.example` содержит предлагаемые переменные для будущего локального запуска.
-`docker-compose.yml` пока является шаблоном с пустым списком сервисов.
+## Agents
 
-## Работа с агентами
-
-Общие инструкции: [AGENTS.md](AGENTS.md).
-Протокол: [.agents/PROTOCOL.md](.agents/PROTOCOL.md).
-Состояние: [.agents/STATE.md](.agents/STATE.md).
-Передача работы: [.agents/HANDOFF.md](.agents/HANDOFF.md).
+Instructions: [AGENTS.md](AGENTS.md) · Protocol: [.agents/PROTOCOL.md](.agents/PROTOCOL.md) ·
+State: [.agents/STATE.md](.agents/STATE.md) · Handoff: [.agents/HANDOFF.md](.agents/HANDOFF.md)
