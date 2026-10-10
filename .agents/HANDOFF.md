@@ -1,133 +1,126 @@
-# Handoff — M2 event-routed visual reasoning + workflow product
+# Handoff — M2 review-fix pass (P1 defects M2-001..M2-005)
 
 - **Milestone:** M2 — strict NL workflow drafts + event-routed Teacher VLM
-- **Implementation SHA:** `c746fc098afd69dedc9cab54d6262e589212abc0`
-  Controller committed Claude's completed implementation after Git commands
-  were denied in the implementation session. Original handoff is retained
-  locally; no additional implementation call was made.
+- **Implementation SHA:** `cc4c0ced59709baa3de399df16250b3fad495d3b`
+  Controller committed Claude’s completed normal M2 fix-cycle-1 changes after
+  Bash/Git denial. No extra implementation call was made. Controller full
+  checks and an independent exact-SHA review remain required.
 - **Base SHA:** `2127d207a7bf2e1401d40e5ad82d926eb0f66a57`
+- **Prior frozen review target:** `36e7ca84d4fe2048cd9c21522e2adfbfc5174798`
 - **Branch:** `feature/visionflow`
 
-Scope: PRD §16 M2-AC1..AC5, plus the Teacher adapter portion of the operator's
-M2-AC3a (docs/VLM_ARCHITECTURE.md). No M3/M4 work. The M2-EXP1 foveated/
-full-frame strategy selector is only partially present (ROI crop + full-frame
-fallback) and remains planned.
+Scope: fix the five reproduced P1 defects from `.agents/reviews/M2.md` / the
+focused review. No M3/M4 work. API contracts preserved; the `foveated`/
+`full_frame` strategy selector (M2-EXP1) remains planned.
 
-## Features implemented
+## Fixes
 
-- **M2-AC1 — strict NL → DSL.** `services/api/app/nl_compiler.py` is a disclosed
-  deterministic rule-based compiler (no text-model credentials). `POST
-  /api/workflows/compile` returns an editable, **disabled** draft or structured
-  rejections/warnings. Ambiguous ("vehicle"), unsupported class/trigger, missing
-  duration/threshold, and external-delivery requests are rejected. Drafts are
-  never saved or enabled by compile; the existing create→enable flow (disabled by
-  default, explicit enable) is unchanged. No generated code is produced/executed.
-- **M2-AC2 — cheap path preserved, event-routed VLM.** The real YOLO/ByteTrack
-  detector, tracker and temporal state machines are unchanged and make **zero**
-  Teacher calls. A workflow `visual_predicate` turns a geometric candidate into a
-  single ROI classification via `pipeline._route_visual` + `app/vlm_router.py`.
-  ROI = the triggering object's bbox (full frame for track-less/aggregate
-  candidates). Verified by `test_geometric_workflow_makes_zero_vlm_calls`.
-- **M2-AC3 / AC3a — real validated Teacher adapter.** `services/api/app/teacher.py`:
-  `OpenAICompatibleTeacher` targets an operator-set `/v1/chat/completions`
-  (config `VLM_BASE_URL`/`VLM_MODEL`/`VLM_API_KEY`, server-only, separate from
-  user input). Strict response validation: `extra=forbid`, finite bounded
-  confidence, label ∈ declared set or `unknown`, else `invalid_response`. Images
-  sent as bounded base64 data URLs. Bounded connect/read/overall timeouts,
-  bounded retries that cover only transient failures (timeout/connection/5xx) and
-  **skip** auth(401/403)/schema, a concurrency semaphore, and a max-image-bytes
-  cap. Timeout/HTTP/invalid/missing-credential results can **never** confirm an
-  action. With no `VLM_BASE_URL`, `UnavailableTeacher` returns
-  `missing_credentials` (honest blocker). **Mocked tests do not verify real
-  visual inference; a real vLLM/GPU smoke is UNVERIFIED (no instance connected).**
-- **M2-AC4 — router discipline.** `app/vlm_router.py`: a `VersionedTTLCache`
-  (LRU + TTL) keyed by task/prompt + prompt/preprocessing version + model + ROI
-  hash + scope (changed task/model/ROI miss ⇒ new call); per-task budget;
-  per-task sampling interval; per-scope cooldown; in-flight dedup so concurrent
-  identical ROIs share one call. Transient failures are not cached. Live counters
-  for calls/hits/misses/dedup/suppressed(by reason)/failed/confirmed/unknown.
-- **M2-AC5 — provenance, counters, boundaries.** Every decision persists a
-  `VlmCall` row; events carry `visual_status`/`visual_label`/`visual_confidence`/
-  `visual_routing`. `GET /api/vlm/stats`, `GET /api/vlm/calls`, and
-  `/api/metrics.vlm` expose actual calls/hits/misses/suppressed/failures. UI
-  section 6 shows counters + teacher availability. Enable/disable (M1-010) and
-  webhook-removal boundaries are preserved; the Teacher URL is config-only
-  (not reachable from workflow/compile input), so user input cannot steer the
-  provider connection. A new-user flow runs without editing source files.
+- **M2-001 — strict NL grammar** (`app/nl_compiler.py`). The compiler now:
+  rejects requests naming more than one object class (e.g. "car or truck");
+  rejects unsupported actions (email/SMS/phone, webhook/HTTP/Slack/Telegram,
+  and code/script/shell execution) instead of silently downgrading to a local
+  notification; rejects an unrecognised condition clause introduced by
+  verify/check/confirm or `with its…/while…/whose…/that has…`; and **preserves**
+  a whitelist of supported visual conditions (hood/trunk/door open, lights on)
+  as a structured, non-executable `visual_predicate`. "When a car enters Service
+  Bay A with its hood open, create an alert" now compiles **with** the hood
+  predicate rather than dropping it.
+- **M2-002 — confidence required + minimum** (`app/teacher.py`, `config.py`).
+  A classified (non-`unknown`) label with no confidence is `invalid_response`;
+  a classified label below `VLM_MIN_CONFIDENCE` (default 0.5) returns the new
+  non-confirming status `low_confidence` (kept distinct from `unknown`).
+  `confirmed` still requires `status == "ok"`, so neither zero nor missing
+  confidence can fire an action.
+- **M2-003 — single monotonic deadline** (`app/teacher.py`). One deadline
+  (`t0 + overall_timeout`) now bounds semaphore acquisition (bounded
+  `acquire(timeout=remaining)` → `timeout` result if it can't be obtained in
+  time), each attempt's connect/read/overall phase timeouts (clamped to the
+  remaining budget), and every backoff (`min(2.0, 0.5·2^n, remaining)`; skipped
+  when no time remains). No phase runs past the deadline.
+- **M2-004 — budget at the transport boundary** (`app/vlm_router.py`,
+  `app/teacher.py`). The router passes an `on_attempt` guard to `classify`; the
+  real adapter calls it before every outbound HTTP attempt (including retries),
+  so each attempt consumes one shared budget unit and a retry that would exceed
+  the budget is never sent. New counters distinguish `adapter_invocations`,
+  `outbound_attempts`, `completed`, and `unavailable`; `UnavailableTeacher`
+  makes no request and increments only `unavailable` (zero outbound attempts,
+  zero `calls`). Existing keys (`calls`, `cache_hits`, …) are retained.
+- **M2-005 — cooldown scope + dedup ordering** (`app/pipeline.py`,
+  `app/vlm_router.py`). Cooldown scope is now the stable `(source, workflow)`
+  task key instead of the always-unique per-event `dedupe_key` (which disabled
+  cooldown entirely). In-flight deduplication is checked **before** the budget,
+  sampling and cooldown gates, so an identical concurrent ROI attaches to the
+  existing call and shares its result instead of being rejected as
+  `suppressed_sampling`.
 
 ## Changed files
 
-New:
-- `services/api/app/nl_compiler.py`
-- `services/api/app/teacher.py`
-- `services/api/app/vlm_router.py`
-- `tests/unit/test_nl_compiler.py`
-- `tests/unit/test_teacher.py`
-- `tests/unit/test_vlm_router.py`
-- `tests/integration/test_m2_visual.py`
+Production:
+- `services/api/app/nl_compiler.py` — strict grammar (M2-001).
+- `services/api/app/teacher.py` — confidence rules + `low_confidence` (M2-002);
+  monotonic deadline (M2-003); `on_attempt` budget guard (M2-004).
+- `services/api/app/vlm_router.py` — per-attempt budget, new counters (M2-004);
+  in-flight-before-gates (M2-005).
+- `services/api/app/pipeline.py` — stable cooldown scope (M2-005).
+- `services/api/app/config.py` — `VLM_MIN_CONFIDENCE`.
+- `apps/web/app/page.tsx` — "Outbound attempts" counter column.
+- `.env.example` — `VLM_MIN_CONFIDENCE`.
 
-Modified:
-- `services/api/app/config.py` — VLM/router/thread config.
-- `services/api/app/schemas.py` — `VisualPredicate`, `visual_predicate` on
-  `WorkflowDSL`, `CompileRequest`/`CompileResponse`, event `visual_*` fields.
-- `services/api/app/db.py` — `TrackEvent.visual_*` columns; new `VlmCall` table.
-- `services/api/app/pipeline.py` — `_encode_roi`, `_route_visual`, visual
-  dispatch gate, visual-recovery guard, CPU thread cap.
-- `services/api/app/main.py` — `/api/workflows/compile`, `/api/vlm/stats`,
-  `/api/vlm/calls`, `/api/metrics.vlm`, event provenance in `_event_out`.
-- `packages/vision/visionflow_vision/detector.py` — torch thread cap (2).
-- `apps/web/app/page.tsx` — NL compile box, visual-predicate indicator, event
-  Visual column, VLM routing counters section.
-- `.env.example` — `VLM_*` + router/thread vars.
-- `docs/TRACEABILITY.md`, `docs/ARCHITECTURE.md`, `.agents/STATE.md`.
+Tests:
+- `tests/unit/test_nl_compiler.py` — +5 M2-001 cases.
+- `tests/unit/test_teacher.py` — +6 M2-002/M2-003 cases; 5xx-retry fixture now
+  carries confidence.
+- `tests/unit/test_vlm_router.py` — stub signatures updated for `on_attempt`;
+  +4 M2-004/M2-005 cases (`AttemptTeacher`, `BlockingTeacher`).
+- `tests/integration/test_m2_visual.py` — `StubTeacher.classify` signature.
 
-## Commands executed and actual results (2026-10-10)
+Docs/state:
+- `docs/TRACEABILITY.md` — "M2 review fixes" table.
+- `.agents/STATE.md` — review-fix status.
 
-- `services/api/.venv/bin/python -m pytest tests/ -q` → **111 passed, 4 warnings**
-  (~13.5 s). Baseline before M2 was 66 passed; +45 M2 tests, no regressions. The
-  4 warnings are pre-existing (deprecation + the deliberate-crash recovery test).
-- New M2 suites: `tests/unit/test_nl_compiler.py` (12), `tests/unit/test_teacher.py`
-  (13), `tests/unit/test_vlm_router.py` (11), `tests/integration/test_m2_visual.py`
-  (8) — all passing.
-- `apps/web` `npm run build` → **compiled successfully**, 4 static pages, route
-  `/` 4.43 kB.
-- Real-YOLO `scripts/smoke_e2e.py` → **NOT RUN in this session**: launching its
-  uvicorn server is blocked by the sandbox. It is controller-run (PASS at M1).
-  The geometric dispatch path is logically unchanged for geometric workflows
-  (visual_predicate absent ⇒ direct `_dispatch_action`, as before).
+## Commands executed and actual results
 
-## Commit recovery
-
-The implementation session denied Git commands. The controller inspected the
-exact changed-file set, preserved the original handoff locally, committed
-Claude's implementation, and filled the real SHA above. No source changes,
-reset, force push or main merge were used for this recovery. The controller
-will run full checks/build and real YOLO smoke before independent review.
+- **No tests were executed in this session.** Bash was denied by the sandbox
+  (`don't ask mode`), so `pytest`, `npm run build`, and the real-YOLO smoke
+  could NOT be run here. This is an honest limitation, not a passing claim. The
+  controller must run, at minimum:
+  - `services/api/.venv/bin/python -m pytest tests/ -q`
+  - `apps/web` `npm run build`
+  - the controller-run real-YOLO geometric smoke (unchanged path).
+- Expected deltas vs. the prior 111-test baseline: +15 new unit tests
+  (5 NL + 6 teacher + 4 router), with no removals; one teacher fixture updated
+  to include confidence (previous assertion encoded the fixed-permissive bug).
 
 ## Known limitations
 
-- **Real Teacher UNVERIFIED.** No `VLM_BASE_URL` is configured; all Teacher tests
-  use mocks/stubs clearly marked test-only. Real visual inference, token usage and
-  any cost/quality comparison are deferred until a provider/GPU is connected
-  (M2-AC3a real smoke, M3/M4). Missing access is a documented blocker, not success.
-- **Input strategy.** Only ROI-crop (with full-frame fallback for track-less
-  candidates) ships. The `foveated`/`full_frame` selector (M2-EXP1) is planned.
-- **Visual-candidate recovery.** If a run is interrupted after an event commit but
-  before routing, the visual event stays visibly `pending` and is **not**
-  auto-dispatched without a confirmed Teacher result (honest, conservative).
-- **Transient Teacher errors** on a candidate are recorded `skipped_visual` and,
-  due to deterministic dedupe keys, are not auto-retried within the same stored
-  event; they remain visible via `visual_status` and `VlmCall`.
-- Carried: no API auth, no live camera, no public deployment (M4 scope). DB
-  column additions apply to fresh databases (SQLite `create_all`); pre-existing
-  dev DBs would need a migration/reset (data dir is gitignored).
+- **Real Teacher still UNVERIFIED.** No `VLM_BASE_URL` configured; all Teacher
+  tests use mocks/stubs. Real visual inference, token usage and cost/quality
+  comparisons remain deferred (M2-AC3a real smoke, M3/M4). Missing provider
+  access is a documented blocker, never fabricated success.
+- Cooldown scope is intentionally `(source, workflow)`-stable (documented
+  trade-off): it throttles the whole rule within the window rather than a
+  single track.
+- `low_confidence` results are not cached (treated as soft, re-checkable);
+  deterministic `ok`/`unknown` remain cached.
+- Carried from M2: ROI-crop + full-frame fallback only; `foveated` selector
+  planned; no API auth / live camera / public deployment (M4 scope); DB column
+  additions apply to fresh SQLite DBs.
 
-## Questions for Codex
+## Review items for Codex
 
-1. Is routing a non-confirming Teacher result to `skipped_visual` (no action, full
-   provenance) the desired semantics, versus retrying transient errors on a later
-   candidate within the same stored event?
-2. Confirm the `VLM_BASE_URL`/`VLM_MODEL`/`VLM_API_KEY` naming and the
-   presence-based enablement match docs/VLM_ARCHITECTURE.md expectations.
-3. Is the deterministic NL compiler acceptable for M2-AC1, with an optional
-   text-model path deferred, given no text-model credentials are configured?
+1. Is the `(source, workflow)` cooldown scope the intended granularity, or
+   should a per-track scope be offered as a per-workflow option?
+2. Is `VLM_MIN_CONFIDENCE=0.5` an acceptable default, and is `low_confidence`
+   the right distinct status (vs. collapsing into `unknown`)?
+3. Confirm the per-attempt budget-guard interface (`on_attempt`) is acceptable
+   for the adapter contract, including the stub fallback that counts one
+   outbound attempt when an adapter does not report attempts.
+
+## Controller commit recovery
+
+- Code and regression tests were committed after the agent returned success,
+  with testing explicitly unexecuted in that session. The original handoff is
+  preserved in ignored runtime storage.
+- Actual code-parent SHA: `e6171fd89e6a9bcb9388f9120d7a3373c4e3cdd1`.
+- M1 acceptance and the original M2 frozen target remain preserved.
+- No PASS, real Teacher quality, or savings measurement is claimed here.
