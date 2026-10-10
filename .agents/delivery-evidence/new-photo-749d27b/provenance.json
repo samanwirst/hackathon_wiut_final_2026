@@ -1,0 +1,22 @@
+{
+  "source": "Pexels photo7666059",
+  "author": "Don Bai",
+  "source_page": "https://www.pexels.com/photo/yellow-school-bus-on-the-road-7666059/",
+  "license": "Pexels license",
+  "license_url": "https://www.pexels.com/license/",
+  "download_url": "https://images.pexels.com/photos/7666059/pexels-photo-7666059.jpeg?auto=compress&cs=tinysrgb&w=1400",
+  "downloaded_dimensions": [
+    1400,
+    2144
+  ],
+  "download_sha256": "308d0f2110f1f8656d7157459aba68bad3f9781483594cd42c28a003b2ed1759",
+  "used_crop_xyxy": [
+    190,
+    490,
+    1160,
+    1090
+  ],
+  "crop_sha256": "4b09f6e973c5f29d0714e49fd286b17589a50d6bbbe7dd7d79100cbe621ef78c",
+  "privacy": "Only visually inspected upper-rear crop entered detector. Original license plate and recognizable people are excluded. Original download is ignored and not committed.",
+  "selection": "First CC0 candidate download failed HTTP; close-up Pexels13181025 was acquired but not inferred because of incomplete object. This upper-bus crop was fixed before detector processing. No quality benchmark population claim."
+}

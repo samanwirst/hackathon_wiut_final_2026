@@ -1,0 +1,181 @@
+{
+  "actual_yolo": true,
+  "container_source_snapshot": "749d27b",
+  "input": {
+    "generator": "QA_ONLY reverse movement, hold, then exit; parameters chosen before processing, no detector output used",
+    "source_asset": "Pexels photograph7666059, a distinct photo from Ultralytics fixture",
+    "source_page": "https://www.pexels.com/photo/yellow-school-bus-on-the-road-7666059/",
+    "license": "Pexels license",
+    "license_url": "https://www.pexels.com/license/",
+    "crop_xyxy": [
+      190,
+      490,
+      1160,
+      1090
+    ],
+    "privacy": "Inspected crop excludes license plate and recognizable faces; only this crop enters detector",
+    "canvas": [
+      1280,
+      720
+    ],
+    "fps": 20,
+    "frames": 200,
+    "bus_size": [
+      360,
+      223
+    ],
+    "motion": "right to left; hold inside zone4.5s; move out",
+    "source_photo_sha256": "4b09f6e973c5f29d0714e49fd286b17589a50d6bbbe7dd7d79100cbe621ef78c",
+    "video_sha256": "10f00dac457264db9019a9410e1e720fb1299d2588cb7b23349506048a9752ed",
+    "limits": "Photographic content new to this application smoke, upper rear crop of a different bus photo; synthetic motion. No claim that pretraining never saw this image, or of natural-video accuracy/quality."
+  },
+  "source": {
+    "id": 6,
+    "type": "upload",
+    "name": "QA_ONLY Pexels upper bus.mp4",
+    "status": "processed",
+    "error": null,
+    "width": 1280,
+    "height": 720,
+    "fps": 20.0,
+    "frame_count": 200,
+    "frames_processed": 50,
+    "avg_inference_ms": 35.02809422076098,
+    "created_at": "2026-10-10T23:30:51.797396"
+  },
+  "workflows": [
+    {
+      "id": 6,
+      "source_id": 6,
+      "name": "QA_ONLY new-photo object_entered_zone",
+      "dsl": {
+        "name": "QA_ONLY new-photo object_entered_zone",
+        "source_id": 6,
+        "object_class": "bus",
+        "trigger": {
+          "type": "object_entered_zone",
+          "zone_id": 6,
+          "duration_seconds": null,
+          "threshold": null
+        },
+        "action": {
+          "type": "create_notification",
+          "config": {
+            "title": "QA_ONLY real unseen event"
+          }
+        },
+        "visual_predicate": null,
+        "cooldown_seconds": 10.0,
+        "requires_approval": true
+      },
+      "enabled": false,
+      "created_at": "2026-10-10T23:30:51.866135Z"
+    },
+    {
+      "id": 7,
+      "source_id": 6,
+      "name": "QA_ONLY new-photo dwell_in_zone",
+      "dsl": {
+        "name": "QA_ONLY new-photo dwell_in_zone",
+        "source_id": 6,
+        "object_class": "bus",
+        "trigger": {
+          "type": "dwell_in_zone",
+          "zone_id": 6,
+          "duration_seconds": 2.0,
+          "threshold": null
+        },
+        "action": {
+          "type": "create_notification",
+          "config": {
+            "title": "QA_ONLY real unseen event"
+          }
+        },
+        "visual_predicate": null,
+        "cooldown_seconds": 10.0,
+        "requires_approval": true
+      },
+      "enabled": false,
+      "created_at": "2026-10-10T23:30:51.879730Z"
+    }
+  ],
+  "events": [
+    {
+      "event": {
+        "id": 4,
+        "source_id": 6,
+        "workflow_id": 6,
+        "track_id": 1,
+        "type": "object_entered_zone",
+        "class_name": "bus",
+        "video_timestamp": 2.4,
+        "confidence": 0.852131187915802,
+        "detail": "bus #1 entered QA_ONLY new-photo left bay",
+        "evidence_url": "/media/evidence/event_src6-wf6_object_entered_zone_1_visit1.jpg",
+        "action_status": "done",
+        "visual_status": null,
+        "visual_label": null,
+        "visual_confidence": null,
+        "visual_routing": null,
+        "created_at": "2026-10-10T23:30:52.802722"
+      },
+      "actions": [
+        {
+          "id": 4,
+          "event_id": 4,
+          "action_type": "create_notification",
+          "status": "success",
+          "attempt_count": 1,
+          "error": null,
+          "executed_at": "2026-10-10T23:30:52.836566"
+        }
+      ],
+      "evidence_sha256": "19396f77f570561f6c80a283ddc6864f1d6db8e195ad4b1e49f74977546a14ab"
+    },
+    {
+      "event": {
+        "id": 5,
+        "source_id": 6,
+        "workflow_id": 7,
+        "track_id": 1,
+        "type": "dwell_in_zone",
+        "class_name": "bus",
+        "video_timestamp": 4.4,
+        "confidence": 0.8342571258544922,
+        "detail": "bus #1 stayed in QA_ONLY new-photo left bay >= 2s",
+        "evidence_url": "/media/evidence/event_src6-wf7_dwell_in_zone_1_visit1.jpg",
+        "action_status": "done",
+        "visual_status": null,
+        "visual_label": null,
+        "visual_confidence": null,
+        "visual_routing": null,
+        "created_at": "2026-10-10T23:30:53.128312"
+      },
+      "actions": [
+        {
+          "id": 5,
+          "event_id": 5,
+          "action_type": "create_notification",
+          "status": "success",
+          "attempt_count": 1,
+          "error": null,
+          "executed_at": "2026-10-10T23:30:53.136922"
+        }
+      ],
+      "evidence_sha256": "823c2f7e58ecf20e2c9a9063dc241c661daa2bd4ac00fe92ba3778510a502366"
+    }
+  ],
+  "teacher_stats": {
+    "live": {
+      "status": "disabled_demo_safe",
+      "teacher_provider": "disabled",
+      "teacher_available": false,
+      "reason": "Teacher-routed visual-predicate workflows are disabled in demo-safe mode. Only the real geometric detector / tracker / zone rules run in this demo."
+    },
+    "persisted_by_route_status": {},
+    "persisted_by_teacher_status": {},
+    "total_decisions": 0
+  },
+  "student_activation": false,
+  "limits": "Photographic content new to this application smoke, upper rear crop of a different bus photo; synthetic motion. No claim that pretraining never saw this image, or of natural-video accuracy/quality."
+}

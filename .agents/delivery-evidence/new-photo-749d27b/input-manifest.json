@@ -1,0 +1,28 @@
+{
+  "generator": "QA_ONLY reverse movement, hold, then exit; parameters chosen before processing, no detector output used",
+  "source_asset": "Pexels photograph7666059, a distinct photo from Ultralytics fixture",
+  "source_page": "https://www.pexels.com/photo/yellow-school-bus-on-the-road-7666059/",
+  "license": "Pexels license",
+  "license_url": "https://www.pexels.com/license/",
+  "crop_xyxy": [
+    190,
+    490,
+    1160,
+    1090
+  ],
+  "privacy": "Inspected crop excludes license plate and recognizable faces; only this crop enters detector",
+  "canvas": [
+    1280,
+    720
+  ],
+  "fps": 20,
+  "frames": 200,
+  "bus_size": [
+    360,
+    223
+  ],
+  "motion": "right to left; hold inside zone4.5s; move out",
+  "source_photo_sha256": "4b09f6e973c5f29d0714e49fd286b17589a50d6bbbe7dd7d79100cbe621ef78c",
+  "video_sha256": "10f00dac457264db9019a9410e1e720fb1299d2588cb7b23349506048a9752ed",
+  "limits": "Photographic content new to this application smoke, upper rear crop of a different bus photo; synthetic motion. No claim that pretraining never saw this image, or of natural-video accuracy/quality."
+}
