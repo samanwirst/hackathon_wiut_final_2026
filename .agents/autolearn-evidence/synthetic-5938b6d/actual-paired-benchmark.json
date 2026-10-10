@@ -1,0 +1,1544 @@
+{
+  "target_sha": "5938b6d1f1396c1513d52ee9d9c3cdb377dc43a4",
+  "model_version_id": 1,
+  "artifact_sha256": "72541bb2b6fa8790610169ad1087128a9ae8c28501221ff878438480d401bcb2",
+  "protocol_split_hash": "b338f78465b9245ef8fde6a6f12f0a28cb45fba8ec37a781beb2523dfedf741a",
+  "selected_image_hashes": [
+    "4bb6a5baafcd702d4e8fee6e0f5052f3557dc1e1d73c41600c64e7579e7c6e28",
+    "f5b86637d254afc8d165383232a6b6ee5f75b27aadf1cb31a21662ca6d24d622",
+    "e18fea284b68970a59650b24d5cce3ac6e1d76dfb80eb770a196bd2d597824b2",
+    "8209024222b92aba6ab0498b3e873d31b4adcdaae3beb6374649cea93c11e38b",
+    "b6da660387d56a31feb95ccce77b57ab310a542df5b216e24c03e99ff4d31d84",
+    "da565c26891fbf3559fc2dc110750e24bed78cee567f9d26e7dbf7fe74de0a2c"
+  ],
+  "cold_student_model_and_artifact_load_ms": 2409.6863699960522,
+  "threshold_selected_on_validation_only": 0.5,
+  "warmup": {
+    "teacher": {
+      "status": "measured",
+      "label": "occupied",
+      "confidence_uncalibrated": 0.9374814204617754,
+      "latency_ms": 835.5660749948584,
+      "request_id": "local-05c30c9b94914604b9d18263a2949199",
+      "provider_model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+      "usage": {
+        "prompt_tokens": 134,
+        "completion_tokens": 0,
+        "total_tokens": 134
+      },
+      "actual_provider_metrics": {
+        "request_id": "local-05c30c9b94914604b9d18263a2949199",
+        "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+        "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+        "image_count": 1,
+        "input_tokens": 134,
+        "output_tokens": 0,
+        "inference_seconds": 0.7618126579982345,
+        "gpu_peak_allocated_bytes": 1063381504,
+        "gpu_peak_reserved_bytes": 1086324736,
+        "deadline_reached": false,
+        "scoring": {
+          "method": "candidate_sequence_softmax",
+          "uncalibrated": true,
+          "formula": "s(label)=sum_t log P(candidate_token_t | image(s), prompt, prior_candidate_tokens); p(label)=exp(s)/sum_candidates exp(s)",
+          "candidate_labels": [
+            "occupied",
+            "empty"
+          ],
+          "candidate_token_ids": [
+            [
+              27450,
+              18
+            ],
+            [
+              16451,
+              18
+            ]
+          ],
+          "candidate_log_likelihoods": [
+            -4.104527473449707,
+            -6.812260627746582
+          ],
+          "normalized_probabilities": [
+            0.9374814204617754,
+            0.06251857953822464
+          ],
+          "model_forward_calls": 2,
+          "actual_model_processed_tokens": 272,
+          "output_is_generated_json": false
+        }
+      }
+    },
+    "student": {
+      "status": "measured",
+      "label": "occupied",
+      "positive_class_probability_uncalibrated": 1.0,
+      "predicted_class_probability_uncalibrated": 1.0,
+      "latency_ms": 102.3499279981479,
+      "encoder_latency_ms": 101.3854530028766,
+      "teacher_requests": 0,
+      "frozen_encoder_forward_calls": 1,
+      "student_head_forward_calls": 1
+    }
+  },
+  "records": [
+    {
+      "round": 1,
+      "sample_id": 13,
+      "image_sha256": "4bb6a5baafcd702d4e8fee6e0f5052f3557dc1e1d73c41600c64e7579e7c6e28",
+      "session_id": "procedural-session-06",
+      "ground_truth": "occupied",
+      "order": [
+        "student",
+        "teacher"
+      ],
+      "student": {
+        "status": "measured",
+        "label": "occupied",
+        "positive_class_probability_uncalibrated": 1.0,
+        "predicted_class_probability_uncalibrated": 1.0,
+        "latency_ms": 37.269746004312765,
+        "encoder_latency_ms": 37.14056799799437,
+        "teacher_requests": 0,
+        "frozen_encoder_forward_calls": 1,
+        "student_head_forward_calls": 1
+      },
+      "teacher": {
+        "status": "measured",
+        "label": "occupied",
+        "confidence_uncalibrated": 0.9374814204617754,
+        "latency_ms": 427.0526960026473,
+        "request_id": "local-871742a1ac3e4e5aabac8ac6752e0e66",
+        "provider_model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+        "usage": {
+          "prompt_tokens": 134,
+          "completion_tokens": 0,
+          "total_tokens": 134
+        },
+        "actual_provider_metrics": {
+          "request_id": "local-871742a1ac3e4e5aabac8ac6752e0e66",
+          "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+          "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+          "image_count": 1,
+          "input_tokens": 134,
+          "output_tokens": 0,
+          "inference_seconds": 0.4223640659984085,
+          "gpu_peak_allocated_bytes": 1063381504,
+          "gpu_peak_reserved_bytes": 1086324736,
+          "deadline_reached": false,
+          "scoring": {
+            "method": "candidate_sequence_softmax",
+            "uncalibrated": true,
+            "formula": "s(label)=sum_t log P(candidate_token_t | image(s), prompt, prior_candidate_tokens); p(label)=exp(s)/sum_candidates exp(s)",
+            "candidate_labels": [
+              "occupied",
+              "empty"
+            ],
+            "candidate_token_ids": [
+              [
+                27450,
+                18
+              ],
+              [
+                16451,
+                18
+              ]
+            ],
+            "candidate_log_likelihoods": [
+              -4.104527473449707,
+              -6.812260627746582
+            ],
+            "normalized_probabilities": [
+              0.9374814204617754,
+              0.06251857953822464
+            ],
+            "model_forward_calls": 2,
+            "actual_model_processed_tokens": 272,
+            "output_is_generated_json": false
+          }
+        }
+      }
+    },
+    {
+      "round": 1,
+      "sample_id": 14,
+      "image_sha256": "f5b86637d254afc8d165383232a6b6ee5f75b27aadf1cb31a21662ca6d24d622",
+      "session_id": "procedural-session-06",
+      "ground_truth": "empty",
+      "order": [
+        "student",
+        "teacher"
+      ],
+      "student": {
+        "status": "measured",
+        "label": "empty",
+        "positive_class_probability_uncalibrated": 1.6277806535948576e-14,
+        "predicted_class_probability_uncalibrated": 0.9999999999999837,
+        "latency_ms": 41.06521700305166,
+        "encoder_latency_ms": 40.91494499880355,
+        "teacher_requests": 0,
+        "frozen_encoder_forward_calls": 1,
+        "student_head_forward_calls": 1
+      },
+      "teacher": {
+        "status": "measured",
+        "label": "occupied",
+        "confidence_uncalibrated": 0.9310551503123619,
+        "latency_ms": 434.49342599342344,
+        "request_id": "local-8dda4d987d344938bb529aa68d9ccc8b",
+        "provider_model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+        "usage": {
+          "prompt_tokens": 134,
+          "completion_tokens": 0,
+          "total_tokens": 134
+        },
+        "actual_provider_metrics": {
+          "request_id": "local-8dda4d987d344938bb529aa68d9ccc8b",
+          "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+          "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+          "image_count": 1,
+          "input_tokens": 134,
+          "output_tokens": 0,
+          "inference_seconds": 0.42969058499875246,
+          "gpu_peak_allocated_bytes": 1063381504,
+          "gpu_peak_reserved_bytes": 1086324736,
+          "deadline_reached": false,
+          "scoring": {
+            "method": "candidate_sequence_softmax",
+            "uncalibrated": true,
+            "formula": "s(label)=sum_t log P(candidate_token_t | image(s), prompt, prior_candidate_tokens); p(label)=exp(s)/sum_candidates exp(s)",
+            "candidate_labels": [
+              "occupied",
+              "empty"
+            ],
+            "candidate_token_ids": [
+              [
+                27450,
+                18
+              ],
+              [
+                16451,
+                18
+              ]
+            ],
+            "candidate_log_likelihoods": [
+              -4.541675090789795,
+              -7.144686698913574
+            ],
+            "normalized_probabilities": [
+              0.9310551503123619,
+              0.06894484968763814
+            ],
+            "model_forward_calls": 2,
+            "actual_model_processed_tokens": 272,
+            "output_is_generated_json": false
+          }
+        }
+      }
+    },
+    {
+      "round": 1,
+      "sample_id": 15,
+      "image_sha256": "e18fea284b68970a59650b24d5cce3ac6e1d76dfb80eb770a196bd2d597824b2",
+      "session_id": "procedural-session-07",
+      "ground_truth": "occupied",
+      "order": [
+        "student",
+        "teacher"
+      ],
+      "student": {
+        "status": "measured",
+        "label": "occupied",
+        "positive_class_probability_uncalibrated": 1.0,
+        "predicted_class_probability_uncalibrated": 1.0,
+        "latency_ms": 43.7239419989055,
+        "encoder_latency_ms": 43.55473699979484,
+        "teacher_requests": 0,
+        "frozen_encoder_forward_calls": 1,
+        "student_head_forward_calls": 1
+      },
+      "teacher": {
+        "status": "measured",
+        "label": "occupied",
+        "confidence_uncalibrated": 0.9416618611816804,
+        "latency_ms": 437.9355500059319,
+        "request_id": "local-2e099d874fb6407495830fbd12060ff3",
+        "provider_model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+        "usage": {
+          "prompt_tokens": 134,
+          "completion_tokens": 0,
+          "total_tokens": 134
+        },
+        "actual_provider_metrics": {
+          "request_id": "local-2e099d874fb6407495830fbd12060ff3",
+          "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+          "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+          "image_count": 1,
+          "input_tokens": 134,
+          "output_tokens": 0,
+          "inference_seconds": 0.43157928100117715,
+          "gpu_peak_allocated_bytes": 1063381504,
+          "gpu_peak_reserved_bytes": 1086324736,
+          "deadline_reached": false,
+          "scoring": {
+            "method": "candidate_sequence_softmax",
+            "uncalibrated": true,
+            "formula": "s(label)=sum_t log P(candidate_token_t | image(s), prompt, prior_candidate_tokens); p(label)=exp(s)/sum_candidates exp(s)",
+            "candidate_labels": [
+              "occupied",
+              "empty"
+            ],
+            "candidate_token_ids": [
+              [
+                27450,
+                18
+              ],
+              [
+                16451,
+                18
+              ]
+            ],
+            "candidate_log_likelihoods": [
+              -3.9568915367126465,
+              -6.738281726837158
+            ],
+            "normalized_probabilities": [
+              0.9416618611816804,
+              0.058338138818319625
+            ],
+            "model_forward_calls": 2,
+            "actual_model_processed_tokens": 272,
+            "output_is_generated_json": false
+          }
+        }
+      }
+    },
+    {
+      "round": 1,
+      "sample_id": 16,
+      "image_sha256": "8209024222b92aba6ab0498b3e873d31b4adcdaae3beb6374649cea93c11e38b",
+      "session_id": "procedural-session-07",
+      "ground_truth": "empty",
+      "order": [
+        "student",
+        "teacher"
+      ],
+      "student": {
+        "status": "measured",
+        "label": "empty",
+        "positive_class_probability_uncalibrated": 2.2005749210055232e-16,
+        "predicted_class_probability_uncalibrated": 0.9999999999999998,
+        "latency_ms": 40.65389699826483,
+        "encoder_latency_ms": 40.40893899946241,
+        "teacher_requests": 0,
+        "frozen_encoder_forward_calls": 1,
+        "student_head_forward_calls": 1
+      },
+      "teacher": {
+        "status": "measured",
+        "label": "occupied",
+        "confidence_uncalibrated": 0.9486219880410585,
+        "latency_ms": 428.0083980047493,
+        "request_id": "local-0170bd6c26fb4d51ba544238f54b7ed1",
+        "provider_model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+        "usage": {
+          "prompt_tokens": 134,
+          "completion_tokens": 0,
+          "total_tokens": 134
+        },
+        "actual_provider_metrics": {
+          "request_id": "local-0170bd6c26fb4d51ba544238f54b7ed1",
+          "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+          "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+          "image_count": 1,
+          "input_tokens": 134,
+          "output_tokens": 0,
+          "inference_seconds": 0.42451460099982796,
+          "gpu_peak_allocated_bytes": 1063381504,
+          "gpu_peak_reserved_bytes": 1086324736,
+          "deadline_reached": false,
+          "scoring": {
+            "method": "candidate_sequence_softmax",
+            "uncalibrated": true,
+            "formula": "s(label)=sum_t log P(candidate_token_t | image(s), prompt, prior_candidate_tokens); p(label)=exp(s)/sum_candidates exp(s)",
+            "candidate_labels": [
+              "occupied",
+              "empty"
+            ],
+            "candidate_token_ids": [
+              [
+                27450,
+                18
+              ],
+              [
+                16451,
+                18
+              ]
+            ],
+            "candidate_log_likelihoods": [
+              -4.885336875915527,
+              -7.8011369705200195
+            ],
+            "normalized_probabilities": [
+              0.9486219880410585,
+              0.05137801195894141
+            ],
+            "model_forward_calls": 2,
+            "actual_model_processed_tokens": 272,
+            "output_is_generated_json": false
+          }
+        }
+      }
+    },
+    {
+      "round": 1,
+      "sample_id": 23,
+      "image_sha256": "b6da660387d56a31feb95ccce77b57ab310a542df5b216e24c03e99ff4d31d84",
+      "session_id": "procedural-session-11",
+      "ground_truth": "occupied",
+      "order": [
+        "student",
+        "teacher"
+      ],
+      "student": {
+        "status": "measured",
+        "label": "occupied",
+        "positive_class_probability_uncalibrated": 1.0,
+        "predicted_class_probability_uncalibrated": 1.0,
+        "latency_ms": 39.70439200202236,
+        "encoder_latency_ms": 39.60123699653195,
+        "teacher_requests": 0,
+        "frozen_encoder_forward_calls": 1,
+        "student_head_forward_calls": 1
+      },
+      "teacher": {
+        "status": "measured",
+        "label": "occupied",
+        "confidence_uncalibrated": 0.9646545806574385,
+        "latency_ms": 432.3869130021194,
+        "request_id": "local-0619a37e9c3c4092a552a2438c4336af",
+        "provider_model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+        "usage": {
+          "prompt_tokens": 134,
+          "completion_tokens": 0,
+          "total_tokens": 134
+        },
+        "actual_provider_metrics": {
+          "request_id": "local-0619a37e9c3c4092a552a2438c4336af",
+          "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+          "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+          "image_count": 1,
+          "input_tokens": 134,
+          "output_tokens": 0,
+          "inference_seconds": 0.42752352700335905,
+          "gpu_peak_allocated_bytes": 1063381504,
+          "gpu_peak_reserved_bytes": 1086324736,
+          "deadline_reached": false,
+          "scoring": {
+            "method": "candidate_sequence_softmax",
+            "uncalibrated": true,
+            "formula": "s(label)=sum_t log P(candidate_token_t | image(s), prompt, prior_candidate_tokens); p(label)=exp(s)/sum_candidates exp(s)",
+            "candidate_labels": [
+              "occupied",
+              "empty"
+            ],
+            "candidate_token_ids": [
+              [
+                27450,
+                18
+              ],
+              [
+                16451,
+                18
+              ]
+            ],
+            "candidate_log_likelihoods": [
+              -3.795855760574341,
+              -7.102457046508789
+            ],
+            "normalized_probabilities": [
+              0.9646545806574385,
+              0.035345419342561475
+            ],
+            "model_forward_calls": 2,
+            "actual_model_processed_tokens": 272,
+            "output_is_generated_json": false
+          }
+        }
+      }
+    },
+    {
+      "round": 1,
+      "sample_id": 24,
+      "image_sha256": "da565c26891fbf3559fc2dc110750e24bed78cee567f9d26e7dbf7fe74de0a2c",
+      "session_id": "procedural-session-11",
+      "ground_truth": "empty",
+      "order": [
+        "student",
+        "teacher"
+      ],
+      "student": {
+        "status": "measured",
+        "label": "empty",
+        "positive_class_probability_uncalibrated": 9.123148417278237e-12,
+        "predicted_class_probability_uncalibrated": 0.9999999999908769,
+        "latency_ms": 43.13018499669852,
+        "encoder_latency_ms": 42.92789299506694,
+        "teacher_requests": 0,
+        "frozen_encoder_forward_calls": 1,
+        "student_head_forward_calls": 1
+      },
+      "teacher": {
+        "status": "measured",
+        "label": "occupied",
+        "confidence_uncalibrated": 0.9150992906319982,
+        "latency_ms": 432.24995600030525,
+        "request_id": "local-f93cea8b281345539b032b3512e7aafe",
+        "provider_model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+        "usage": {
+          "prompt_tokens": 134,
+          "completion_tokens": 0,
+          "total_tokens": 134
+        },
+        "actual_provider_metrics": {
+          "request_id": "local-f93cea8b281345539b032b3512e7aafe",
+          "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+          "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+          "image_count": 1,
+          "input_tokens": 134,
+          "output_tokens": 0,
+          "inference_seconds": 0.42745896699489094,
+          "gpu_peak_allocated_bytes": 1063381504,
+          "gpu_peak_reserved_bytes": 1086324736,
+          "deadline_reached": false,
+          "scoring": {
+            "method": "candidate_sequence_softmax",
+            "uncalibrated": true,
+            "formula": "s(label)=sum_t log P(candidate_token_t | image(s), prompt, prior_candidate_tokens); p(label)=exp(s)/sum_candidates exp(s)",
+            "candidate_labels": [
+              "occupied",
+              "empty"
+            ],
+            "candidate_token_ids": [
+              [
+                27450,
+                18
+              ],
+              [
+                16451,
+                18
+              ]
+            ],
+            "candidate_log_likelihoods": [
+              -5.230649471282959,
+              -7.608199596405029
+            ],
+            "normalized_probabilities": [
+              0.9150992906319982,
+              0.08490070936800172
+            ],
+            "model_forward_calls": 2,
+            "actual_model_processed_tokens": 272,
+            "output_is_generated_json": false
+          }
+        }
+      }
+    },
+    {
+      "round": 2,
+      "sample_id": 13,
+      "image_sha256": "4bb6a5baafcd702d4e8fee6e0f5052f3557dc1e1d73c41600c64e7579e7c6e28",
+      "session_id": "procedural-session-06",
+      "ground_truth": "occupied",
+      "order": [
+        "teacher",
+        "student"
+      ],
+      "teacher": {
+        "status": "measured",
+        "label": "occupied",
+        "confidence_uncalibrated": 0.9374814204617754,
+        "latency_ms": 428.4100330041838,
+        "request_id": "local-fbe365873586486d8abab2f4afeac5da",
+        "provider_model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+        "usage": {
+          "prompt_tokens": 134,
+          "completion_tokens": 0,
+          "total_tokens": 134
+        },
+        "actual_provider_metrics": {
+          "request_id": "local-fbe365873586486d8abab2f4afeac5da",
+          "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+          "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+          "image_count": 1,
+          "input_tokens": 134,
+          "output_tokens": 0,
+          "inference_seconds": 0.423909602999629,
+          "gpu_peak_allocated_bytes": 1063381504,
+          "gpu_peak_reserved_bytes": 1086324736,
+          "deadline_reached": false,
+          "scoring": {
+            "method": "candidate_sequence_softmax",
+            "uncalibrated": true,
+            "formula": "s(label)=sum_t log P(candidate_token_t | image(s), prompt, prior_candidate_tokens); p(label)=exp(s)/sum_candidates exp(s)",
+            "candidate_labels": [
+              "occupied",
+              "empty"
+            ],
+            "candidate_token_ids": [
+              [
+                27450,
+                18
+              ],
+              [
+                16451,
+                18
+              ]
+            ],
+            "candidate_log_likelihoods": [
+              -4.104527473449707,
+              -6.812260627746582
+            ],
+            "normalized_probabilities": [
+              0.9374814204617754,
+              0.06251857953822464
+            ],
+            "model_forward_calls": 2,
+            "actual_model_processed_tokens": 272,
+            "output_is_generated_json": false
+          }
+        }
+      },
+      "student": {
+        "status": "measured",
+        "label": "occupied",
+        "positive_class_probability_uncalibrated": 1.0,
+        "predicted_class_probability_uncalibrated": 1.0,
+        "latency_ms": 35.46288099460071,
+        "encoder_latency_ms": 35.22179800347658,
+        "teacher_requests": 0,
+        "frozen_encoder_forward_calls": 1,
+        "student_head_forward_calls": 1
+      }
+    },
+    {
+      "round": 2,
+      "sample_id": 14,
+      "image_sha256": "f5b86637d254afc8d165383232a6b6ee5f75b27aadf1cb31a21662ca6d24d622",
+      "session_id": "procedural-session-06",
+      "ground_truth": "empty",
+      "order": [
+        "teacher",
+        "student"
+      ],
+      "teacher": {
+        "status": "measured",
+        "label": "occupied",
+        "confidence_uncalibrated": 0.9310551503123619,
+        "latency_ms": 427.1597499973723,
+        "request_id": "local-dc0d6ffece0446ddafa8839d24dbc33a",
+        "provider_model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+        "usage": {
+          "prompt_tokens": 134,
+          "completion_tokens": 0,
+          "total_tokens": 134
+        },
+        "actual_provider_metrics": {
+          "request_id": "local-dc0d6ffece0446ddafa8839d24dbc33a",
+          "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+          "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+          "image_count": 1,
+          "input_tokens": 134,
+          "output_tokens": 0,
+          "inference_seconds": 0.4238044459998491,
+          "gpu_peak_allocated_bytes": 1063381504,
+          "gpu_peak_reserved_bytes": 1086324736,
+          "deadline_reached": false,
+          "scoring": {
+            "method": "candidate_sequence_softmax",
+            "uncalibrated": true,
+            "formula": "s(label)=sum_t log P(candidate_token_t | image(s), prompt, prior_candidate_tokens); p(label)=exp(s)/sum_candidates exp(s)",
+            "candidate_labels": [
+              "occupied",
+              "empty"
+            ],
+            "candidate_token_ids": [
+              [
+                27450,
+                18
+              ],
+              [
+                16451,
+                18
+              ]
+            ],
+            "candidate_log_likelihoods": [
+              -4.541675090789795,
+              -7.144686698913574
+            ],
+            "normalized_probabilities": [
+              0.9310551503123619,
+              0.06894484968763814
+            ],
+            "model_forward_calls": 2,
+            "actual_model_processed_tokens": 272,
+            "output_is_generated_json": false
+          }
+        }
+      },
+      "student": {
+        "status": "measured",
+        "label": "empty",
+        "positive_class_probability_uncalibrated": 1.6277806535948576e-14,
+        "predicted_class_probability_uncalibrated": 0.9999999999999837,
+        "latency_ms": 36.617498997657094,
+        "encoder_latency_ms": 36.41115599748446,
+        "teacher_requests": 0,
+        "frozen_encoder_forward_calls": 1,
+        "student_head_forward_calls": 1
+      }
+    },
+    {
+      "round": 2,
+      "sample_id": 15,
+      "image_sha256": "e18fea284b68970a59650b24d5cce3ac6e1d76dfb80eb770a196bd2d597824b2",
+      "session_id": "procedural-session-07",
+      "ground_truth": "occupied",
+      "order": [
+        "teacher",
+        "student"
+      ],
+      "teacher": {
+        "status": "measured",
+        "label": "occupied",
+        "confidence_uncalibrated": 0.9416618611816804,
+        "latency_ms": 426.46667399822036,
+        "request_id": "local-174cbd59724e486291077bbae39be112",
+        "provider_model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+        "usage": {
+          "prompt_tokens": 134,
+          "completion_tokens": 0,
+          "total_tokens": 134
+        },
+        "actual_provider_metrics": {
+          "request_id": "local-174cbd59724e486291077bbae39be112",
+          "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+          "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+          "image_count": 1,
+          "input_tokens": 134,
+          "output_tokens": 0,
+          "inference_seconds": 0.4219179690044257,
+          "gpu_peak_allocated_bytes": 1063381504,
+          "gpu_peak_reserved_bytes": 1086324736,
+          "deadline_reached": false,
+          "scoring": {
+            "method": "candidate_sequence_softmax",
+            "uncalibrated": true,
+            "formula": "s(label)=sum_t log P(candidate_token_t | image(s), prompt, prior_candidate_tokens); p(label)=exp(s)/sum_candidates exp(s)",
+            "candidate_labels": [
+              "occupied",
+              "empty"
+            ],
+            "candidate_token_ids": [
+              [
+                27450,
+                18
+              ],
+              [
+                16451,
+                18
+              ]
+            ],
+            "candidate_log_likelihoods": [
+              -3.9568915367126465,
+              -6.738281726837158
+            ],
+            "normalized_probabilities": [
+              0.9416618611816804,
+              0.058338138818319625
+            ],
+            "model_forward_calls": 2,
+            "actual_model_processed_tokens": 272,
+            "output_is_generated_json": false
+          }
+        }
+      },
+      "student": {
+        "status": "measured",
+        "label": "occupied",
+        "positive_class_probability_uncalibrated": 1.0,
+        "predicted_class_probability_uncalibrated": 1.0,
+        "latency_ms": 41.17891199712176,
+        "encoder_latency_ms": 40.99907299678307,
+        "teacher_requests": 0,
+        "frozen_encoder_forward_calls": 1,
+        "student_head_forward_calls": 1
+      }
+    },
+    {
+      "round": 2,
+      "sample_id": 16,
+      "image_sha256": "8209024222b92aba6ab0498b3e873d31b4adcdaae3beb6374649cea93c11e38b",
+      "session_id": "procedural-session-07",
+      "ground_truth": "empty",
+      "order": [
+        "teacher",
+        "student"
+      ],
+      "teacher": {
+        "status": "measured",
+        "label": "occupied",
+        "confidence_uncalibrated": 0.9486219880410585,
+        "latency_ms": 441.0511160021997,
+        "request_id": "local-402e5605521149239b0b37d3ed476aad",
+        "provider_model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+        "usage": {
+          "prompt_tokens": 134,
+          "completion_tokens": 0,
+          "total_tokens": 134
+        },
+        "actual_provider_metrics": {
+          "request_id": "local-402e5605521149239b0b37d3ed476aad",
+          "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+          "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+          "image_count": 1,
+          "input_tokens": 134,
+          "output_tokens": 0,
+          "inference_seconds": 0.43585729799815454,
+          "gpu_peak_allocated_bytes": 1063381504,
+          "gpu_peak_reserved_bytes": 1086324736,
+          "deadline_reached": false,
+          "scoring": {
+            "method": "candidate_sequence_softmax",
+            "uncalibrated": true,
+            "formula": "s(label)=sum_t log P(candidate_token_t | image(s), prompt, prior_candidate_tokens); p(label)=exp(s)/sum_candidates exp(s)",
+            "candidate_labels": [
+              "occupied",
+              "empty"
+            ],
+            "candidate_token_ids": [
+              [
+                27450,
+                18
+              ],
+              [
+                16451,
+                18
+              ]
+            ],
+            "candidate_log_likelihoods": [
+              -4.885336875915527,
+              -7.8011369705200195
+            ],
+            "normalized_probabilities": [
+              0.9486219880410585,
+              0.05137801195894141
+            ],
+            "model_forward_calls": 2,
+            "actual_model_processed_tokens": 272,
+            "output_is_generated_json": false
+          }
+        }
+      },
+      "student": {
+        "status": "measured",
+        "label": "empty",
+        "positive_class_probability_uncalibrated": 2.2005749210055232e-16,
+        "predicted_class_probability_uncalibrated": 0.9999999999999998,
+        "latency_ms": 36.42563800531207,
+        "encoder_latency_ms": 36.31007399962982,
+        "teacher_requests": 0,
+        "frozen_encoder_forward_calls": 1,
+        "student_head_forward_calls": 1
+      }
+    },
+    {
+      "round": 2,
+      "sample_id": 23,
+      "image_sha256": "b6da660387d56a31feb95ccce77b57ab310a542df5b216e24c03e99ff4d31d84",
+      "session_id": "procedural-session-11",
+      "ground_truth": "occupied",
+      "order": [
+        "teacher",
+        "student"
+      ],
+      "teacher": {
+        "status": "measured",
+        "label": "occupied",
+        "confidence_uncalibrated": 0.9646545806574385,
+        "latency_ms": 432.7422799979104,
+        "request_id": "local-7f250a3dae1746f9a12b9272d7a10847",
+        "provider_model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+        "usage": {
+          "prompt_tokens": 134,
+          "completion_tokens": 0,
+          "total_tokens": 134
+        },
+        "actual_provider_metrics": {
+          "request_id": "local-7f250a3dae1746f9a12b9272d7a10847",
+          "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+          "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+          "image_count": 1,
+          "input_tokens": 134,
+          "output_tokens": 0,
+          "inference_seconds": 0.4290515669999877,
+          "gpu_peak_allocated_bytes": 1063381504,
+          "gpu_peak_reserved_bytes": 1086324736,
+          "deadline_reached": false,
+          "scoring": {
+            "method": "candidate_sequence_softmax",
+            "uncalibrated": true,
+            "formula": "s(label)=sum_t log P(candidate_token_t | image(s), prompt, prior_candidate_tokens); p(label)=exp(s)/sum_candidates exp(s)",
+            "candidate_labels": [
+              "occupied",
+              "empty"
+            ],
+            "candidate_token_ids": [
+              [
+                27450,
+                18
+              ],
+              [
+                16451,
+                18
+              ]
+            ],
+            "candidate_log_likelihoods": [
+              -3.795855760574341,
+              -7.102457046508789
+            ],
+            "normalized_probabilities": [
+              0.9646545806574385,
+              0.035345419342561475
+            ],
+            "model_forward_calls": 2,
+            "actual_model_processed_tokens": 272,
+            "output_is_generated_json": false
+          }
+        }
+      },
+      "student": {
+        "status": "measured",
+        "label": "occupied",
+        "positive_class_probability_uncalibrated": 1.0,
+        "predicted_class_probability_uncalibrated": 1.0,
+        "latency_ms": 39.58791500190273,
+        "encoder_latency_ms": 39.421627996489406,
+        "teacher_requests": 0,
+        "frozen_encoder_forward_calls": 1,
+        "student_head_forward_calls": 1
+      }
+    },
+    {
+      "round": 2,
+      "sample_id": 24,
+      "image_sha256": "da565c26891fbf3559fc2dc110750e24bed78cee567f9d26e7dbf7fe74de0a2c",
+      "session_id": "procedural-session-11",
+      "ground_truth": "empty",
+      "order": [
+        "teacher",
+        "student"
+      ],
+      "teacher": {
+        "status": "measured",
+        "label": "occupied",
+        "confidence_uncalibrated": 0.9150992906319982,
+        "latency_ms": 436.2705269959406,
+        "request_id": "local-6dd26f0aad28400685c39b2d656b26aa",
+        "provider_model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+        "usage": {
+          "prompt_tokens": 134,
+          "completion_tokens": 0,
+          "total_tokens": 134
+        },
+        "actual_provider_metrics": {
+          "request_id": "local-6dd26f0aad28400685c39b2d656b26aa",
+          "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+          "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+          "image_count": 1,
+          "input_tokens": 134,
+          "output_tokens": 0,
+          "inference_seconds": 0.4305614799959585,
+          "gpu_peak_allocated_bytes": 1063381504,
+          "gpu_peak_reserved_bytes": 1086324736,
+          "deadline_reached": false,
+          "scoring": {
+            "method": "candidate_sequence_softmax",
+            "uncalibrated": true,
+            "formula": "s(label)=sum_t log P(candidate_token_t | image(s), prompt, prior_candidate_tokens); p(label)=exp(s)/sum_candidates exp(s)",
+            "candidate_labels": [
+              "occupied",
+              "empty"
+            ],
+            "candidate_token_ids": [
+              [
+                27450,
+                18
+              ],
+              [
+                16451,
+                18
+              ]
+            ],
+            "candidate_log_likelihoods": [
+              -5.230649471282959,
+              -7.608199596405029
+            ],
+            "normalized_probabilities": [
+              0.9150992906319982,
+              0.08490070936800172
+            ],
+            "model_forward_calls": 2,
+            "actual_model_processed_tokens": 272,
+            "output_is_generated_json": false
+          }
+        }
+      },
+      "student": {
+        "status": "measured",
+        "label": "empty",
+        "positive_class_probability_uncalibrated": 9.123148417278237e-12,
+        "predicted_class_probability_uncalibrated": 0.9999999999908769,
+        "latency_ms": 36.446292004256975,
+        "encoder_latency_ms": 36.32060900417855,
+        "teacher_requests": 0,
+        "frozen_encoder_forward_calls": 1,
+        "student_head_forward_calls": 1
+      }
+    },
+    {
+      "round": 3,
+      "sample_id": 13,
+      "image_sha256": "4bb6a5baafcd702d4e8fee6e0f5052f3557dc1e1d73c41600c64e7579e7c6e28",
+      "session_id": "procedural-session-06",
+      "ground_truth": "occupied",
+      "order": [
+        "student",
+        "teacher"
+      ],
+      "student": {
+        "status": "measured",
+        "label": "occupied",
+        "positive_class_probability_uncalibrated": 1.0,
+        "predicted_class_probability_uncalibrated": 1.0,
+        "latency_ms": 37.01641599764116,
+        "encoder_latency_ms": 36.92561400384875,
+        "teacher_requests": 0,
+        "frozen_encoder_forward_calls": 1,
+        "student_head_forward_calls": 1
+      },
+      "teacher": {
+        "status": "measured",
+        "label": "occupied",
+        "confidence_uncalibrated": 0.9374814204617754,
+        "latency_ms": 427.30566899990663,
+        "request_id": "local-26f89e28357d4b029f12e3d77d377ed0",
+        "provider_model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+        "usage": {
+          "prompt_tokens": 134,
+          "completion_tokens": 0,
+          "total_tokens": 134
+        },
+        "actual_provider_metrics": {
+          "request_id": "local-26f89e28357d4b029f12e3d77d377ed0",
+          "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+          "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+          "image_count": 1,
+          "input_tokens": 134,
+          "output_tokens": 0,
+          "inference_seconds": 0.4224254880027729,
+          "gpu_peak_allocated_bytes": 1063381504,
+          "gpu_peak_reserved_bytes": 1086324736,
+          "deadline_reached": false,
+          "scoring": {
+            "method": "candidate_sequence_softmax",
+            "uncalibrated": true,
+            "formula": "s(label)=sum_t log P(candidate_token_t | image(s), prompt, prior_candidate_tokens); p(label)=exp(s)/sum_candidates exp(s)",
+            "candidate_labels": [
+              "occupied",
+              "empty"
+            ],
+            "candidate_token_ids": [
+              [
+                27450,
+                18
+              ],
+              [
+                16451,
+                18
+              ]
+            ],
+            "candidate_log_likelihoods": [
+              -4.104527473449707,
+              -6.812260627746582
+            ],
+            "normalized_probabilities": [
+              0.9374814204617754,
+              0.06251857953822464
+            ],
+            "model_forward_calls": 2,
+            "actual_model_processed_tokens": 272,
+            "output_is_generated_json": false
+          }
+        }
+      }
+    },
+    {
+      "round": 3,
+      "sample_id": 14,
+      "image_sha256": "f5b86637d254afc8d165383232a6b6ee5f75b27aadf1cb31a21662ca6d24d622",
+      "session_id": "procedural-session-06",
+      "ground_truth": "empty",
+      "order": [
+        "student",
+        "teacher"
+      ],
+      "student": {
+        "status": "measured",
+        "label": "empty",
+        "positive_class_probability_uncalibrated": 1.6277806535948576e-14,
+        "predicted_class_probability_uncalibrated": 0.9999999999999837,
+        "latency_ms": 40.405927000392694,
+        "encoder_latency_ms": 40.22564100159798,
+        "teacher_requests": 0,
+        "frozen_encoder_forward_calls": 1,
+        "student_head_forward_calls": 1
+      },
+      "teacher": {
+        "status": "measured",
+        "label": "occupied",
+        "confidence_uncalibrated": 0.9310551503123619,
+        "latency_ms": 436.9000529986806,
+        "request_id": "local-0a8ff24466724da993970abf563d75b0",
+        "provider_model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+        "usage": {
+          "prompt_tokens": 134,
+          "completion_tokens": 0,
+          "total_tokens": 134
+        },
+        "actual_provider_metrics": {
+          "request_id": "local-0a8ff24466724da993970abf563d75b0",
+          "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+          "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+          "image_count": 1,
+          "input_tokens": 134,
+          "output_tokens": 0,
+          "inference_seconds": 0.43152901499706786,
+          "gpu_peak_allocated_bytes": 1063381504,
+          "gpu_peak_reserved_bytes": 1086324736,
+          "deadline_reached": false,
+          "scoring": {
+            "method": "candidate_sequence_softmax",
+            "uncalibrated": true,
+            "formula": "s(label)=sum_t log P(candidate_token_t | image(s), prompt, prior_candidate_tokens); p(label)=exp(s)/sum_candidates exp(s)",
+            "candidate_labels": [
+              "occupied",
+              "empty"
+            ],
+            "candidate_token_ids": [
+              [
+                27450,
+                18
+              ],
+              [
+                16451,
+                18
+              ]
+            ],
+            "candidate_log_likelihoods": [
+              -4.541675090789795,
+              -7.144686698913574
+            ],
+            "normalized_probabilities": [
+              0.9310551503123619,
+              0.06894484968763814
+            ],
+            "model_forward_calls": 2,
+            "actual_model_processed_tokens": 272,
+            "output_is_generated_json": false
+          }
+        }
+      }
+    },
+    {
+      "round": 3,
+      "sample_id": 15,
+      "image_sha256": "e18fea284b68970a59650b24d5cce3ac6e1d76dfb80eb770a196bd2d597824b2",
+      "session_id": "procedural-session-07",
+      "ground_truth": "occupied",
+      "order": [
+        "student",
+        "teacher"
+      ],
+      "student": {
+        "status": "measured",
+        "label": "occupied",
+        "positive_class_probability_uncalibrated": 1.0,
+        "predicted_class_probability_uncalibrated": 1.0,
+        "latency_ms": 41.29011899931356,
+        "encoder_latency_ms": 41.1078980032471,
+        "teacher_requests": 0,
+        "frozen_encoder_forward_calls": 1,
+        "student_head_forward_calls": 1
+      },
+      "teacher": {
+        "status": "measured",
+        "label": "occupied",
+        "confidence_uncalibrated": 0.9416618611816804,
+        "latency_ms": 444.32814799802145,
+        "request_id": "local-72d2b72c13bd458691535ad1b58da682",
+        "provider_model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+        "usage": {
+          "prompt_tokens": 134,
+          "completion_tokens": 0,
+          "total_tokens": 134
+        },
+        "actual_provider_metrics": {
+          "request_id": "local-72d2b72c13bd458691535ad1b58da682",
+          "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+          "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+          "image_count": 1,
+          "input_tokens": 134,
+          "output_tokens": 0,
+          "inference_seconds": 0.43831052300083684,
+          "gpu_peak_allocated_bytes": 1063381504,
+          "gpu_peak_reserved_bytes": 1086324736,
+          "deadline_reached": false,
+          "scoring": {
+            "method": "candidate_sequence_softmax",
+            "uncalibrated": true,
+            "formula": "s(label)=sum_t log P(candidate_token_t | image(s), prompt, prior_candidate_tokens); p(label)=exp(s)/sum_candidates exp(s)",
+            "candidate_labels": [
+              "occupied",
+              "empty"
+            ],
+            "candidate_token_ids": [
+              [
+                27450,
+                18
+              ],
+              [
+                16451,
+                18
+              ]
+            ],
+            "candidate_log_likelihoods": [
+              -3.9568915367126465,
+              -6.738281726837158
+            ],
+            "normalized_probabilities": [
+              0.9416618611816804,
+              0.058338138818319625
+            ],
+            "model_forward_calls": 2,
+            "actual_model_processed_tokens": 272,
+            "output_is_generated_json": false
+          }
+        }
+      }
+    },
+    {
+      "round": 3,
+      "sample_id": 16,
+      "image_sha256": "8209024222b92aba6ab0498b3e873d31b4adcdaae3beb6374649cea93c11e38b",
+      "session_id": "procedural-session-07",
+      "ground_truth": "empty",
+      "order": [
+        "student",
+        "teacher"
+      ],
+      "student": {
+        "status": "measured",
+        "label": "empty",
+        "positive_class_probability_uncalibrated": 2.2005749210055232e-16,
+        "predicted_class_probability_uncalibrated": 0.9999999999999998,
+        "latency_ms": 42.348388000391424,
+        "encoder_latency_ms": 42.1055660044658,
+        "teacher_requests": 0,
+        "frozen_encoder_forward_calls": 1,
+        "student_head_forward_calls": 1
+      },
+      "teacher": {
+        "status": "measured",
+        "label": "occupied",
+        "confidence_uncalibrated": 0.9486219880410585,
+        "latency_ms": 428.33495400554966,
+        "request_id": "local-fb6cf1c7147d4b1e9dc2f9bd961ad90e",
+        "provider_model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+        "usage": {
+          "prompt_tokens": 134,
+          "completion_tokens": 0,
+          "total_tokens": 134
+        },
+        "actual_provider_metrics": {
+          "request_id": "local-fb6cf1c7147d4b1e9dc2f9bd961ad90e",
+          "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+          "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+          "image_count": 1,
+          "input_tokens": 134,
+          "output_tokens": 0,
+          "inference_seconds": 0.4242482510016998,
+          "gpu_peak_allocated_bytes": 1063381504,
+          "gpu_peak_reserved_bytes": 1086324736,
+          "deadline_reached": false,
+          "scoring": {
+            "method": "candidate_sequence_softmax",
+            "uncalibrated": true,
+            "formula": "s(label)=sum_t log P(candidate_token_t | image(s), prompt, prior_candidate_tokens); p(label)=exp(s)/sum_candidates exp(s)",
+            "candidate_labels": [
+              "occupied",
+              "empty"
+            ],
+            "candidate_token_ids": [
+              [
+                27450,
+                18
+              ],
+              [
+                16451,
+                18
+              ]
+            ],
+            "candidate_log_likelihoods": [
+              -4.885336875915527,
+              -7.8011369705200195
+            ],
+            "normalized_probabilities": [
+              0.9486219880410585,
+              0.05137801195894141
+            ],
+            "model_forward_calls": 2,
+            "actual_model_processed_tokens": 272,
+            "output_is_generated_json": false
+          }
+        }
+      }
+    },
+    {
+      "round": 3,
+      "sample_id": 23,
+      "image_sha256": "b6da660387d56a31feb95ccce77b57ab310a542df5b216e24c03e99ff4d31d84",
+      "session_id": "procedural-session-11",
+      "ground_truth": "occupied",
+      "order": [
+        "student",
+        "teacher"
+      ],
+      "student": {
+        "status": "measured",
+        "label": "occupied",
+        "positive_class_probability_uncalibrated": 1.0,
+        "predicted_class_probability_uncalibrated": 1.0,
+        "latency_ms": 38.77966300206026,
+        "encoder_latency_ms": 38.664384999719914,
+        "teacher_requests": 0,
+        "frozen_encoder_forward_calls": 1,
+        "student_head_forward_calls": 1
+      },
+      "teacher": {
+        "status": "measured",
+        "label": "occupied",
+        "confidence_uncalibrated": 0.9646545806574385,
+        "latency_ms": 433.02261600183556,
+        "request_id": "local-dab530b859964724b21bc9ee51b40b81",
+        "provider_model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+        "usage": {
+          "prompt_tokens": 134,
+          "completion_tokens": 0,
+          "total_tokens": 134
+        },
+        "actual_provider_metrics": {
+          "request_id": "local-dab530b859964724b21bc9ee51b40b81",
+          "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+          "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+          "image_count": 1,
+          "input_tokens": 134,
+          "output_tokens": 0,
+          "inference_seconds": 0.4270197539954097,
+          "gpu_peak_allocated_bytes": 1063381504,
+          "gpu_peak_reserved_bytes": 1086324736,
+          "deadline_reached": false,
+          "scoring": {
+            "method": "candidate_sequence_softmax",
+            "uncalibrated": true,
+            "formula": "s(label)=sum_t log P(candidate_token_t | image(s), prompt, prior_candidate_tokens); p(label)=exp(s)/sum_candidates exp(s)",
+            "candidate_labels": [
+              "occupied",
+              "empty"
+            ],
+            "candidate_token_ids": [
+              [
+                27450,
+                18
+              ],
+              [
+                16451,
+                18
+              ]
+            ],
+            "candidate_log_likelihoods": [
+              -3.795855760574341,
+              -7.102457046508789
+            ],
+            "normalized_probabilities": [
+              0.9646545806574385,
+              0.035345419342561475
+            ],
+            "model_forward_calls": 2,
+            "actual_model_processed_tokens": 272,
+            "output_is_generated_json": false
+          }
+        }
+      }
+    },
+    {
+      "round": 3,
+      "sample_id": 24,
+      "image_sha256": "da565c26891fbf3559fc2dc110750e24bed78cee567f9d26e7dbf7fe74de0a2c",
+      "session_id": "procedural-session-11",
+      "ground_truth": "empty",
+      "order": [
+        "student",
+        "teacher"
+      ],
+      "student": {
+        "status": "measured",
+        "label": "empty",
+        "positive_class_probability_uncalibrated": 9.123148417278237e-12,
+        "predicted_class_probability_uncalibrated": 0.9999999999908769,
+        "latency_ms": 52.28969500603853,
+        "encoder_latency_ms": 52.120530999673065,
+        "teacher_requests": 0,
+        "frozen_encoder_forward_calls": 1,
+        "student_head_forward_calls": 1
+      },
+      "teacher": {
+        "status": "measured",
+        "label": "occupied",
+        "confidence_uncalibrated": 0.9150992906319982,
+        "latency_ms": 436.1447600022075,
+        "request_id": "local-9c6ce8592e5349d7996e9a9765769caf",
+        "provider_model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+        "usage": {
+          "prompt_tokens": 134,
+          "completion_tokens": 0,
+          "total_tokens": 134
+        },
+        "actual_provider_metrics": {
+          "request_id": "local-9c6ce8592e5349d7996e9a9765769caf",
+          "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+          "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+          "image_count": 1,
+          "input_tokens": 134,
+          "output_tokens": 0,
+          "inference_seconds": 0.43173617900174577,
+          "gpu_peak_allocated_bytes": 1063381504,
+          "gpu_peak_reserved_bytes": 1086324736,
+          "deadline_reached": false,
+          "scoring": {
+            "method": "candidate_sequence_softmax",
+            "uncalibrated": true,
+            "formula": "s(label)=sum_t log P(candidate_token_t | image(s), prompt, prior_candidate_tokens); p(label)=exp(s)/sum_candidates exp(s)",
+            "candidate_labels": [
+              "occupied",
+              "empty"
+            ],
+            "candidate_token_ids": [
+              [
+                27450,
+                18
+              ],
+              [
+                16451,
+                18
+              ]
+            ],
+            "candidate_log_likelihoods": [
+              -5.230649471282959,
+              -7.608199596405029
+            ],
+            "normalized_probabilities": [
+              0.9150992906319982,
+              0.08490070936800172
+            ],
+            "model_forward_calls": 2,
+            "actual_model_processed_tokens": 272,
+            "output_is_generated_json": false
+          }
+        }
+      }
+    }
+  ],
+  "summary": {
+    "teacher": {
+      "actual_predictions": 18,
+      "correct": 9,
+      "latency": {
+        "count": 18,
+        "p50_ms": 432.565,
+        "p95_ms": 441.543
+      },
+      "mean_ms": 432.79241772284473,
+      "serial_prediction_throughput_per_second": 2.310576523640459,
+      "actual_http_requests_excluding_warmup": 18,
+      "actual_gpu_model_forward_calls_excluding_warmup": 36,
+      "quality_metrics_on_six_unique_inputs": {
+        "confusion_matrix": {
+          "tp": 3,
+          "fp": 3,
+          "fn": 0,
+          "tn": 0
+        },
+        "precision": 0.5,
+        "recall": 1.0,
+        "f1": 0.6667,
+        "accuracy": 0.5,
+        "support": 6,
+        "positives": 3,
+        "negatives": 3
+      }
+    },
+    "student": {
+      "actual_predictions": 18,
+      "correct": 18,
+      "latency": {
+        "count": 18,
+        "p50_ms": 40.055,
+        "p95_ms": 45.009
+      },
+      "mean_ms": 40.18870688944136,
+      "serial_prediction_throughput_per_second": 24.882611992244183,
+      "actual_teacher_requests": 0,
+      "actual_cpu_encoder_forward_calls": 18,
+      "actual_student_head_forward_calls": 18,
+      "quality_metrics_on_six_unique_inputs": {
+        "confusion_matrix": {
+          "tp": 3,
+          "fp": 0,
+          "fn": 0,
+          "tn": 3
+        },
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "accuracy": 1.0,
+        "support": 6,
+        "positives": 3,
+        "negatives": 3
+      }
+    }
+  },
+  "actual_teacher_requests_total_with_warmup": 19,
+  "teacher_job_cap": 24,
+  "activation": false,
+  "actions": 0,
+  "hardware": "Intel i5-11400H CPU with2threads for actual frozenResNet+Student; separate actual RTX3050Laptop4GiB for pinnedSmol likelihoodscoring, sharedhost concurrent workloads",
+  "limits": [
+    "Only6unique synthetic heldout images/3 rendering sessions, sharedgenerator.18repeated predictions are NOT18independent qualitysamples.",
+    "Teacher uses actual2candidate sequence-likelihood GPUforwards/image; probabilities uncalibrated; serializedJSON is not generatedJSON.",
+    "Walllatency includesclient/provider overhead and preprocessing; CUDAkernel time UNVERIFIED.",
+    "Actual rentalcharge0(localGPU), totalhardware/power cost UNVERIFIED; paidVastinvoice, cost/event andsavings UNVERIFIED.",
+    "This experiment never activates a model or dispatches actions; no M3 acceptance."
+  ],
+  "aggregation_note": "Quality counts one prediction per unique heldout hash (first round), six total. All eighteen actual repetitions are retained solely for timing and repeated prediction consistency; no eighteen-sample quality claim."
+}

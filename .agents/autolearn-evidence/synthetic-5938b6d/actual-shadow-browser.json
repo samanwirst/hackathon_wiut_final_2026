@@ -1,0 +1,83 @@
+{
+  "target_sha": "5938b6d1f1396c1513d52ee9d9c3cdb377dc43a4",
+  "actual_browser_shadow_request": true,
+  "shadow": {
+    "experimental": true,
+    "version": 1,
+    "compared": 6,
+    "disagreement": {
+      "compared": 6,
+      "disagreements": 3,
+      "rate": 0.5
+    },
+    "items": [
+      {
+        "sample_id": 13,
+        "session_id": "procedural-session-06",
+        "student_label": "occupied",
+        "student_confidence": 1,
+        "teacher_label": "occupied",
+        "teacher_status": "labeled",
+        "verified_label": "occupied",
+        "action": "none"
+      },
+      {
+        "sample_id": 14,
+        "session_id": "procedural-session-06",
+        "student_label": "empty",
+        "student_confidence": 0,
+        "teacher_label": "occupied",
+        "teacher_status": "labeled",
+        "verified_label": "empty",
+        "action": "none"
+      },
+      {
+        "sample_id": 15,
+        "session_id": "procedural-session-07",
+        "student_label": "occupied",
+        "student_confidence": 1,
+        "teacher_label": "occupied",
+        "teacher_status": "labeled",
+        "verified_label": "occupied",
+        "action": "none"
+      },
+      {
+        "sample_id": 16,
+        "session_id": "procedural-session-07",
+        "student_label": "empty",
+        "student_confidence": 0,
+        "teacher_label": "occupied",
+        "teacher_status": "labeled",
+        "verified_label": "empty",
+        "action": "none"
+      },
+      {
+        "sample_id": 23,
+        "session_id": "procedural-session-11",
+        "student_label": "occupied",
+        "student_confidence": 1,
+        "teacher_label": "occupied",
+        "teacher_status": "labeled",
+        "verified_label": "occupied",
+        "action": "none"
+      },
+      {
+        "sample_id": 24,
+        "session_id": "procedural-session-11",
+        "student_label": "empty",
+        "student_confidence": 0,
+        "teacher_label": "occupied",
+        "teacher_status": "labeled",
+        "verified_label": "empty",
+        "action": "none"
+      }
+    ]
+  },
+  "active_version_id": null,
+  "activation": false,
+  "console_errors": [],
+  "mobile": {
+    "viewport": 390,
+    "scroll_width": 497
+  }
+}

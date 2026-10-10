@@ -1,0 +1,149 @@
+{
+  "before_first_student_fit": true,
+  "target_sha": "5938b6d1f1396c1513d52ee9d9c3cdb377dc43a4",
+  "source": "24 exact human-user-approved synthetic images, twelve original procedural sessions; original image hashes unchanged.",
+  "activation_approved": false,
+  "status": "passed",
+  "counts": {
+    "train": 14,
+    "val": 4,
+    "test": 6
+  },
+  "class_counts": {
+    "train": {
+      "empty": 7,
+      "occupied": 7
+    },
+    "val": {
+      "empty": 2,
+      "occupied": 2
+    },
+    "test": {
+      "empty": 3,
+      "occupied": 3
+    }
+  },
+  "assignments": {
+    "1": "train",
+    "2": "train",
+    "3": "train",
+    "4": "train",
+    "5": "train",
+    "6": "train",
+    "7": "train",
+    "8": "train",
+    "9": "val",
+    "10": "val",
+    "11": "train",
+    "12": "train",
+    "13": "test",
+    "14": "test",
+    "15": "test",
+    "16": "test",
+    "17": "val",
+    "18": "val",
+    "19": "train",
+    "20": "train",
+    "21": "train",
+    "22": "train",
+    "23": "test",
+    "24": "test"
+  },
+  "groups": {
+    "src:none|ses:procedural-session-11": "test",
+    "src:none|ses:procedural-session-07": "test",
+    "src:none|ses:procedural-session-06": "test",
+    "src:none|ses:procedural-session-04": "val",
+    "src:none|ses:procedural-session-08": "val",
+    "src:none|ses:procedural-session-09": "train",
+    "src:none|ses:procedural-session-10": "train",
+    "src:none|ses:procedural-session-00": "train",
+    "src:none|ses:procedural-session-01": "train",
+    "src:none|ses:procedural-session-05": "train",
+    "src:none|ses:procedural-session-03": "train",
+    "src:none|ses:procedural-session-02": "train"
+  },
+  "dataset_hash": "3a83ca9c28de3115a9d932c4d7731fb708f63f4f73bd6bd3adf88085104a8e77",
+  "split_hash": "b338f78465b9245ef8fde6a6f12f0a28cb45fba8ec37a781beb2523dfedf741a",
+  "old_split_hash": "b07205b0a13f0ada0d0fb1e20ac309d6e8676f8971c873c97a4f3be879151940",
+  "changed_membership": {
+    "1": {
+      "old": "test",
+      "new": "train"
+    },
+    "2": {
+      "old": "test",
+      "new": "train"
+    },
+    "3": {
+      "old": "val",
+      "new": "train"
+    },
+    "4": {
+      "old": "val",
+      "new": "train"
+    },
+    "9": {
+      "old": "test",
+      "new": "val"
+    },
+    "10": {
+      "old": "test",
+      "new": "val"
+    },
+    "13": {
+      "old": "train",
+      "new": "test"
+    },
+    "14": {
+      "old": "train",
+      "new": "test"
+    },
+    "17": {
+      "old": "train",
+      "new": "val"
+    },
+    "18": {
+      "old": "train",
+      "new": "val"
+    },
+    "21": {
+      "old": "val",
+      "new": "train"
+    },
+    "22": {
+      "old": "val",
+      "new": "train"
+    },
+    "23": {
+      "old": "train",
+      "new": "test"
+    },
+    "24": {
+      "old": "train",
+      "new": "test"
+    }
+  },
+  "registered_at_utc": "2026-10-10T22:44:47Z",
+  "amendment_reason": "Corrected physical src/session grouping replaces arbitrary caller group keys. Stable SHA1 ordering/25%test15%validation algorithm unchanged; canonical key strings change ranking. Required leakage fix, not selected using Student outcomes. No Student was fitted on these24images before this record. Teacher predicts occupied on all24, so class balance/accuracy remainunchanged; paired latency will use exactnewheldout hashes.",
+  "supersedes_protocol_sha256": "5c1c2422dba1335817169243663e84de51d5227d696a15050011d704491548a5",
+  "quality_gate": {
+    "min_f1": 0.75,
+    "min_test": 4,
+    "offline_only": true,
+    "human_activation_required": true
+  },
+  "limits": [
+    "Procedural images only,12 independent render seeds, shared drawing generator; no natural-video robustness claim.",
+    "Hash/session/source grouping currently present; application perceptual near-duplicate gate remains under independent review.",
+    "No real training or quality conclusion until input-leakage audit is resolved.",
+    "Compare measured Teacher and Student predictions on exactly these same heldout image hashes.",
+    "No rental/power/kernel-time/cost savings inferred from local HTTP timings."
+  ],
+  "dataset_id": "synthetic-occupancy-v1",
+  "near_duplicate_threshold": {
+    "decoded_pixel_MAD": 5.0,
+    "fixed_before_student_fit": true,
+    "not_tuned_on_heldout_outcomes": true
+  }
+}

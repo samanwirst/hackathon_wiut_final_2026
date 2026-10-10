@@ -39,8 +39,13 @@ ships. See [.agents/reviews/M1.md](.agents/reviews/M1.md) and
 M2's experimental VLM routing/compiler implementation remains BLOCKED.
 The isolated ten-hour experiment has executed actual private GPU Teacher
 labeling and applied the user's verification of 24 exact synthetic images.
-Twelve biased Teacher proposals needed correction. Student fitting and
-activation remain pending QA; this is not M3 acceptance. The verified fallback
+Twelve biased Teacher proposals needed correction. A real Student was fitted,
+saved, reloaded and compared in shadow on six held-out synthetic images:
+Student 6/6 correct, Teacher 3/6. The independent review of that experimental
+snapshot returned CHANGES_REQUIRED; its final second normal correction pass is
+in progress. See the [executed pilot evidence](.agents/autolearn-evidence/synthetic-5938b6d/VALIDATION.md)
+for exact inputs, timings and limits. No model was activated; this is not M3
+acceptance. The verified fallback
 is protected on `feature/demo-safe`.
 The [architecture audit](docs/VISUAL_ANALYTICS_AUDIT.md) and
 [milestone acceptance criteria](docs/PRD.md#16-acceptance-criteria) define
@@ -76,8 +81,9 @@ server-side, not just in the UI:
 - VLM stats report an explicit disabled state **without** instantiating a Teacher.
 
 **M1 is accepted; M2 remains BLOCKED.** This demo is not an M2 acceptance, an M3
-AutoLearn implementation, or a measured-cost result. Teacher, Student, foveated
-input and any GPU savings are UNVERIFIED and no savings percentage is claimed.
+AutoLearn implementation, or a measured-cost result. The fallback does not expose
+Teacher or Student features. Foveated input and GPU cost savings remain UNVERIFIED;
+no savings percentage is claimed.
 The guided UI builds a rule, shows the exact server-validated JSON, and requires
 a deliberate approval before the real detector → tracker → temporal-rule
 pipeline is armed.

@@ -22,11 +22,15 @@ actual inference evidence. Each worktree has one writer. CPU checks/builds run
 sequentially; GPU work uses an isolated environment, never shared API dependencies.
 
 The new stage has a deterministic ledger under ignored
-`.agents/runtime/ten-hour/`, at most **nine actual new CLI calls**, no implicit retries,
+`.agents/runtime/ten-hour/`, at most **eleven actual new CLI calls**, no implicit retries,
 per-process deadlines and an immutable historical call count of nineteen.
 The initial eight-call allocation was increased once to nine because A’s first
 unfinished implementation required a separately counted continuation. This
-reserves the final A fix/review and corrected C review without adding cycles.
+reserved the final A fix/review and corrected C review without adding cycles.
+The allocation then increased from nine to eleven when C's independent review
+found seven P1 defects after its first fix. The two additional calls are exactly
+its final second normal correction pass and fresh review. A receives no further
+cycle; all time cutoffs and historical counters remain unchanged.
 Only the controller launches CLIs. A report for another SHA cannot pass a gate.
 No main merge, history rewrite or fabricated PASS is authorized.
 

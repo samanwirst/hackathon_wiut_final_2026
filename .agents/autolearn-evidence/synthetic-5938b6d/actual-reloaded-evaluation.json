@@ -1,0 +1,116 @@
+{
+  "target_sha": "5938b6d1f1396c1513d52ee9d9c3cdb377dc43a4",
+  "actual_reloaded_artifact_evaluation": {
+    "experimental": true,
+    "version": 1,
+    "metrics": {
+      "confusion_matrix": {
+        "tp": 3,
+        "fp": 0,
+        "fn": 0,
+        "tn": 3
+      },
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "accuracy": 1.0,
+      "support": 6,
+      "positives": 3,
+      "negatives": 3,
+      "latency": {
+        "count": 6,
+        "p50_ms": 49.061,
+        "p95_ms": 99.689
+      },
+      "threshold": 0.5
+    }
+  },
+  "shadow": {
+    "experimental": true,
+    "version": 1,
+    "compared": 6,
+    "disagreement": {
+      "compared": 6,
+      "disagreements": 3,
+      "rate": 0.5
+    },
+    "items": [
+      {
+        "sample_id": 13,
+        "session_id": "procedural-session-06",
+        "student_label": "occupied",
+        "student_confidence": 1.0,
+        "teacher_label": "occupied",
+        "teacher_status": "labeled",
+        "verified_label": "occupied",
+        "action": "none"
+      },
+      {
+        "sample_id": 14,
+        "session_id": "procedural-session-06",
+        "student_label": "empty",
+        "student_confidence": 0.0,
+        "teacher_label": "occupied",
+        "teacher_status": "labeled",
+        "verified_label": "empty",
+        "action": "none"
+      },
+      {
+        "sample_id": 15,
+        "session_id": "procedural-session-07",
+        "student_label": "occupied",
+        "student_confidence": 1.0,
+        "teacher_label": "occupied",
+        "teacher_status": "labeled",
+        "verified_label": "occupied",
+        "action": "none"
+      },
+      {
+        "sample_id": 16,
+        "session_id": "procedural-session-07",
+        "student_label": "empty",
+        "student_confidence": 0.0,
+        "teacher_label": "occupied",
+        "teacher_status": "labeled",
+        "verified_label": "empty",
+        "action": "none"
+      },
+      {
+        "sample_id": 23,
+        "session_id": "procedural-session-11",
+        "student_label": "occupied",
+        "student_confidence": 1.0,
+        "teacher_label": "occupied",
+        "teacher_status": "labeled",
+        "verified_label": "occupied",
+        "action": "none"
+      },
+      {
+        "sample_id": 24,
+        "session_id": "procedural-session-11",
+        "student_label": "empty",
+        "student_confidence": 0.0,
+        "teacher_label": "occupied",
+        "teacher_status": "labeled",
+        "verified_label": "empty",
+        "action": "none"
+      }
+    ]
+  },
+  "gate": {
+    "experimental": true,
+    "version": 1,
+    "gate": {
+      "passed": true,
+      "f1": 1.0,
+      "support": 6,
+      "min_f1": 0.75,
+      "test_count": 6,
+      "min_test": 4,
+      "reasons": []
+    }
+  },
+  "active_version_id": null,
+  "activation_events": [],
+  "scope": "Six heldout synthetic images/three render sessions sharing a generator; not natural-video accuracy. No model activation."
+}
