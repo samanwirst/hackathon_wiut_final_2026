@@ -19,19 +19,22 @@ The official task is in [docs/source/README.md](docs/source/README.md);
 product requirements in [docs/PRD.md](docs/PRD.md);
 architecture in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
-## Current state (M1 awaiting fixes)
+## Current state (M1 recovery cycle)
 
 Working end-to-end pipeline: **MP4 upload → YOLO11n detection + ByteTrack
 tracking → polygon-zone temporal events (enter / exit / dwell / count) →
-SQLite persistence + evidence JPEG → authorized action (notification,
-allowlisted webhook) → web UI** (upload, canvas zone drawing, workflow
+SQLite persistence + evidence JPEG → authorized local action
+(create_notification) → web UI** (upload, canvas zone drawing, workflow
 builder, event timeline).
 
-The ordinary real-YOLO smoke works. Independent review of `cc59523` found
-four remaining P1 defects: dispatch after disable, ambiguous webhook delivery
-after interruption, DNS rebinding, and truncated video reported complete.
-M1 has not passed QA; the controller stopped at its two-fix-cycle limit.
-See [.agents/reviews/M1.md](.agents/reviews/M1.md).
+The exceptional M1 recovery cycle resolved the four P1 defects from the
+`cc59523` review: dispatch-after-disable is now serialized and suppressed
+(M1-010); a truncated video is reported as a failed source (M1-013); and
+arbitrary outbound webhooks were **removed** (M1-011/M1-012) — the SSRF/
+DNS-rebinding guard could not safely protect the delivery connection without a
+risky custom egress transport, so only the local `create_notification` action
+ships. See [.agents/reviews/M1.md](.agents/reviews/M1.md) and
+[docs/TRACEABILITY.md](docs/TRACEABILITY.md).
 
 VLM routing/caching is assigned to M2, verified teacher-to-student learning
 to M3, and measured baseline comparisons to M4. These stages are pending.

@@ -41,6 +41,13 @@ _detector_lock = threading.Lock()
 # state. This also keeps CPU/RAM use sequential, which suits the M1 target.
 _session_lock = threading.Lock()
 
+# Serializes a workflow disable (API) against an action's dispatch admission
+# (worker) so a disable that completes before dispatch is always observed and
+# the queued action is suppressed, closing the check-commit-dispatch race
+# (M1-010). The API disable handler acquires this lock around its commit; the
+# worker acquires it around the authoritative enabled recheck + dispatch.
+dispatch_admission_lock = threading.Lock()
+
 # Tests may replace this factory to inject a deterministic stub detector.
 # Production always builds the real YOLO detector.
 detector_factory = None
@@ -225,10 +232,36 @@ def _record_source_failure(session, source_id: int, message: str) -> None:
 
 
 def _dispatch_action(session, wf: Workflow, event: TrackEvent) -> None:
-    """Run the workflow's action for one persisted event."""
-    execute_action(
-        session, event, wf.dsl["action"]["type"], wf.dsl["action"].get("config", {})
-    )
+    """Run the workflow's action for one persisted event.
+
+    Admission is serialized against workflow disable (M1-010): under
+    ``dispatch_admission_lock`` we re-read the authoritative enabled state and,
+    if the workflow was disabled before this dispatch, suppress the queued
+    action explicitly (recorded as a ``cancelled`` ActionExecution and a
+    ``cancelled`` event action_status) instead of running it. Because the API
+    disable handler commits inside the same lock, a disable that completed
+    before dispatch is always observed here."""
+    with dispatch_admission_lock:
+        if not _workflow_enabled(wf.id):
+            logger.info(
+                "workflow %s disabled before dispatch; suppressing action for event %s",
+                wf.id, event.id,
+            )
+            session.add(
+                ActionExecution(
+                    event_id=event.id,
+                    action_type=wf.dsl["action"]["type"],
+                    status="cancelled",
+                    attempt_count=0,
+                    error="workflow disabled before action dispatch",
+                )
+            )
+            event.action_status = "cancelled"
+            session.commit()
+            return
+        execute_action(
+            session, event, wf.dsl["action"]["type"], wf.dsl["action"].get("config", {})
+        )
 
 
 def _resume_pending_event(session, wf: Workflow, existing: TrackEvent) -> bool:
@@ -354,13 +387,35 @@ def _process_source(source_id: int) -> None:
             frame_idx += 1
 
         cap.release()
+        # frame_idx counted every successfully decoded frame (sampled or not).
+        frames_read = frame_idx
         source.frames_processed = processed
         source.avg_inference_ms = inference_ms_total / processed if processed else None
+
+        # Distinguish a clean EOF from a premature decode termination (M1-013).
+        # If the container reports a reliable frame count and we decoded
+        # substantially fewer frames, the upload was truncated/corrupt: surface
+        # a failed source instead of silently reporting "processed". Events
+        # emitted before the truncation point remain committed (visible partial
+        # progress); the source row makes the shortfall explicit.
+        if total and frames_read < total * config.DECODE_MIN_COMPLETENESS:
+            source.status = "failed"
+            source.error = (
+                f"incomplete video: decoded {frames_read} of {total} frames reported "
+                "by container metadata (truncated or corrupt upload)"
+            )
+            session.commit()
+            logger.warning(
+                "source %s incomplete: decoded %d of %d frames (min %.0f%%)",
+                source_id, frames_read, total, config.DECODE_MIN_COMPLETENESS * 100,
+            )
+            return
+
         source.status = "processed"
         session.commit()
         logger.info(
-            "source %s done: %d frames analyzed, avg inference %.1f ms",
-            source_id, processed, source.avg_inference_ms or 0,
+            "source %s done: %d frames analyzed (%d decoded), avg inference %.1f ms",
+            source_id, processed, frames_read, source.avg_inference_ms or 0,
         )
     except Exception as exc:  # noqa: BLE001 — surface failure on the source row
         logger.exception("processing failed for source %s", source_id)

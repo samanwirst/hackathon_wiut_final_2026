@@ -24,7 +24,12 @@ TriggerType = Literal[
     "object_count_exceeded",
 ]
 
-ActionType = Literal["create_notification", "send_webhook"]
+# M1 ships only the local, side-effect-free notification action. Arbitrary
+# outbound webhooks were removed (M1-011/M1-012): the SSRF/DNS-rebinding guard
+# could not safely protect the delivery connection without a risky custom
+# DNS/TLS egress transport, so the capability is disabled rather than shipped
+# insecurely. A validated-egress integration can be reintroduced later.
+ActionType = Literal["create_notification"]
 
 # COCO classes relevant to the automotive vertical, plus "person".
 SUPPORTED_CLASSES = {"car", "truck", "bus", "motorcycle", "bicycle", "person"}
@@ -51,10 +56,6 @@ class Action(BaseModel):
 
     @model_validator(mode="after")
     def check_config(self) -> "Action":
-        if self.type == "send_webhook":
-            url = self.config.get("url", "")
-            if not isinstance(url, str) or not url.startswith(("http://", "https://")):
-                raise ValueError("send_webhook requires config.url (http/https)")
         if self.type == "create_notification":
             title = self.config.get("title")
             # Optional: falls back to a generated title. If present it must be a

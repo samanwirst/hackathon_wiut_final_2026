@@ -51,9 +51,13 @@ def test_unsupported_class_rejected():
         WorkflowDSL.model_validate(base(object_class="unicorn"))
 
 
-def test_webhook_requires_url():
-    with pytest.raises(ValidationError, match="config.url"):
-        WorkflowDSL.model_validate(base(action={"type": "send_webhook", "config": {}}))
+def test_webhook_action_now_rejected():
+    # External webhook delivery was removed (M1-011/M1-012); send_webhook is no
+    # longer a valid ActionType, so creating such a workflow fails validation.
+    with pytest.raises(ValidationError):
+        WorkflowDSL.model_validate(
+            base(action={"type": "send_webhook", "config": {"url": "http://x/y"}})
+        )
 
 
 def test_arbitrary_action_rejected():

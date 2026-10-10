@@ -4,14 +4,23 @@ Updated: 2026-10-10. Branch: `feature/visionflow`.
 
 ## Current stage
 
-M1 is NOT accepted. Final review of `cc595239c2d361c714a996f23712643981209b95`
-found four P1 defects after two fix cycles. Report: `.agents/reviews/M1.md`,
-pushed on `review/M1-r2`. Runtime checkpoint was preserved at BLOCKED/DECIDE.
+M1 exceptional recovery cycle COMPLETE, awaiting ONE exact-SHA independent
+review. The four P1 defects from review `cc59523` (`.agents/reviews/M1.md`)
+are resolved:
 
-The operator has now authorized ONE exceptional focused M1 recovery cycle:
-Claude fixes only M1-010/011/012/013 with regressions, full checks/build and
-real YOLO smoke, followed by ONE exact-SHA independent review. PASS advances
-to M2; any P0/P1 or failed gate stops again. No active fix was interrupted.
+- M1-010: `dispatch_admission_lock` serializes API disable vs worker dispatch
+  admission; a disable completed before dispatch suppresses the queued action
+  explicitly (`cancelled`).
+- M1-011 + M1-012: outbound `send_webhook` removed entirely (no safe egress
+  without a risky custom DNS/TLS transport). Only the local
+  `create_notification` ships; legacy webhook rows rejected at dispatch with no
+  network lookup/delivery. API/UI/docs/tests updated honestly.
+- M1-013: decoded-frame count vs reliable container frame count with
+  `DECODE_MIN_COMPLETENESS` tolerance; a truncated upload is a failed source.
+
+Gates (2026-10-10): `pytest tests/` 66 passed; frontend production build
+passed; real-YOLO smoke PASS (30 frames analyzed/180 decoded, bus enter t=4.2s
+conf 0.76, evidence+notification persisted). M1-014 (P2 CI deps) out of scope.
 
 ## Existing implementation and evidence
 

@@ -20,12 +20,12 @@ DETECTOR_MODEL = os.environ.get("DETECTOR_MODEL", "yolo11n.pt")
 DETECTOR_CONFIDENCE = float(os.environ.get("DETECTOR_CONFIDENCE", "0.35"))
 DETECTOR_DEVICE = os.environ.get("DETECTOR_DEVICE", "cpu")
 
-# Comma-separated URL prefixes that send_webhook actions may target.
-WEBHOOK_ALLOWLIST = [
-    p.strip()
-    for p in os.environ.get("WEBHOOK_ALLOWLIST", "").split(",")
-    if p.strip()
-]
+# Minimum fraction of the container-reported frame count that must actually be
+# decoded for a run to count as complete. A larger shortfall indicates a
+# truncated/corrupt upload and is surfaced as a failed source rather than
+# silently reported "processed" (M1-013). Tolerance absorbs the small
+# frame-count inaccuracies some codecs report.
+DECODE_MIN_COMPLETENESS = float(os.environ.get("DECODE_MIN_COMPLETENESS", "0.9"))
 
 CORS_ORIGINS = [
     o.strip()

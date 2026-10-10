@@ -1,14 +1,21 @@
-"""Webhook SSRF authorization tests (M1-001).
+"""External webhook delivery removal (M1-011 / M1-012).
 
-The authorization layer must canonicalize URLs, reject embedded userinfo (which
-HTTPX would otherwise use to reach an internal host), compare scheme/host/port
-exactly, and enforce the configured path prefix.
+Arbitrary outbound webhooks were removed because the SSRF/allowlist guard could
+not safely protect the actual delivery connection against DNS rebinding without
+a risky custom DNS/TLS egress transport, and an interrupted delivery could not
+be distinguished from a completed one on recovery.
+
+These tests prove that a legacy ``send_webhook`` action is now rejected
+*without any network lookup or delivery*, so neither the rebinding nor the
+duplicate-delivery scenario can occur. ``socket.getaddrinfo`` is monkeypatched
+to fail loudly if the action path ever attempts a DNS resolution.
 """
 
-import httpx
+import socket
+
 import pytest
 
-from app import actions, config, db
+from app import actions, db
 
 
 @pytest.fixture
@@ -38,175 +45,19 @@ def _make_event(session) -> db.TrackEvent:
     return ev
 
 
-# ------------------------------------------------------- pure authorization
+def test_legacy_webhook_action_rejected_without_network(session, monkeypatch):
+    """A persisted legacy send_webhook workflow must be rejected at execution
+    with no DNS lookup and no delivery (M1-012: no network for a disabled
+    feature)."""
 
+    def exploding_lookup(*args, **kwargs):
+        raise AssertionError("no DNS lookup may occur for a removed webhook action")
 
-def test_userinfo_disguising_internal_host_is_rejected(monkeypatch):
-    monkeypatch.setattr(config, "WEBHOOK_ALLOWLIST", ["http://approved.example"])
-    allowed, reason = actions._webhook_authorization(
-        "http://approved.example@127.0.0.1:9876/private"
-    )
-    assert not allowed
-    assert "userinfo" in reason.lower()
-
-
-def test_exact_ip_literal_match_allowed(monkeypatch):
-    monkeypatch.setattr(config, "WEBHOOK_ALLOWLIST", ["http://127.0.0.1:9876/hook"])
-    allowed, reason = actions._webhook_authorization("http://127.0.0.1:9876/hook")
-    assert allowed, reason
-
-
-def test_path_prefix_enforced(monkeypatch):
-    monkeypatch.setattr(config, "WEBHOOK_ALLOWLIST", ["http://127.0.0.1:9876/hook"])
-    allowed, _ = actions._webhook_authorization("http://127.0.0.1:9876/elsewhere")
-    assert not allowed
-
-
-def test_wrong_host_rejected(monkeypatch):
-    monkeypatch.setattr(config, "WEBHOOK_ALLOWLIST", ["http://127.0.0.1:9876/"])
-    allowed, _ = actions._webhook_authorization("http://127.0.0.2:9876/")
-    assert not allowed
-
-
-def test_wrong_port_rejected(monkeypatch):
-    monkeypatch.setattr(config, "WEBHOOK_ALLOWLIST", ["http://127.0.0.1:9876/"])
-    allowed, _ = actions._webhook_authorization("http://127.0.0.1:8000/")
-    assert not allowed
-
-
-def test_empty_allowlist_rejects_everything(monkeypatch):
-    monkeypatch.setattr(config, "WEBHOOK_ALLOWLIST", [])
-    allowed, reason = actions._webhook_authorization("http://127.0.0.1:9876/")
-    assert not allowed
-    assert "allowlist" in reason.lower()
-
-
-# ------------------------------------------------- path traversal (M1-006)
-
-
-def test_dotdot_traversal_rejected(monkeypatch):
-    monkeypatch.setattr(config, "WEBHOOK_ALLOWLIST", ["http://127.0.0.1:9876/hook/"])
-    allowed, reason, canonical = actions._authorize_webhook(
-        "http://127.0.0.1:9876/hook/../admin"
-    )
-    assert not allowed
-    assert canonical is None
-
-
-def test_encoded_traversal_rejected(monkeypatch):
-    monkeypatch.setattr(config, "WEBHOOK_ALLOWLIST", ["http://127.0.0.1:9876/hook/"])
-    allowed, reason, canonical = actions._authorize_webhook(
-        "http://127.0.0.1:9876/hook/%2e%2e/admin"
-    )
-    assert not allowed
-    assert canonical is None
-    assert "traversal" in reason.lower()
-
-
-def test_legit_subpath_canonicalized(monkeypatch):
-    monkeypatch.setattr(config, "WEBHOOK_ALLOWLIST", ["http://127.0.0.1:9876/hook/"])
-    allowed, _, canonical = actions._authorize_webhook(
-        "http://127.0.0.1:9876/hook/./deploy"
-    )
-    assert allowed
-    assert canonical == "http://127.0.0.1:9876/hook/deploy"
-
-
-def test_traversal_never_reaches_admin_via_transport(session, monkeypatch):
-    """The defect: authorization accepts the raw '/hook/../admin' path but HTTPX
-    normalizes it to '/admin' on the wire. The transport must never see it."""
-    monkeypatch.setattr(config, "WEBHOOK_ALLOWLIST", ["http://127.0.0.1:9876/hook/"])
-    seen: list[str] = []
-
-    def handler(request: httpx.Request) -> httpx.Response:
-        seen.append(request.url.path)
-        return httpx.Response(200)
-
-    monkeypatch.setattr(actions, "webhook_transport", httpx.MockTransport(handler))
+    monkeypatch.setattr(socket, "getaddrinfo", exploding_lookup)
 
     ev = _make_event(session)
     actions.execute_action(
-        session, ev, "send_webhook",
-        {"url": "http://127.0.0.1:9876/hook/../admin"},
-    )
-
-    assert seen == []  # no request reached the transport, certainly not /admin
-    exec_row = (
-        session.query(db.ActionExecution)
-        .filter(db.ActionExecution.event_id == ev.id)
-        .one()
-    )
-    assert exec_row.status == "rejected"
-
-
-def test_authorized_path_is_exactly_what_is_delivered(session, monkeypatch):
-    monkeypatch.setattr(config, "WEBHOOK_ALLOWLIST", ["http://127.0.0.1:9000/hook/"])
-    seen: list[str] = []
-
-    def handler(request: httpx.Request) -> httpx.Response:
-        seen.append(str(request.url))
-        return httpx.Response(200)
-
-    monkeypatch.setattr(actions, "webhook_transport", httpx.MockTransport(handler))
-
-    ev = _make_event(session)
-    actions.execute_action(
-        session, ev, "send_webhook", {"url": "http://127.0.0.1:9000/hook/./deploy"}
-    )
-
-    exec_row = (
-        session.query(db.ActionExecution)
-        .filter(db.ActionExecution.event_id == ev.id)
-        .one()
-    )
-    assert exec_row.status == "success", exec_row.error
-    assert seen == ["http://127.0.0.1:9000/hook/deploy"]
-
-
-# ------------------------------------------------- end-to-end via transport
-
-
-def test_userinfo_url_never_reaches_transport(session, monkeypatch):
-    """A real httpx client with MockTransport must never observe the request:
-    authorization rejects the userinfo URL before any delivery."""
-    monkeypatch.setattr(config, "WEBHOOK_ALLOWLIST", ["http://approved.example/"])
-    seen: list[str] = []
-
-    def handler(request: httpx.Request) -> httpx.Response:
-        seen.append(request.url.host)
-        return httpx.Response(200)
-
-    monkeypatch.setattr(actions, "webhook_transport", httpx.MockTransport(handler))
-
-    ev = _make_event(session)
-    actions.execute_action(
-        session, ev, "send_webhook",
-        {"url": "http://approved.example@127.0.0.1:9876/private"},
-    )
-
-    assert seen == []  # no network request was sent
-    exec_row = (
-        session.query(db.ActionExecution)
-        .filter(db.ActionExecution.event_id == ev.id)
-        .one()
-    )
-    assert exec_row.status == "rejected"
-    assert "userinfo" in (exec_row.error or "").lower()
-
-
-def test_allowlisted_destination_is_delivered(session, monkeypatch):
-    monkeypatch.setattr(config, "WEBHOOK_ALLOWLIST", ["http://127.0.0.1:9000/hook"])
-    seen: list[str] = []
-
-    def handler(request: httpx.Request) -> httpx.Response:
-        seen.append(request.url.host)
-        return httpx.Response(200)
-
-    monkeypatch.setattr(actions, "webhook_transport", httpx.MockTransport(handler))
-
-    ev = _make_event(session)
-    actions.execute_action(
-        session, ev, "send_webhook", {"url": "http://127.0.0.1:9000/hook"}
+        session, ev, "send_webhook", {"url": "http://approved.example:9876/hook"}
     )
 
     exec_row = (
@@ -214,5 +65,32 @@ def test_allowlisted_destination_is_delivered(session, monkeypatch):
         .filter(db.ActionExecution.event_id == ev.id)
         .one()
     )
-    assert exec_row.status == "success", exec_row.error
-    assert seen == ["127.0.0.1"]
+    assert exec_row.status == "rejected"
+    assert "not supported" in (exec_row.error or "").lower()
+    # No notification/side effect was produced.
+    assert session.query(db.Notification).count() == 0
+    assert ev.action_status == "failed"
+
+
+def test_notification_action_still_works(session):
+    """The retained local action remains fully functional."""
+    ev = _make_event(session)
+    actions.execute_action(session, ev, "create_notification", {"title": "bay alert"})
+
+    exec_row = (
+        session.query(db.ActionExecution)
+        .filter(db.ActionExecution.event_id == ev.id)
+        .one()
+    )
+    assert exec_row.status == "success"
+    notif = session.query(db.Notification).filter(db.Notification.event_id == ev.id).one()
+    assert notif.title == "bay alert"
+    assert ev.action_status == "done"
+
+
+def test_webhook_helpers_removed():
+    """The SSRF/authorization helpers are gone; nothing can re-enable delivery
+    by calling them."""
+    assert not hasattr(actions, "_authorize_webhook")
+    assert not hasattr(actions, "_post_webhook")
+    assert not hasattr(actions, "webhook_transport")

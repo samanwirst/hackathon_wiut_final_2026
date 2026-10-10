@@ -84,7 +84,7 @@ class TrackEvent(Base):
     dedupe_key: Mapped[str] = mapped_column(String(255), unique=True)
     evidence_path: Mapped[str | None] = mapped_column(Text, nullable=True)
     action_status: Mapped[str] = mapped_column(String(32), default="pending")
-    # pending | done | failed
+    # pending | done | failed | cancelled
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
@@ -95,7 +95,7 @@ class ActionExecution(Base):
     event_id: Mapped[int] = mapped_column(ForeignKey("track_events.id"))
     action_type: Mapped[str] = mapped_column(String(64))
     status: Mapped[str] = mapped_column(String(32), default="pending")
-    # pending | success | failed | rejected
+    # pending | success | failed | rejected | cancelled
     attempt_count: Mapped[int] = mapped_column(Integer, default=0)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
     executed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

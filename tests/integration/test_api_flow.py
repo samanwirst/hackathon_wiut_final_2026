@@ -159,7 +159,10 @@ def test_full_pipeline_flow(client, video_path):
     assert any(n["event_id"] == ev["id"] and n["title"] == "Bay alert" for n in notifications)
 
 
-def test_webhook_to_non_allowlisted_destination_is_rejected(client, video_path):
+def test_webhook_action_rejected_at_creation(client, video_path):
+    # External webhook delivery was removed (M1-011/M1-012). Creating a workflow
+    # with send_webhook is now rejected at the API boundary (422), so no
+    # outbound-delivery code path can ever be reached.
     with open(video_path, "rb") as f:
         source = client.post(
             "/api/sources/upload", files={"file": ("test2.mp4", f, "video/mp4")}
@@ -172,7 +175,7 @@ def test_webhook_to_non_allowlisted_destination_is_rejected(client, video_path):
             "polygon": [[0.5, 0.0], [1.0, 0.0], [1.0, 1.0], [0.5, 1.0]],
         },
     ).json()
-    wf = client.post(
+    r = client.post(
         "/api/workflows",
         json={
             "name": "Webhook rule",
@@ -182,21 +185,8 @@ def test_webhook_to_non_allowlisted_destination_is_rejected(client, video_path):
             "action": {"type": "send_webhook", "config": {"url": "http://evil.example/hook"}},
             "cooldown_seconds": 5,
         },
-    ).json()
-    client.post(f"/api/workflows/{wf['id']}/enable")
-    client.post(f"/api/sources/{source['id']}/process")
-
-    deadline = time.time() + 30
-    while time.time() < deadline:
-        if client.get(f"/api/sources/{source['id']}").json()["status"] == "processed":
-            break
-        time.sleep(0.3)
-
-    events = client.get("/api/events", params={"source_id": source["id"]}).json()
-    assert events, "expected an event"
-    actions = client.get(f"/api/events/{events[0]['id']}/actions").json()
-    assert actions[0]["status"] == "rejected"
-    assert "allowlist" in (actions[0]["error"] or "").lower()
+    )
+    assert r.status_code == 422, r.text
 
 
 def test_upload_rejects_non_mp4(client):

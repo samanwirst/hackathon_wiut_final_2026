@@ -250,9 +250,16 @@ Supported trigger types:
 
 Supported actions:
 
-- `create_notification`
-- `create_service_event`
-- `send_webhook`
+- `create_notification` (the shipped M1 action: local, side-effect-free)
+- `create_service_event` (planned)
+- `send_webhook` — **removed in M1** (M1-011/M1-012). Arbitrary outbound
+  delivery was disabled because the SSRF/allowlist guard could not safely
+  protect the actual delivery connection against DNS rebinding without a risky
+  custom DNS/TLS egress transport, and an interrupted delivery could not be
+  distinguished from a completed one on recovery. A validated-egress
+  integration can be reintroduced later; until then the API rejects this action
+  at creation and any legacy workflow naming it is rejected at dispatch with no
+  network activity.
 - `robot_preset`, only when explicitly configured and authorized
 
 The LLM must produce only a structured workflow. It must never generate arbitrary code that is executed by the backend.
@@ -386,7 +393,7 @@ Minimum entities:
 - Commit `.env.example`, never `.env`.
 - Validate upload types and enforce file-size limits.
 - Restrict file and evidence access.
-- Validate webhook destinations; do not permit arbitrary internal-network requests.
+- Validate webhook destinations; do not permit arbitrary internal-network requests. (In M1 this is enforced by removing outbound webhooks entirely — M1-011/M1-012 — rather than shipping an allowlist guard that DNS rebinding could bypass.)
 - Require authorization for workflow actions and model activation.
 - Provide visible notice and consent for recorded people.
 - Minimize retention and support deletion.

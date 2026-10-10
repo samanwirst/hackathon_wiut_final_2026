@@ -253,8 +253,12 @@ def disable_workflow(workflow_id: int, session: Session = Depends(db)):
     wf = session.get(Workflow, workflow_id)
     if wf is None:
         raise HTTPException(404, "workflow not found")
-    wf.enabled = False
-    session.commit()
+    # Serialize the disable commit against the worker's dispatch admission so a
+    # disable that returns here is guaranteed to suppress any not-yet-dispatched
+    # queued action for this workflow (M1-010).
+    with pipeline.dispatch_admission_lock:
+        wf.enabled = False
+        session.commit()
     return WorkflowOut(
         id=wf.id, source_id=wf.source_id, name=wf.name,
         dsl=WorkflowDSL.model_validate(wf.dsl), enabled=False, created_at=wf.created_at,

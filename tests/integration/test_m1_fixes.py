@@ -425,3 +425,156 @@ def test_evidence_write_failure_fails_source_and_rolls_back(client, video_path, 
         assert events == [], f"event persisted despite evidence failure: {events}"
     finally:
         _reset_detector()
+
+
+# -------------------------------------------------------------- M1-010 (disable completes before dispatch)
+
+
+def test_disable_before_dispatch_suppresses_queued_action(client, video_path, monkeypatch):
+    """The exact M1-010 race: the event is committed, dispatch is paused, the
+    workflow is disabled through the API (returns enabled=false), then dispatch
+    is released. The queued action must be suppressed (cancelled) explicitly —
+    no notification may be created."""
+    det = SingleCarDetector()
+    _use_detector(det)
+    original = pipeline._dispatch_action
+    ready, release = threading.Event(), threading.Event()
+
+    def gated(session, wf, event):
+        ready.set()
+        assert release.wait(10), "dispatch was never released"
+        original(session, wf, event)
+
+    try:
+        source = _upload(client, video_path, "m1010.mp4")
+        zone = _right_half_zone(client, source["id"])
+        wf = _enter_workflow(client, source["id"], zone["id"])
+        monkeypatch.setattr(pipeline, "_dispatch_action", gated)
+
+        assert client.post(f"/api/sources/{source['id']}/process").status_code == 202
+        assert ready.wait(10), "worker never reached dispatch"
+
+        # Disable completes (committed) before dispatch is released.
+        r = client.post(f"/api/workflows/{wf['id']}/disable")
+        assert r.status_code == 200 and r.json()["enabled"] is False
+        release.set()
+
+        assert _wait_status(client, source["id"]) == "processed"
+
+        events = client.get("/api/events", params={"source_id": source["id"]}).json()
+        assert len(events) == 1, events
+        ev_id = events[0]["id"]
+        assert events[0]["action_status"] == "cancelled", events[0]
+
+        acts = client.get(f"/api/events/{ev_id}/actions").json()
+        assert len(acts) == 1 and acts[0]["status"] == "cancelled", acts
+        # The suppressed action created no notification side effect.
+        notifs = client.get("/api/notifications").json()
+        assert not any(n["event_id"] == ev_id for n in notifs), notifs
+    finally:
+        release.set()
+        _reset_detector()
+
+
+# -------------------------------------------------------------- M1-011 / M1-012 (webhook removed)
+
+
+def test_legacy_webhook_action_rejected_no_side_effect(client, video_path, monkeypatch):
+    """External webhook delivery was removed. A legacy workflow whose persisted
+    DSL still names send_webhook must be rejected at dispatch with no network
+    lookup/delivery, so the crash-recovery duplicate-delivery (M1-011) and
+    DNS-rebinding (M1-012) scenarios cannot occur. We inject the legacy DSL
+    directly because the API now refuses to create such a workflow."""
+    import socket
+
+    det = SingleCarDetector()
+    _use_detector(det)
+
+    def exploding_lookup(*args, **kwargs):
+        raise AssertionError("no DNS lookup may occur for the removed webhook action")
+
+    try:
+        source = _upload(client, video_path, "m1011.mp4")
+        zone = _right_half_zone(client, source["id"])
+        wf = _enter_workflow(client, source["id"], zone["id"])
+
+        # Rewrite the stored DSL to a legacy send_webhook action, then enable.
+        s = get_session()
+        try:
+            row = s.get(Workflow, wf["id"])
+            dsl = dict(row.dsl)
+            dsl["action"] = {"type": "send_webhook", "config": {"url": "http://approved.example:9876/hook"}}
+            row.dsl = dsl
+            row.enabled = True
+            s.commit()
+        finally:
+            s.close()
+
+        monkeypatch.setattr(socket, "getaddrinfo", exploding_lookup)
+
+        assert client.post(f"/api/sources/{source['id']}/process").status_code == 202
+        assert _wait_status(client, source["id"]) == "processed"
+
+        events = client.get("/api/events", params={"source_id": source["id"]}).json()
+        assert len(events) == 1, events
+        ev_id = events[0]["id"]
+        acts = client.get(f"/api/events/{ev_id}/actions").json()
+        assert len(acts) == 1 and acts[0]["status"] == "rejected", acts
+        assert "not supported" in (acts[0]["error"] or "").lower()
+        notifs = client.get("/api/notifications").json()
+        assert not any(n["event_id"] == ev_id for n in notifs), notifs
+    finally:
+        _reset_detector()
+
+
+# -------------------------------------------------------------- M1-013 (truncated video)
+
+
+def test_truncated_video_reported_failed(client, tmp_path):
+    """A faststart MP4 truncated to 65% of its bytes decodes far fewer frames
+    than its container metadata reports. Processing must surface a failed source
+    with an explicit shortfall message, not silently report 'processed'."""
+    import subprocess
+
+    det = SingleCarDetector()
+    _use_detector(det)
+    try:
+        # Build a complete 60-frame source, remux with faststart (reliable
+        # leading metadata), then truncate the bytes.
+        full = tmp_path / "full.mp4"
+        writer = cv2.VideoWriter(str(full), cv2.VideoWriter_fourcc(*"mp4v"), 30.0, (320, 240))
+        for i in range(60):
+            writer.write(np.full((240, 320, 3), i % 256, dtype=np.uint8))
+        writer.release()
+
+        faststart = tmp_path / "faststart.mp4"
+        subprocess.run(
+            ["ffmpeg", "-hide_banner", "-loglevel", "error", "-i", str(full),
+             "-c", "copy", "-movflags", "+faststart", str(faststart)],
+            check=True,
+        )
+
+        # A complete faststart video must still process cleanly (no false fail).
+        ok_src = _upload(client, faststart, "faststart_ok.mp4")
+        assert client.post(f"/api/sources/{ok_src['id']}/process").status_code == 202
+        assert _wait_status(client, ok_src["id"]) == "processed"
+
+        truncated = faststart.read_bytes()
+        truncated = truncated[: int(len(truncated) * 0.65)]
+        cut = tmp_path / "cut.mp4"
+        cut.write_bytes(truncated)
+
+        bad = client.post(
+            "/api/sources/upload",
+            files={"file": ("cut.mp4", truncated, "video/mp4")},
+        )
+        assert bad.status_code == 201, bad.text
+        bad_id = bad.json()["id"]
+        assert client.post(f"/api/sources/{bad_id}/process").status_code == 202
+        assert _wait_status(client, bad_id) == "failed"
+
+        got = client.get(f"/api/sources/{bad_id}").json()
+        assert got["frame_count"] == 60, got
+        assert "incomplete" in (got["error"] or "").lower(), got
+    finally:
+        _reset_detector()

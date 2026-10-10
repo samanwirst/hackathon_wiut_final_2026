@@ -14,17 +14,17 @@ tests below do not override the unresolved P1 findings in the final review.
 | ID | Requirement | Source | Component / file | Check | Status |
 | --- | --- | --- | --- | --- | --- |
 | R1 | Prototype runs end to end on new input | Brief "prototype runs end to end, live" | whole pipeline | `scripts/smoke_e2e.py` (real YOLO) — PASS 2026-10-10 | verified |
-| R2 | MP4 upload with validation | PRD P0.1 | `services/api/app/main.py` upload_source | Happy-path/type/size tests pass; M1-013 reproduces silent partial decode | blocked |
+| R2 | MP4 upload with validation | PRD P0.1 | `services/api/app/main.py` upload_source + `app/pipeline.py` decode-completeness guard | Happy-path/type/size tests pass; truncated decode now surfaces failed source (M1-013) | verified |
 | R3 | Real object detection | PRD P0.3; brief "no faked demos" | `packages/vision/visionflow_vision/detector.py` (YOLO11n) | smoke test: bus detected conf 0.76 | verified |
 | R4 | Object tracking | PRD P0.3 | ByteTrack via `model.track(persist=True)` | smoke test: stable track id in events | verified |
 | R5 | Polygonal zones | PRD P0.4 | `visionflow_vision/zones.py`; UI canvas drawing | `tests/unit/test_zones.py`; browser flow 2026-10-10 | verified |
 | R6 | Temporal events (enter/exit/dwell/count) | PRD P0.5 | `visionflow_vision/events.py` | `tests/unit/test_events.py` (debounce, cooldown, track loss, one-shot) | verified |
 | R7 | Validated workflow DSL | PRD §8 | `services/api/app/schemas.py` | `tests/unit/test_dsl.py` (unsupported trigger/action/class rejected) | verified |
 | R8 | Explicit enable before workflow is armed | PRD P0.7 | workflows create disabled; `/enable` endpoint | integration test asserts enabled=false on create | verified |
-| R9 | Real authorized action | PRD P0.8 | `services/api/app/actions.py` (notification persisted; webhook allowlisted) | Ordinary action tests pass; M1-010/011/012 fail disable/recovery/DNS boundaries | blocked |
+| R9 | Real authorized action | PRD P0.8 | `services/api/app/actions.py` (local `create_notification`; outbound webhook removed, M1-011/M1-012) | Action tests pass; disable-before-dispatch suppressed (M1-010); legacy webhook rejected with no network | verified |
 | R10 | Event persistence with evidence | PRD P0.9 | `TrackEvent` + evidence JPEG in `app/pipeline.py` | smoke + integration: evidence URL serves image/jpeg | verified |
 | R11 | Working web interface | PRD P0.10 | `apps/web/app/page.tsx` | manual browser run 2026-10-10: full flow exercised | verified |
-| R12 | Automated tests | PRD P0.11 | `tests/` | `pytest tests/` — 69 passed 2026-10-10 | verified |
+| R12 | Automated tests | PRD P0.11 | `tests/` | `pytest tests/` — 66 passed 2026-10-10 (recovery cycle) | verified |
 | R13 | NL → workflow compilation | PRD P0.6 | — | planned for M2 | planned |
 | R14 | Live camera source | PRD P0.2 | — | planned (M2+, hardware-dependent) | planned |
 | R15 | Public deployment | Brief "publicly available" | — | planned for M4 | planned |
@@ -50,12 +50,26 @@ tests below do not override the unresolved P1 findings in the final review.
 | M1-008 | P1 | FIXED | `services/api/app/schemas.py` (bounded-string title → 422) + `services/api/app/pipeline.py` (`_record_source_failure` rolls back the aborted transaction, fresh-session fallback) | `tests/integration/test_m1_fixes.py::test_invalid_notification_title_rejected` |
 | M1-009 | P2 | FIXED | `services/api/app/pipeline.py` — `_save_evidence` checks `cv2.imwrite` return and raises; event work is rolled back and the source recorded failed | `tests/integration/test_m1_fixes.py::test_evidence_write_failure_fails_source_and_rolls_back` |
 
+## M1 review fixes (exceptional recovery cycle, 2026-10-10)
+
+Authorized single focused M1 recovery pass (base `b131c50`). Only M1-010..013.
+
+| ID | Severity | Resolution | File | Test |
+| --- | --- | --- | --- | --- |
+| M1-010 | P1 | FIXED | `services/api/app/{pipeline,main}.py` — `dispatch_admission_lock` serializes API disable commit against the worker's authoritative enabled recheck + dispatch; a disable completed before dispatch suppresses the queued action explicitly (`cancelled` execution + event `action_status`) | `tests/integration/test_m1_fixes.py::test_disable_before_dispatch_suppresses_queued_action` |
+| M1-011 | P1 | FIXED (by removal) | `services/api/app/actions.py` — outbound webhook delivery removed, eliminating the interrupted/duplicate-external-delivery ambiguity; the retained local action commits atomically with its event status so recovery re-dispatches exactly once | `tests/integration/test_m1_fixes.py::{test_legacy_webhook_action_rejected_no_side_effect,test_interrupted_before_dispatch_resumes_on_retry}` |
+| M1-012 | P1 | FIXED (by removal) | `services/api/app/{actions,schemas,config}.py` — `send_webhook` removed from `ActionType`; no DNS lookup or delivery can occur; legacy rows rejected at dispatch; preferred over a risky custom DNS/TLS egress transport | `tests/unit/test_webhook_auth.py`, `tests/unit/test_dsl.py::test_webhook_action_now_rejected`, `tests/integration/test_api_flow.py::test_webhook_action_rejected_at_creation` |
+| M1-013 | P1 | FIXED | `services/api/app/{pipeline,config}.py` — decoded-frame count compared to reliable container frame count with `DECODE_MIN_COMPLETENESS` tolerance; substantial shortfall surfaces a failed source instead of silent `processed` | `tests/integration/test_m1_fixes.py::test_truncated_video_reported_failed` |
+
 ## Discrepancies / notes
 
 - Cycle-1/2 fix entries above record the developer's changes and passing
-  regressions at the time. Final independent review found related remaining
-  defects M1-010 through M1-013; M1 is not accepted. See
-  `.agents/reviews/M1.md`, exact reviewed commit `cc59523`.
+  regressions at the time. Final independent review (`cc59523`) found related
+  remaining P1 defects M1-010 through M1-013; those are resolved in the
+  exceptional recovery cycle above. M1-001/M1-006 (webhook SSRF/traversal)
+  became moot once outbound webhooks were removed; those tests were replaced.
+- M1-014 (P2, CI omits httpx/SQLAlchemy) is out of scope for this focused pass.
+  Removing httpx from `actions.py` reduces but does not formally close it.
 
 - The PDF named in CLAUDE.md is absent; the official task exists as text in
   `docs/source/README.md`. Treated as the official brief (per operator message).
