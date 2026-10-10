@@ -16,6 +16,8 @@ import hashlib
 from collections import defaultdict
 from dataclasses import dataclass
 
+import numpy as np
+
 
 class DatasetError(ValueError):
     """Dataset is insufficient or leaky; refuse to build a split."""
@@ -27,6 +29,11 @@ class SampleRow:
     group_key: str
     image_hash: str
     label: str  # the immutable human-verified label
+    # Optional normalized decoded-pixel fingerprint (flattened 32x32 RGB float
+    # array) for conservative near-duplicate detection across groups (a
+    # decode/re-encode of the same frame). ``None`` when pixel data was
+    # unavailable to compute it.
+    fingerprint: "np.ndarray | None" = None
 
 
 @dataclass
@@ -51,6 +58,7 @@ def build_split(
     min_train_groups: int,
     min_val_groups: int,
     min_test_groups: int,
+    near_dup_max_mad: float = 0.0,
 ) -> SplitPlan:
     verified = [r for r in rows if r.label]
     if not verified:
@@ -78,6 +86,27 @@ def build_split(
             f"identical image content appears across {len(leaked)} group(s); "
             "refusing to split to prevent leakage"
         )
+
+    # Conservative near-duplicate leakage check (C-003): a decode/re-encode of the
+    # same frame has a different content hash but near-identical decoded pixels.
+    # If two rows in DIFFERENT groups have a mean-absolute decoded-pixel
+    # difference below a small, FIXED threshold, they could straddle the split, so
+    # refuse. Decoded-pixel MAD (unlike a perceptual hash) preserves global tint,
+    # so independent scenes are not falsely flagged. Never tuned on held-out data.
+    if near_dup_max_mad > 0:
+        fp = [r for r in verified if r.fingerprint is not None]
+        for i in range(len(fp)):
+            for j in range(i + 1, len(fp)):
+                a, b = fp[i], fp[j]
+                if a.group_key == b.group_key:
+                    continue
+                mad = float(np.abs(a.fingerprint - b.fingerprint).mean())
+                if mad <= near_dup_max_mad:
+                    raise DatasetError(
+                        "near-duplicate image content appears across groups "
+                        f"{a.group_key!r} and {b.group_key!r} (decoded-pixel MAD "
+                        f"{mad:.3f} <= {near_dup_max_mad}); refusing to split to prevent leakage"
+                    )
 
     ordered = _stable_order(list(groups))
     need = min_train_groups + min_val_groups + min_test_groups
