@@ -4,33 +4,20 @@ Updated: 2026-10-10. Branch: `feature/visionflow`.
 
 ## Current stage
 
-M2 COMPLETE (event-routed visual reasoning + NL workflow product), awaiting
-independent review. Base `2127d207`. M1 recovery cycle accepted at that base.
+M1 accepted with documented P2 risks at `390b337`, report `review/M1-r3`.
+M2 implementation committed as `c746fc0`; frozen review target `36e7ca84d4fe2048cd9c21522e2adfbfc5174798`.
+Controller checks: 111 tests passed, frontend build and real YOLO smoke passed.
 
-M2 delivered (PRD §16 M2-AC1..AC5, plus adapter for AC3a):
+M2 is **BLOCKED**: its controller parent was interrupted, the orphaned review
+exceeded the 1,200-second limit, and no complete structured review was
+returned. The existing reviewer was terminated; no extra implementation or
+review call was launched. M2 is not accepted; M3/M4 have not started.
+Report: `.agents/reviews/M2.md`, pushed on `review/M2`.
 
-- M2-AC1: deterministic NL→DSL compiler (`app/nl_compiler.py`) +
-  `POST /api/workflows/compile`. Ambiguous/unsupported rejected with reasons;
-  draft saved disabled; explicit enable required; no code generated/executed.
-- M2-AC2: geometric detector/tracker/temporal path unchanged and makes ZERO
-  Teacher calls. A `visual_predicate` routes the triggering object's ROI to the
-  Teacher only on a candidate event (`pipeline._route_visual`).
-- M2-AC3/AC3a: `app/teacher.py` strict adapter. Config by `VLM_BASE_URL`/
-  `VLM_MODEL`/`VLM_API_KEY` (server-only). Strict JSON (`extra=forbid`, bounded
-  finite confidence, declared labels or `unknown`), connect/read/overall
-  timeouts, bounded retries (skipping auth/schema), concurrency semaphore, max
-  image bytes, data-URL images. No creds → `missing_credentials`, never
-  confirms. Real vLLM/GPU smoke UNVERIFIED (no instance connected).
-- M2-AC4: `app/vlm_router.py` — versioned TTL+LRU cache, per-task budget,
-  sampling interval, per-scope cooldown, in-flight dedup; live counters.
-- M2-AC5: `VlmCall` provenance rows, `/api/vlm/stats`, `/api/vlm/calls`,
-  `/api/metrics.vlm`, event `visual_*` fields; UI section 6 shows counters and
-  teacher availability. Webhook removal + enable/disable boundaries preserved.
-
-Gates (2026-10-10): `pytest tests/` **111 passed** (66→111; +45 M2 tests), 4
-pre-existing warnings. Frontend production build passed. Real-YOLO smoke is
-controller-run (sandbox blocks launching the uvicorn server here); the geometric
-dispatch path is logically unchanged for geometric workflows.
+PRD v1.2, `docs/VLM_ARCHITECTURE.md` and `docs/METRICS.md` preserve the
+self-hosted Vast.ai/vLLM contract, foveated/full-frame/ROI experiment and
+actual rental measurement gates. Real Teacher and all unexecuted benchmarks
+remain UNVERIFIED. No GPU was rented or public endpoint deployed.
 
 ## Existing implementation and evidence
 
