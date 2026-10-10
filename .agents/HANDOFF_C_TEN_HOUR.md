@@ -2,11 +2,80 @@
 
 - Branch: `experiment/autolearn-ten-hour` (worktree C).
 - Implementation commit SHA: `530f36a752d132e0845cc9fbbbfc8f138c49709b`.
-- **Blocker-fix pass code SHA: `699775eca6cf12ab7c18512215c31197aba509b0`**
-  (prior review base `440eaa72d32874779eae447f94ea46dcca695a17`).
+- First blocker-fix pass code SHA: `699775eca6cf12ab7c18512215c31197aba509b0`.
+- **Second (final) blocker-fix pass code SHA: `8e9d95f`**
+  (review base `5938b6d1f1396c1513d52ee9d9c3cdb377dc43a4`, report
+  AUTOLEARN-TEN-HOUR-FIXED). This handoff commit follows on the same branch.
 - Base: `ae2b5a5` (root `feature/demo-safe`, frozen — untouched).
 - Status: **EXPERIMENTAL / UNVERIFIED.** No milestone verdict changed. M2 stays
   BLOCKED. M3 is **not** marked PASS. No push performed (root pushes).
+
+---
+
+## Second blocker-fix pass (review AUTOLEARN-TEN-HOUR-FIXED, commit 5938b6d)
+
+The independent reviewer ran real CPU fitting, owned two-worker production TCP
+probes and the transpiled UI, returning **CHANGES_REQUIRED with 7 P1**. All seven
+are fixed and each was **reproduced first** with the reviewer's own evidence
+scripts in `.agents/review-evidence/C-5938b6d/` (re-run against the fixed code),
+plus durable repo regressions in `tests/unit/test_autolearn_c2_regressions.py`.
+AutoLearn still never dispatches a workflow action; demo-safe default and M1/M2
+behaviour untouched; schema changes are additive (two new tables + a unique index)
+so root's backed-up hashes/labels/manifests/old-metrics are preserved, not rewritten.
+
+| Finding | Resolution | Verified by reviewer's own repro (fixed code) |
+| --- | --- | --- |
+| C-005 | FIXED — durable `LabelingReservation` ledger (UNIQUE(task_id,slot), recount-on-collision) is an atomic BEFORE-send admission committed on an independent connection; shared by labeling + classify fallback; `attempted` distinguishes admission-timeout/local-reject (released, zero spend) from actual send; in-flight dedupe; bounded persistent `LabelingCache`. Local input validated before reservation. | `api_probes`: two /label & two /classify workers → **1 POST** each (was 2); repeated identical fallback → **1 POST** (was 3); admission-timeout and local-oversize → **0 budget** (was 1). `multiworker_probe`: **8 reqs / 2 Uvicorn processes → 1 POST**, all 200, budget_remaining 0. |
+| C-001 (P2) | DOCUMENTED/ENFORCED — durable task budget now holds across processes (above). Async per-loop concurrency bound stays explicit (two independent `asyncio.run` loops each admit 1); the authoritative cross-process guard is the budget ledger, not the semaphore. Single-Uvicorn-process remains the honest production assumption. | `two_async_event_loops` still peak 2 (per-loop), but spend is capped by the ledger; `multiworker` confirms cross-process budget. |
+| C-003 | FIXED — `_canonical_group` makes an immutable uploaded `source_id` **one** partition regardless of arbitrary session/group names; session-only synthetic keeps its historical `src:none|ses:<id>` key (hash-stable). MAD threshold untouched. | `physical_provenance_probe` / `api_probes one_video`: one AVI's 12 frames → **REFUSED** (insufficient independent groups), no longer 6/2/4 leak. |
+| C-004 | FIXED — `run(ctx)` captures task id + selection generation at start; `reloadFor`, result/error, shadow and classify commits all guarded by `ctx.live()`; render gated on `detail.task.id===sel`. | `ui_probe` (transpiled): out-of-order A→B leaves **B selected, B_yes/B_no controls, activate → version 201**; stale shadow/classify of A do **not** render under B. |
+| C-008 | FIXED — `_reserve_version` claims unique `(task_id,version)`+immutable path transactionally **before** fitting; temp→`os.replace`; failed job → version marked `failed` + owned-artifact cleanup; `_load_verified_artifact` checks artifact provenance vs row. | `version_probes`: two concurrent trains → **v1 & v2, distinct v1.pt/v2.pt** (was both v1); post-save failure → **version failed, 0 orphans** (was orphan + no record). |
+| C-002 | FIXED — `_frozen_manifest` validates the COMPLETE snapshot (per-split counts, unique membership, existing hashes/labels) + digest; metrics carry `manifest_digest`; session-aware `gate_status` fails closed on incomplete/stale; `_validate_proba` rejects NaN/inf/oob/wrong-shape; classify returns explicit unknown. | `version_probes lost_manifest`: gate **passed=false**, activate **false** (was true/true). `extra_probes` NaN: eval f1 **None**, gate **false**, offline **200 unknown** (was finite F1=1 / HTTP 500). |
+| C-009 | FIXED — rollback loads+verifies the target artifact and re-runs the full gate BEFORE moving the active pointer; unusable target → bounded `AutoLearnError` (HTTP 422), current active unchanged, no `gate_passed=true` record. | `version_probes missing_artifact_rollback`: **HTTP 422**, current preserved (was 200 + broken active + 500 classify). |
+| C-006 | FIXED — provider envelope `model` must be a bounded string else `invalid_response` with the actual attempt retained; never a `sqlite3.ProgrammingError`. | `api_probes malformed_model(_API)`: status `invalid_response`, **HTTP 200, audit row kept** (was 500, 0 audit). |
+| C-007 | FIXED — `_scoring_provenance` preserves allowlisted method/`model_revision`/`candidate_scores`/`forward_passes`; actual model stays `None` (unknown) distinct from the configured alias; audit endpoint exposes `response_model`+`method`; never logs tokens/headers/credentials/images. | `api_probes scoring_provenance`: method `two_candidate_likelihood`, revision pinned, scores + forward_passes=2 preserved (was hardcoded `chat_json`). |
+
+### Commands run and actual results (second pass)
+
+- `pytest tests/unit/test_autolearn_c2_regressions.py -q` → **13 passed** (new).
+- `pytest` 5 focused AutoLearn files → **41 passed**.
+- `pytest tests/` (full tree incl. orchestrator) → **249 passed** (236 prior + 13;
+  the one trace is the intentional simulated-crash recovery test).
+- Reviewer evidence re-run on fixed code: `version_probes.py`, `extra_probes.py`,
+  `multiworker_probe.py`, `ui_probe.cjs` → all defects closed (table above).
+  `api_probes.py` needed ONE adaptation: its final one-video block `assert`-ed a
+  leaky split, which the fix now correctly REFUSES (raises `DatasetError`); the
+  copy at `/tmp/api_probes_adapted.py` only wraps that block in try/except and
+  writes `api-probes-adapted.json` — no race/fault boundary moved. The original
+  reviewer scripts are left untouched under `.agents/review-evidence/`.
+- `apps/web`: `npm run build` → **compiled + type-checked OK**, `/autolearn` built.
+
+### Database migration notes (second pass)
+
+- New tables `autolearn_labeling_reservations` and `autolearn_labeling_cache`
+  (created by `create_all`); `UniqueConstraint(task_id, version)` on
+  `autolearn_model_versions` plus a `CREATE UNIQUE INDEX IF NOT EXISTS` in
+  `_migrate_additive` so existing databases gain the version-uniqueness guard
+  additively (it fails loudly if pre-existing rows already violate it rather than
+  inferring provenance). No column is dropped/retyped; old metrics/labels/hashes/
+  manifests are never rewritten. Versions/artifacts created before this pass that
+  lack a manifest fail the gate closed (honest) until a real re-evaluation.
+
+### Honest limits / remaining risks (second pass)
+
+- Not run on root's real 24-image approved dataset here; root re-evaluates the
+  saved artifact (hash `72541bb2…`) against this new code. Image approval is NOT
+  activation approval.
+- C-001 async per-loop concurrency can still reach provider_peak 2 across two
+  independent event loops; this is the documented per-loop bound. Production is
+  single-Uvicorn-process; the cross-process spend cap is the durable ledger, which
+  is verified. If multi-worker async fan-out is ever required, add shared-process
+  admission.
+- Natural-video accuracy, calibration, cost/savings and real-provider performance
+  remain UNVERIFIED. Live 390px browser usability not run (transpiled harness only).
+- A post-save training fault returns HTTP 500 (genuine server error from the
+  injected fault) but now leaves a `failed` version record and no orphan artifact.
+- **Not an M3 PASS.** M2 stays BLOCKED. No push performed.
 
 ---
 
