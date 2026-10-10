@@ -321,6 +321,7 @@ Run meaningful tests, record actual results/limitations, update docs/TRACEABILIT
             for rel in ("services/api/.venv", "apps/web/node_modules"):
                 dest, source = directory / rel, self.root / rel
                 if source.exists() and not dest.exists():
+                    dest.parent.mkdir(parents=True, exist_ok=True)
                     dest.symlink_to(source, target_is_directory=True)
             prompt = f"""Independent QA review of {milestone}, frozen TARGET_SHA {sha}, base {self.state['base_sha']}.
 Human explicitly requested this milestone review through the deterministic orchestrator. Follow AGENTS.md review criteria, but controller alone commits/pushes report; do not modify tracked files or Git refs, fetch, merge, implement, spawn agents, or poll. You are in an isolated worktree; never access credentials or unrelated personal files.

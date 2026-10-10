@@ -63,7 +63,7 @@ class ControllerTests(unittest.TestCase):
         git(self.root, "config", "user.name", "QA Fixture")
         (self.root / ".agents").mkdir()
         (self.root / ".agents/HANDOFF.md").write_text("Initial fixture\n")
-        (self.root / ".gitignore").write_text(".agents/runtime/\n")
+        (self.root / ".gitignore").write_text(".agents/runtime/\n.venv\nnode_modules\n")
         (self.root / "Makefile").write_text("check:\n\t@echo fixture-check\nsmoke:\n\t@echo fixture-smoke\n")
         git(self.root, "add", ".")
         git(self.root, "commit", "-m", "fixture")
@@ -97,6 +97,16 @@ class ControllerTests(unittest.TestCase):
         result = self.run_controller("--resume")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(self.state()["agent_calls"], 2)
+
+    def test_dependency_symlinks_are_ignored(self):
+        for relative in ("services/api/.venv", "apps/web/node_modules"):
+            (self.root / relative).mkdir(parents=True)
+        result = self.run_controller()
+        self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+        review_dir = Path(self.state()["review_directory"])
+        self.assertTrue((review_dir / "services/api/.venv").is_symlink())
+        self.assertTrue((review_dir / "apps/web/node_modules").is_symlink())
+        self.assertEqual(git(review_dir, "status", "--porcelain"), "")
 
     def test_two_fix_cycles_then_block(self):
         result = self.run_controller(env={"FAKE_REVIEW_FAILS": "99"})

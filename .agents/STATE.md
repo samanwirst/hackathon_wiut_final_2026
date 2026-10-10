@@ -42,9 +42,13 @@ triggers UX, dashboard/timeline pages, SSE updates, security/failure handling.
 
 - Main controller: `scripts/orchestrate.py`; sequential Claude implementation
   and independent Codex reviews; full workflow in `.agents/AUTOPILOT.md`.
-- Controller recovery/gate tests: 15 passed using real temporary Git repos
+- Controller recovery/gate tests: 16 passed using real temporary Git repos
   and mocked CLI subprocesses (not product-inference evidence).
-- Current controller phase: preparing first exact-commit M1 review.
+- Current controller phase: M1 first fix cycle. Review `a622572` found five
+  P1 issues (webhook SSRF, count re-arm dedupe, disable during processing,
+  shared tracker state, interrupted-source recovery). Report pushed to
+  `review/M1`; exact-SHA JSON retained locally. Generated dependency-link
+  ignore issue fixed without repeating the independent review.
 - Runtime JSON/logs are local and ignored; durable milestone acceptance is
   recorded in review reports. Maximum two fix cycles per milestone.
 - Claude/Codex/GitHub authenticated; CPU, FFmpeg, Python/Node available.

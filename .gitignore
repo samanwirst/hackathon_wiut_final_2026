@@ -4,14 +4,14 @@
 !.env.example
 
 # JavaScript / Next.js
-node_modules/
+node_modules
 .next/
 out/
 coverage/
 *.tsbuildinfo
 
 # Python
-.venv/
+.venv
 venv/
 __pycache__/
 *.py[cod]
