@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from pathlib import Path
+
+_log = logging.getLogger(__name__)
 
 # Repo root = services/api/app/config.py -> three levels up
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -92,14 +95,37 @@ THREAD_COUNT = int(os.environ.get("VISIONFLOW_THREADS", "2"))
 #     Teacher adapter.
 # Set VISIONFLOW_DEMO_SAFE=false to exercise the historical M2 experimental
 # paths (the original M2 tests opt out with an explicit fixture).
-def _env_bool(name: str, default: bool) -> bool:
+#
+# The guard is FAIL-CLOSED: it is on by default, and ONLY an explicitly
+# recognized false value may turn it off. A typo or any other unrecognized
+# value (e.g. "treu") keeps the guard ON — an unknown value must never silently
+# disable the demo's safety boundary. Recognized true/false spellings are kept
+# small and explicit so the behavior is obvious.
+_DEMO_SAFE_TRUE = {"1", "true", "yes", "on"}
+_DEMO_SAFE_FALSE = {"0", "false", "no", "off"}
+
+
+def _demo_safe_from_env(name: str = "VISIONFLOW_DEMO_SAFE") -> bool:
     raw = os.environ.get(name)
     if raw is None:
-        return default
-    return raw.strip().lower() in ("1", "true", "yes", "on")
+        return True  # default: safe
+    value = raw.strip().lower()
+    if value in _DEMO_SAFE_FALSE:
+        return False
+    if value in _DEMO_SAFE_TRUE:
+        return True
+    # Unrecognized value: keep the guard ON (fail-closed) and make the reason
+    # visible rather than silently fail-open.
+    _log.warning(
+        "Unrecognized %s=%r; keeping demo-safe mode ON. Use one of %s to disable.",
+        name,
+        raw,
+        sorted(_DEMO_SAFE_FALSE),
+    )
+    return True
 
 
-DEMO_SAFE = _env_bool("VISIONFLOW_DEMO_SAFE", True)
+DEMO_SAFE = _demo_safe_from_env()
 
 DEMO_SAFE_COMPILE_MESSAGE = (
     "Natural-language compilation is unavailable in demo-safe mode. Build the "

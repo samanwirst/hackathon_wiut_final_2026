@@ -33,8 +33,15 @@ when the object has been in the zone for **≥** the configured seconds.
 
 With `VISIONFLOW_DEMO_SAFE=true` (default):
 
+- The guard is **fail-closed**: it defaults ON and only an explicitly recognized
+  false value (`0`/`false`/`no`/`off`) turns it off. A typo (e.g. `treu`) or any
+  other unrecognized value keeps the guard **ON**.
+- `GET /api/health` reports `demo_safe: true|false`. The frontend verifies this
+  and **refuses** uploads, rule arming and runs if the connected API is not in
+  safe mode, or if the capability cannot be verified (e.g. an older backend).
 - `POST /api/workflows/compile` returns a visible unavailable error **without
-  importing or calling** the NL compiler — no prompt reaches the grammar.
+  invoking** the NL compiler. The module is imported at startup but its grammar
+  is never called, so no prompt reaches it.
 - `POST /api/workflows` and `POST /api/workflows/{id}/enable` **reject**
   (`403`) any workflow carrying a `visual_predicate`.
 - Processing **skips** any enabled `visual_predicate` workflow (even a legacy row
@@ -72,33 +79,64 @@ NEXT_PUBLIC_API_URL=http://127.0.0.1:8000 npm --prefix apps/web run dev
 # open http://localhost:3000
 ```
 
-### Demo clip (real photo, synthetic motion)
+### Demo clip (bus-only crop, synthetic motion)
 
 ```sh
-services/api/.venv/bin/python scripts/make_demo_video.py data/demo/demo_bus.mp4
+services/api/.venv/bin/python scripts/make_demo_safe_video.py \
+  data/demo/demo_bus_private_crop.mp4
 ```
 
-The clip translates a real Ultralytics sample photo (bus + pedestrians) across a
-canvas so objects move through zones. **Detection is genuine YOLO inference on
-real image content; only the motion is synthetic.** Provenance is recorded in
-[LICENSES.md](LICENSES.md). Upload this file through the UI (or use any MP4 a
-judge provides). There is no invented camera feed and no hardcoded prediction.
+This clip crops the Ultralytics sample photo to the **bus only** (crop
+`[350,220,755,665]`, excluding the foreground pedestrians) and sweeps that crop
+left→right across a flat canvas. **Detection is genuine YOLO inference on real
+image content; only the motion is synthetic** — never the prediction. The
+foreground pedestrians are excluded because their subject rights are unverified
+(see [LICENSES.md](LICENSES.md)); the historical M1 smoke clip
+(`scripts/make_demo_video.py` → `demo_bus.mp4`) is left unchanged and not used
+here. Upload the generated file through the UI (or use any MP4 a judge provides).
+There is no invented camera feed and no hardcoded prediction.
 
-## 4. Seven-minute demo script
+## 4. Seven-minute demo script (exact timing)
+
+The live demo defines the rule **before** running anything — a run requires an
+approved, enabled geometric rule on the selected source, and the UI guides you
+there if one is missing.
 
 | Time | Beat | On screen |
 | --- | --- | --- |
-| 0:00–0:45 | **Problem** — manual service-bay monitoring is slow and undocumented. | Dashboard, demo-safe + capability chips. |
-| 0:45–1:30 | **Product & customer** — recorded-video control platform for service ops. | Lede + architecture note. |
-| 1:30–3:30 | **Live demo** — upload the demo clip → **Run** → draw “Service Bay A” polygon → build `bus · enters zone` → **review the exact server JSON** → **Approve & activate** → **Run** → event + evidence + local notification appear. | Sources, Zone workspace, Build & review, Event timeline, Notifications. |
-| 3:30–4:30 | **Technical differentiation** — OpenVector-inspired hierarchy: cheap detection/tracking/temporal rules now; Teacher → verified dataset → Student planned. Honest JSON-review + server-side validation. | Architecture & honest status card. |
-| 4:30–5:15 | **Honest evaluation** — real per-frame inference latency from `make smoke`; events are reproducible on video time. No savings % claimed. | Smoke output / metrics. |
-| 5:15–6:00 | **Business & pilot** — three-month service-bay pilot (PRD §18). | Deck. |
-| 6:00–7:00 | **Impact, limits, roadmap** — demo-safe boundary; M2 BLOCKED; AutoLearn/Teacher/foveated UNVERIFIED. | This matrix. |
+| 0:00–0:45 (45s) | **Problem** — manual service-bay monitoring is slow and undocumented. | Dashboard; "Demo-safe · verified" + capability chips. |
+| 0:45–1:30 (45s) | **Product & customer** — recorded-video control platform for service ops. | Lede + architecture note. |
+| 1:30–2:00 (30s) | **Upload / select** the demo clip (`demo_bus_private_crop.mp4`). | Video sources card. |
+| 2:00–2:40 (40s) | **Draw the zone** — a "Service Bay A" polygon on the first frame. | Zone workspace. |
+| 2:40–3:20 (40s) | **Build the rule** explicitly — `bus · enters zone`. | Build & review a rule. |
+| 3:20–3:50 (30s) | **Review the canonical JSON** the server validated, then **Approve & activate**. | Review pane → armed rule. |
+| 3:50–4:40 (50s) | **Run once** — real YOLO → event + evidence frame + one local notification appear. | Event timeline, Notifications. |
+| 4:40–5:10 (30s) | **Edit / disable / re-enable** — Edit disables the prior rule (events/evidence preserved) and creates a new reviewed version; disable then **Review & arm** re-activates from the stored JSON. | Rules table. |
+| 5:10–6:00 (50s) | **Technical differentiation** — OpenVector-inspired hierarchy: cheap detection/tracking/temporal rules now; Teacher → verified dataset → Student planned. Honest JSON review + server-side validation; fail-closed demo-safe guard. | Architecture & honest status card. |
+| 6:00–6:30 (30s) | **Honest evaluation** — real per-frame inference latency from `make smoke`; events reproducible on video time. No savings % claimed. | Smoke/terminal output. |
+| 6:30–7:00 (30s) | **Pilot & limits** — the three-month pilot proposal below; demo-safe boundary; M2 BLOCKED; AutoLearn/Teacher/foveated UNVERIFIED. | This guide (matrix + pilot). |
 
-Edit/version note to demonstrate if time allows: click **Edit** on an armed
-rule — the old rule is disabled (its events/evidence preserved) and a new
-reviewed version is created; **Approve** re-arms it.
+Run the live beat **once**; do not re-trigger processing on the same clip.
+
+### Proposed three-month service-bay pilot (proposal only — no results claimed)
+
+A proposal to validate the product on a partner's own recorded footage. Numbers
+below are **targets to measure during the pilot**, not achieved results:
+
+- **Month 1 — Baseline & geometric rules.** Deploy on recorded clips from one
+  service bay; configure zones + enter/exit/dwell/count rules; capture events,
+  evidence and local notifications. Measure real per-frame latency and
+  operator-confirmed event correctness on the partner's footage.
+- **Month 2 — Teacher-assisted labeling (gated).** Only if an approved, secured
+  VLM endpoint is available: route selected candidate events for visual
+  predicates; build a human-reviewed labeled set. (Disabled in this demo-safe
+  build; M2 is BLOCKED.)
+- **Month 3 — Student + shadow mode.** Train a lightweight Student on the
+  verified set; run shadow-only and compare against held-out labels before any
+  activation; document rollback.
+
+No ROI, cost, or savings figures are asserted — any such numbers would be
+produced *from the pilot's own measurements*.
 
 ## 5. Commands (verify before showing)
 
@@ -122,6 +160,7 @@ this deliverable.
 - [ ] Backend on `127.0.0.1:8000` with `VISIONFLOW_DEMO_SAFE=true` and an
       isolated `VISIONFLOW_DATA_DIR`.
 - [ ] Frontend on `127.0.0.1:3000` pointed at the loopback API.
-- [ ] `data/demo/demo_bus.mp4` generated (or a judge's MP4 ready).
+- [ ] `data/demo/demo_bus_private_crop.mp4` generated (or a judge's MP4 ready).
+- [ ] Header shows **Demo-safe · verified** (the backend reported `demo_safe:true`).
 - [ ] `make check` and `make smoke` pass on the target machine.
 - [ ] No autopilot/orchestrator running; no public deployment.

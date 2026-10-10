@@ -137,6 +137,18 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [busy, setBusy] = useState(false);
+  // Verified backend demo-safe capability: true (enforced), false (NOT safe),
+  // null (could not verify, e.g. older backend / unreachable). Only `true`
+  // allows demo mutations and runs.
+  const [demoSafe, setDemoSafe] = useState<boolean | null>(null);
+  // A run requested from the UI but not yet observed as "processing"; keeps the
+  // run/arm/edit controls disabled during the pending window too.
+  const [runPending, setRunPending] = useState<{ id: number; from: string } | null>(null);
+  // Read-only JSON inspection of a workflow (used for unavailable visual rules).
+  const [jsonView, setJsonView] = useState<Workflow | null>(null);
+  // Tracks the source a source-scoped refresh must still be relevant for, so a
+  // stale in-flight response cannot overwrite a newly selected source.
+  const selectedSourceRef = useRef<number | null>(null);
 
   // zone drawing
   const [drawing, setDrawing] = useState(false);
@@ -162,6 +174,25 @@ export default function Home() {
 
   const current = sources.find((s) => s.id === selectedSource) || null;
   const isProcessing = current?.status === "processing";
+  // "Analyzing" covers the pending request window plus the actual processing
+  // run; run/arming/edit are unavailable during it, Disable stays available.
+  const analyzing = isProcessing || runPending?.id === selectedSource;
+  const canMutate = demoSafe === true;
+  // Run requires the selected source to have an approved ENABLED geometric rule.
+  const approvedGeometric = useMemo(
+    () => workflows.some((w) => w.enabled && w.dsl.visual_predicate == null),
+    [workflows],
+  );
+
+  // A list-returning GET that fails or returns a non-array is treated as a
+  // recoverable error (keep prior state) rather than crashing the render.
+  const getArray = async (url: string) => {
+    const r = await fetch(url);
+    if (!r.ok) throw new Error(`${url} -> ${r.status}`);
+    const body = await r.json();
+    if (!Array.isArray(body)) throw new Error(`${url} did not return a list`);
+    return body;
+  };
 
   const apiError = async (r: Response) => {
     let detail = `request failed (${r.status})`;
@@ -175,22 +206,42 @@ export default function Home() {
   };
 
   const refresh = useCallback(async () => {
+    const sid = selectedSource;
     try {
+      // Verify the backend actually enforces demo-safe mode. A missing field
+      // (older backend) or non-ok response leaves it unverified (null).
+      const health = await fetch(`${API}/api/health`)
+        .then((r) => (r.ok ? r.json() : null))
+        .catch(() => null);
+      setDemoSafe(health && typeof health.demo_safe === "boolean" ? health.demo_safe : null);
+
       const [s, n] = await Promise.all([
-        fetch(`${API}/api/sources`).then((r) => r.json()),
-        fetch(`${API}/api/notifications?limit=100`).then((r) => r.json()),
+        getArray(`${API}/api/sources`),
+        getArray(`${API}/api/notifications?limit=100`),
       ]);
-      setSources(s);
-      setNotifications(n);
-      if (selectedSource) {
-        const [z, w, e] = await Promise.all([
-          fetch(`${API}/api/zones?source_id=${selectedSource}`).then((r) => r.json()),
-          fetch(`${API}/api/workflows?source_id=${selectedSource}`).then((r) => r.json()),
-          fetch(`${API}/api/events?source_id=${selectedSource}&limit=100`).then((r) => r.json()),
-        ]);
-        setZones(z);
-        setWorkflows(w);
-        setEvents(e);
+      setSources(s as Source[]);
+      setNotifications(n as NotificationT[]);
+
+      if (sid) {
+        try {
+          const [z, w, e] = await Promise.all([
+            getArray(`${API}/api/zones?source_id=${sid}`),
+            getArray(`${API}/api/workflows?source_id=${sid}`),
+            getArray(`${API}/api/events?source_id=${sid}&limit=100`),
+          ]);
+          // Drop the response if the user switched sources while it was in flight.
+          if (selectedSourceRef.current === sid) {
+            setZones(z as Zone[]);
+            setWorkflows(w as Workflow[]);
+            setEvents(e as TrackEventT[]);
+          }
+        } catch {
+          // Source-scoped data (e.g. workflows) failed to load — surface it and
+          // keep the previous lists rather than crashing on a non-array body.
+          if (selectedSourceRef.current === sid) {
+            setError("Could not refresh this source's workflows/events (the API returned an error).");
+          }
+        }
       } else {
         setZones([]);
         setWorkflows([]);
@@ -200,6 +251,7 @@ export default function Home() {
       setError((prev) => (prev && prev.startsWith("Cannot reach") ? null : prev));
     } catch {
       setError(`Cannot reach the API at ${API}. Is the backend running?`);
+      setDemoSafe(null);
       setLoaded(true);
     }
   }, [selectedSource]);
@@ -212,12 +264,21 @@ export default function Home() {
 
   // Switching source clears any in-progress draft/approval, drawing and edit note.
   useEffect(() => {
+    selectedSourceRef.current = selectedSource;
     setReview(null);
     setEditNote(null);
     setPoints([]);
     setDrawing(false);
     setWfZone(null);
   }, [selectedSource]);
+
+  // Clear the pending-run marker once the run has actually started (or the
+  // source otherwise left the state it was in when Run was pressed).
+  useEffect(() => {
+    if (runPending && current && current.id === runPending.id && current.status !== runPending.from) {
+      setRunPending(null);
+    }
+  }, [current, runPending]);
 
   /* -------------------------------------------------- canvas overlay */
 
@@ -293,6 +354,7 @@ export default function Home() {
   /* -------------------------------------------------- actions */
 
   const upload = async (file: File) => {
+    if (!canMutate) return;
     setUploading(true);
     setError(null);
     const form = new FormData();
@@ -311,7 +373,7 @@ export default function Home() {
   };
 
   const saveZone = async () => {
-    if (!selectedSource || points.length < 3) return;
+    if (!canMutate || !selectedSource || points.length < 3) return;
     const r = await fetch(`${API}/api/zones`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -323,11 +385,12 @@ export default function Home() {
     refresh();
   };
 
-  // Any builder edit invalidates a pending (unapproved) new draft so no stale
-  // approval can be submitted against outdated parameters.
-  const touchBuilder = () => setReview((rt) => (rt?.kind === "new" ? null : rt));
+  // Any builder edit invalidates ALL pending review kinds (a new draft OR a
+  // re-enable) so no stale approval can be submitted against changed parameters.
+  const touchBuilder = () => setReview(null);
 
   const saveDraft = async () => {
+    if (!canMutate) return;
     if (!selectedSource || !wfZone) {
       setError("Pick a zone for this rule first.");
       return;
@@ -362,7 +425,14 @@ export default function Home() {
   };
 
   const approve = async () => {
-    if (!review) return;
+    if (!review || !canMutate) return;
+    // Defense-in-depth: never activate a rule carrying a visual predicate from
+    // the UI (the backend also rejects this). These are view/disable only.
+    if (review.dsl.visual_predicate != null) {
+      setError("Teacher-routed visual rules cannot be armed in this demo.");
+      setReview(null);
+      return;
+    }
     setBusy(true);
     try {
       const r = await fetch(`${API}/api/workflows/${review.workflowId}/enable`, { method: "POST" });
@@ -382,12 +452,16 @@ export default function Home() {
   };
 
   const reviewEnable = (wf: Workflow) => {
+    // Visual-predicate rules are unavailable: never offer re-arming for them.
+    if (wf.dsl.visual_predicate != null || !canMutate || analyzing) return;
     setReview({ workflowId: wf.id, dsl: wf.dsl, kind: "reenable" });
     builderRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   const editWorkflow = async (wf: Workflow) => {
-    if (isProcessing) return;
+    // Never copy a visual rule into the geometric builder (that silently drops
+    // its visual predicate). Edit is unavailable during analysis.
+    if (wf.dsl.visual_predicate != null || !canMutate || analyzing) return;
     if (wf.enabled) {
       const r = await fetch(`${API}/api/workflows/${wf.id}/disable`, { method: "POST" });
       if (!r.ok) return apiError(r);
@@ -396,7 +470,8 @@ export default function Home() {
     setWfClass(wf.dsl.object_class);
     setWfTrigger(wf.dsl.trigger.type);
     setWfZone(wf.dsl.trigger.zone_id);
-    if (wf.dsl.trigger.duration_seconds) setWfDuration(Math.round(wf.dsl.trigger.duration_seconds));
+    // Preserve the exact valid dwell value (fractional seconds too); do not round.
+    if (wf.dsl.trigger.duration_seconds) setWfDuration(wf.dsl.trigger.duration_seconds);
     if (wf.dsl.trigger.threshold) setWfThreshold(wf.dsl.trigger.threshold);
     setReview(null);
     setEditNote(
@@ -407,10 +482,19 @@ export default function Home() {
     builderRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
-  const processSource = async (id: number) => {
+  const processSource = async (s: Source) => {
+    if (!canMutate || analyzing) return; // never start a second run on top of one
+    if (!approvedGeometric) {
+      setError("Approve an enabled geometric rule for this source before running it.");
+      return;
+    }
     setError(null);
-    const r = await fetch(`${API}/api/sources/${id}/process`, { method: "POST" });
-    if (!r.ok) return apiError(r);
+    setRunPending({ id: s.id, from: s.status });
+    const r = await fetch(`${API}/api/sources/${s.id}/process`, { method: "POST" });
+    if (!r.ok) {
+      setRunPending(null);
+      return apiError(r);
+    }
     refresh();
   };
 
@@ -433,15 +517,6 @@ export default function Home() {
     return s;
   };
 
-  const progressPct = () => {
-    if (!current) return 0;
-    const total = current.frame_count || 0;
-    if (!total) return current.status === "processing" ? 15 : 0;
-    const analyzed = current.frames_processed || 0;
-    // frames_processed is sampled count; cap for a calm indicator.
-    return Math.min(100, Math.round((analyzed / Math.max(1, total / 6)) * 100));
-  };
-
   /* -------------------------------------------------- render */
 
   return (
@@ -456,7 +531,13 @@ export default function Home() {
             </div>
           </div>
           <div className="chips">
-            <span className="chip on">{I.shield} Demo-safe</span>
+            {demoSafe === true ? (
+              <span className="chip on">{I.shield} Demo-safe · verified</span>
+            ) : demoSafe === false ? (
+              <span className="chip danger">{I.alert} Not demo-safe</span>
+            ) : (
+              <span className="chip warn">{I.alert} Demo-safe · unverified</span>
+            )}
             <span className="chip planned"><span className="dot" /> NL agent · planned</span>
             <span className="chip planned"><span className="dot" /> Teacher VLM · unavailable</span>
             <span className="chip planned"><span className="dot" /> AutoLearn · planned</span>
@@ -480,6 +561,17 @@ export default function Home() {
           </div>
         )}
 
+        {loaded && demoSafe !== true && (
+          <div className="banner warn">
+            {I.alert}
+            <span>
+              {demoSafe === false
+                ? "The connected API reports it is NOT in demo-safe mode. Demo uploads, rule arming and runs are disabled so this UI never drives the experimental backend paths. Restart the backend with VISIONFLOW_DEMO_SAFE=true."
+                : "Could not verify demo-safe mode on the connected API (the backend did not report the capability). Demo uploads, rule arming and runs are disabled until it is verified."}
+            </span>
+          </div>
+        )}
+
         {/* 1 · Sources ------------------------------------------------ */}
         <section className="card">
           <div className="card-head">
@@ -489,20 +581,20 @@ export default function Home() {
           </div>
 
           <div className="row" style={{ marginBottom: 14 }}>
-            <label className="secondary" style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "8px 15px", borderRadius: 8, cursor: uploading ? "not-allowed" : "pointer", border: "1px solid var(--border-strong)" }}>
+            <label className="secondary" style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "8px 15px", borderRadius: 8, cursor: uploading || !canMutate ? "not-allowed" : "pointer", border: "1px solid var(--border-strong)", opacity: canMutate ? 1 : 0.55 }}>
               {uploading ? <span className="spinner" /> : I.upload}
               <span>{uploading ? "Uploading…" : "Upload MP4"}</span>
               <input
                 type="file"
                 accept="video/mp4"
-                disabled={uploading}
+                disabled={uploading || !canMutate}
                 style={{ display: "none" }}
                 onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])}
               />
             </label>
             <span className="faint">
-              Sample: <code>data/demo/demo_bus.mp4</code> (real photo, synthetic motion). Generate it
-              with <code>make smoke</code> or <code>python scripts/make_demo_video.py</code>, then upload.
+              Upload a recorded MP4. A prepared demo clip (real photo, synthetic motion, analyzed with
+              real YOLO) and the setup commands are described in the demo guide.
             </span>
           </div>
 
@@ -532,9 +624,16 @@ export default function Home() {
                     <td>{s.avg_inference_ms ? `${s.avg_inference_ms.toFixed(0)} ms` : "—"}</td>
                     <td className="row" style={{ justifyContent: "flex-end" }} onClick={(e) => e.stopPropagation()}>
                       <button className="secondary sm" onClick={() => setSelectedSource(s.id)}>Select</button>
-                      <button className="sm" disabled={s.status === "processing"} onClick={() => processSource(s.id)}>
-                        {s.status === "processing" ? <><span className="spinner" />Processing</> : <>{I.play} Run</>}
-                      </button>
+                      {s.id === selectedSource && (
+                        <button
+                          className="sm"
+                          disabled={analyzing || !approvedGeometric || !canMutate}
+                          title={!approvedGeometric ? "Approve an enabled geometric rule for this source first" : undefined}
+                          onClick={() => processSource(s)}
+                        >
+                          {analyzing ? <><span className="spinner" />Analyzing</> : <>{I.play} Run</>}
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -548,15 +647,30 @@ export default function Home() {
               <span>
                 <strong>{current.name}</strong> selected ({current.width}×{current.height}). Status:{" "}
                 <strong>{current.status}</strong>.{" "}
-                {current.status === "processing"
-                  ? "Processing in progress — rule editing and arming are paused until it completes."
+                {analyzing
+                  ? "Analysis in progress — rule editing, arming and re-running are paused until it completes."
                   : "Detection samples frames and runs real YOLO; only the demo clip's motion is synthetic."}
               </span>
             </div>
           )}
 
-          {current && isProcessing && (
-            <div className="progress-track"><div className="progress-bar" style={{ width: `${Math.max(10, progressPct())}%` }} /></div>
+          {current && !approvedGeometric && !analyzing && (
+            <div className="hint warn" style={{ marginTop: 10 }}>
+              {I.info}
+              <span>Build, review and <strong>approve</strong> a geometric rule below before running this source.</span>
+            </div>
+          )}
+
+          {current && analyzing && (
+            <div style={{ marginTop: 14 }}>
+              <div className="progress-track"><div className="progress-bar indeterminate" /></div>
+              <p className="faint" style={{ marginTop: 6 }}>
+                Analyzing on real YOLO — {current.frames_processed || 0} frame
+                {current.frames_processed === 1 ? "" : "s"} sampled so far. Total sampled frames depend on the
+                clip length and backend sampling rate, so completion is shown as it progresses rather than as a
+                fixed percentage.
+              </p>
+            </div>
           )}
         </section>
 
@@ -625,38 +739,38 @@ export default function Home() {
 
               <div className="form-grid">
                 <label className="field">Rule name
-                  <input value={wfName} onChange={(e) => { setWfName(e.target.value); touchBuilder(); }} disabled={isProcessing} />
+                  <input value={wfName} onChange={(e) => { setWfName(e.target.value); touchBuilder(); }} disabled={analyzing || !canMutate} />
                 </label>
                 <label className="field">Object class
-                  <select value={wfClass} onChange={(e) => { setWfClass(e.target.value); touchBuilder(); }} disabled={isProcessing}>
+                  <select value={wfClass} onChange={(e) => { setWfClass(e.target.value); touchBuilder(); }} disabled={analyzing || !canMutate}>
                     {CLASSES.map((c) => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </label>
                 <label className="field">Zone
-                  <select value={wfZone ?? ""} onChange={(e) => { setWfZone(Number(e.target.value) || null); touchBuilder(); }} disabled={isProcessing}>
+                  <select value={wfZone ?? ""} onChange={(e) => { setWfZone(Number(e.target.value) || null); touchBuilder(); }} disabled={analyzing || !canMutate}>
                     <option value="">— select zone —</option>
                     {zones.map((z) => <option key={z.id} value={z.id}>{z.name}</option>)}
                   </select>
                 </label>
                 <label className="field" style={{ gridColumn: "1 / -1" }}>Trigger
-                  <select value={wfTrigger} onChange={(e) => { setWfTrigger(e.target.value); touchBuilder(); }} disabled={isProcessing}>
+                  <select value={wfTrigger} onChange={(e) => { setWfTrigger(e.target.value); touchBuilder(); }} disabled={analyzing || !canMutate}>
                     {TRIGGERS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
                   </select>
                 </label>
                 {wfTrigger === "dwell_in_zone" && (
                   <label className="field">Dwell seconds (≥)
-                    <input type="number" min={1} value={wfDuration} onChange={(e) => { setWfDuration(Number(e.target.value)); touchBuilder(); }} disabled={isProcessing} />
+                    <input type="number" min={1} step="any" value={wfDuration} onChange={(e) => { setWfDuration(Number(e.target.value)); touchBuilder(); }} disabled={analyzing || !canMutate} />
                   </label>
                 )}
                 {wfTrigger === "object_count_exceeded" && (
                   <label className="field">Threshold (count &gt;)
-                    <input type="number" min={1} value={wfThreshold} onChange={(e) => { setWfThreshold(Number(e.target.value)); touchBuilder(); }} disabled={isProcessing} />
+                    <input type="number" min={1} value={wfThreshold} onChange={(e) => { setWfThreshold(Number(e.target.value)); touchBuilder(); }} disabled={analyzing || !canMutate} />
                   </label>
                 )}
               </div>
 
               <div className="row end" style={{ marginTop: 14 }}>
-                <button onClick={saveDraft} disabled={isProcessing || busy || !wfZone}>
+                <button onClick={saveDraft} disabled={analyzing || busy || !wfZone || !canMutate}>
                   {busy ? <span className="spinner" /> : null} Save draft for review
                 </button>
               </div>
@@ -664,8 +778,8 @@ export default function Home() {
               {zones.length === 0 && (
                 <p className="faint" style={{ marginTop: 10, textAlign: "right" }}>Draw a zone first to enable rule creation.</p>
               )}
-              {isProcessing && (
-                <p className="faint" style={{ marginTop: 10, textAlign: "right" }}>Paused while this source is processing (the frame snapshot would be stale).</p>
+              {analyzing && (
+                <p className="faint" style={{ marginTop: 10, textAlign: "right" }}>Paused while this source is being analyzed (the frame snapshot would be stale).</p>
               )}
 
               {review && (
@@ -681,7 +795,7 @@ export default function Home() {
                   <pre className="code">{JSON.stringify(review.dsl, null, 2)}</pre>
                   <div className="row end" style={{ marginTop: 12 }}>
                     <button className="ghost" onClick={() => setReview(null)}>Discard</button>
-                    <button className="success" onClick={approve} disabled={busy || isProcessing}>
+                    <button className="success" onClick={approve} disabled={busy || analyzing || !canMutate}>
                       {busy ? <span className="spinner" /> : I.check} Approve &amp; activate
                     </button>
                   </div>
@@ -694,26 +808,48 @@ export default function Home() {
                   <table>
                     <thead><tr><th>#</th><th>Rule</th><th>State</th><th /></tr></thead>
                     <tbody>
-                      {workflows.map((w) => (
-                        <tr key={w.id}>
-                          <td>{w.id}</td>
-                          <td>
-                            {w.name}
-                            <div className="faint">{ruleSummary(w.dsl)}</div>
-                          </td>
-                          <td>
-                            <span className={`badge ${w.enabled ? "enabled" : "disabled"}`}><span className="dot" />{w.enabled ? "armed" : "disabled"}</span>
-                          </td>
-                          <td className="row" style={{ justifyContent: "flex-end" }}>
-                            {w.enabled ? (
-                              <button className="danger sm" onClick={() => disableWorkflow(w)}>Disable</button>
-                            ) : (
-                              <button className="secondary sm" disabled={isProcessing} onClick={() => reviewEnable(w)}>Review &amp; arm</button>
-                            )}
-                            <button className="ghost sm" disabled={isProcessing} onClick={() => editWorkflow(w)}>{I.edit} Edit</button>
-                          </td>
-                        </tr>
-                      ))}
+                      {workflows.map((w) => {
+                        const isVisual = w.dsl.visual_predicate != null;
+                        return (
+                          <tr key={w.id}>
+                            <td>{w.id}</td>
+                            <td>
+                              {w.name}
+                              <div className="faint">{ruleSummary(w.dsl)}</div>
+                              {isVisual && (
+                                <div className="faint" style={{ color: "var(--warn)" }}>
+                                  Teacher-routed visual rule — unavailable in demo-safe mode (it never runs and
+                                  cannot be armed or edited here).
+                                </div>
+                              )}
+                            </td>
+                            <td>
+                              {isVisual ? (
+                                <span className="badge visual"><span className="dot" />unavailable</span>
+                              ) : (
+                                <span className={`badge ${w.enabled ? "enabled" : "disabled"}`}><span className="dot" />{w.enabled ? "armed" : "disabled"}</span>
+                              )}
+                            </td>
+                            <td className="row" style={{ justifyContent: "flex-end" }}>
+                              {isVisual ? (
+                                <>
+                                  {w.enabled && <button className="danger sm" onClick={() => disableWorkflow(w)}>Disable</button>}
+                                  <button className="ghost sm" onClick={() => setJsonView(w)}>{I.info} View JSON</button>
+                                </>
+                              ) : (
+                                <>
+                                  {w.enabled ? (
+                                    <button className="danger sm" onClick={() => disableWorkflow(w)}>Disable</button>
+                                  ) : (
+                                    <button className="secondary sm" disabled={analyzing || !canMutate} onClick={() => reviewEnable(w)}>Review &amp; arm</button>
+                                  )}
+                                  <button className="ghost sm" disabled={analyzing || !canMutate} onClick={() => editWorkflow(w)}>{I.edit} Edit</button>
+                                </>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </>
@@ -826,6 +962,25 @@ export default function Home() {
           </p>
         </section>
       </main>
+
+      {/* read-only workflow JSON (e.g. an unavailable visual rule) */}
+      {jsonView && (
+        <div className="modal-backdrop" onClick={() => setJsonView(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-head">
+              <h3>Workflow #{jsonView.id} · read-only</h3>
+              <button className="ghost sm" onClick={() => setJsonView(null)}>{I.close}</button>
+            </div>
+            <div className="modal-body">
+              <p className="faint" style={{ marginTop: 0 }}>
+                Stored definition. This rule carries a Teacher-routed visual predicate and is unavailable in
+                demo-safe mode — it is shown for inspection only and cannot be armed or edited here.
+              </p>
+              <pre className="code">{JSON.stringify(jsonView.dsl, null, 2)}</pre>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* evidence modal */}
       {modalEvent && (

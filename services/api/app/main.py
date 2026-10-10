@@ -103,7 +103,14 @@ def _event_out(e: TrackEvent) -> EventOut:
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "service": "visionflow-api", "version": "0.1.0"}
+    # Expose demo_safe so the frontend can verify the connected backend actually
+    # enforces the demo's safety boundary before offering any demo mutation/run.
+    return {
+        "status": "ok",
+        "service": "visionflow-api",
+        "version": "0.1.0",
+        "demo_safe": config.DEMO_SAFE,
+    }
 
 
 # ---------------------------------------------------------------- sources
@@ -219,9 +226,10 @@ def compile_workflow(body: CompileRequest, session: Session = Depends(db)):
     (M2-AC1). Deterministic rule-based compiler (no text-model credentials).
     Unsupported/ambiguous requests are rejected; the draft is never saved or
     enabled here and no code is generated or executed."""
-    # Demo-safe: return a visible unavailable response WITHOUT importing or
-    # invoking nl_compiler, so no prompt (including the unresolved M2-001 cases)
-    # can ever reach the compiler grammar in this demo.
+    # Demo-safe: return a visible unavailable response WITHOUT invoking
+    # nl_compiler. The module is imported at startup but its grammar is never
+    # called here, so no prompt (including the unresolved M2-001 cases) can ever
+    # reach the compiler in this demo.
     if config.DEMO_SAFE:
         return CompileResponse(
             ok=False,
