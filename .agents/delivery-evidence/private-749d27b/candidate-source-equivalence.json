@@ -1,0 +1,12 @@
+{
+  "checked_at_utc": "2026-10-10T23:27:13.356292+00:00",
+  "tested_container_source": "749d27b33bcec03883d4a1b1ac481ee9a95fd91e",
+  "proposal_candidate": "7843f15112352d0bea6e02fb43a02e506ea0872b",
+  "changed_application_files": [],
+  "gateway_pinned_digest": "nginx@sha256:a8b39bd9cf0f83869a2162827a0caf6137ddf759d50a171451b335cecc87d236",
+  "actual_running_gateway_image_id": "sha256:dc73b49f5124cf2ee538dfbdfbd121f0b4ccdcb20fea30f3a81bd477c02e2bb5",
+  "gateway_only_diff": "Pinned exact already-running image digest; no NGINX configuration change.",
+  "public_tunnel_started": false,
+  "student_activation": false,
+  "limits": "This source/digest comparison does not establish external reachability or repeat full application checks."
+}

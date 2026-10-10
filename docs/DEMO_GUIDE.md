@@ -61,8 +61,12 @@ the autopilot/orchestrator. Ports 8000 and 3000 must be free for these commands.
 
 Use a desktop browser at least **1024px wide**; 1024/1280/1440px were checked.
 At 390px, selecting a real source still expands the zone workspace horizontally
-(known P2). Phone readiness is not claimed. Public deployment, the presentation
-deck, and a recorded backup remain submission tasks outside this local demo.
+(known P2). Phone readiness is not claimed. The delivery branch now includes an
+[editable deck and real recorded backup](presentation/README.md), a
+[current seven-minute defence script](DEFENSE_SCRIPT.md), and
+[executed private deployment evidence](../.agents/delivery-evidence/private-749d27b/VALIDATION.md).
+Public access remains unexecuted under the user's restriction; see the
+[prepared publication proposal](PUBLICATION_PROPOSAL.md).
 
 ### Backend
 
