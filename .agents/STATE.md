@@ -1,104 +1,85 @@
-# Project state
+# VisionFlow execution state
 
-Updated: 2026-10-10. Branch: `feature/visionflow`.
+## M2 BLOCKED — exceptional recovery exhausted
 
-## Current gate: M2 exceptional recovery — fixed, awaiting review
+- Implementation branch: `feature/visionflow`.
+- Original final normal snapshot: `a93d983dd89b31e329689b09726c5a1cfbf4dbb5`.
+- Exceptional implementation: `7096ab3dd3908467c79ba2de75ddd70970995cce`.
+- Exact tested/reviewed handoff: `0250feb7de89a6bc6df06a3d293dbc3b1cd93595`.
+- Base: `2127d207a7bf2e1401d40e5ad82d926eb0f66a57`.
+- Fresh independent verdict: **CHANGES_REQUIRED / FAIL**, completed in 818s.
+- Review branch: `review/M2-r4`.
+- One exceptional Claude pass and ONE fresh independent Codex review consumed.
+  Two normal fixes plus this exception: fix counter 3. No further exception
+  cycles or automatic M2 fixes are authorized. Total agent calls: 16.
+- M1 remains accepted at `390b337cc1f58504864ba27a23a96c1e811b358d`.
+  M1 application code and regression tests were not changed by this recovery.
+- M3/M4 implementation has not started. M2 was never accepted.
 
-- M1 remains accepted at `390b337cc1f58504864ba27a23a96c1e811b358d`,
-  report branch `review/M1-r3`, with its documented P2 risks.
-- Prior frozen review snapshot: `a93d983dd89b31e329689b09726c5a1cfbf4dbb5`
-  (base `2127d207a7bf2e1401d40e5ad82d926eb0f66a57`) — all four P1s reproduced.
-- The ONE authorized exceptional recovery implemented fixes for the four P1s
-  below; implementation SHA recorded in `.agents/HANDOFF.md`.
-- Full local suite: **140 passed** (`pytest tests/ --ignore=tests/orchestrator`),
-  +17 desired-behaviour regressions. M3/M4 not started; awaits a passing M2 gate.
+## Remaining material defects
 
-Read [the consolidated M2 report](reviews/M2.md) for the earlier reproductions,
-commands, line references, passed portions and limitations.
+| ID | Gate result | Minimal scope |
+| --- | --- | --- |
+| M2-001 | Independent P1: token stripping still discards unknown action/visual meaning and ambiguous duration | Complete supported-command grammar; reject unconsumed clauses and ambiguity |
+| M2-003 | Independent P1: expired worker keeps reading unbounded data; admission wait can exceed deadline then send/confirm | Owned cancellable streaming transport, bounded bytes/cleanup, deadline through admission and parsing |
+| M2-007 | Supplementary controller P1: after grant but before HTTP, disable acknowledges; releasing pause starts HTTP afterward | Couple approval to actual request start and revoke unsent attempts |
+| M2-008 | Verified fixed: malformed confidence produces no action; valid numeric controls work | No further change needed |
+| M2-009 | Existing P2: completed `_inflight_result` storage bypasses bounded primary cache | Deferred outside this exceptional scope |
 
-## Findings addressed in this recovery
+The independent reviewer verified M2-007's original read/grant race fixed.
+The controller preserved that judgment verbatim and appended a distinct
+actual-send reproduction required by the human's stronger guarantee.
+See [the consolidated report](reviews/M2.md) and
+[safe executable evidence](review-evidence/M2-0250feb/README.md).
 
-- **M2-001, P1 — FIXED:** anchored grammar + residual-token backstop rejects
-  negated triggers, upper-bound dwell, data-deletion actions, multiple named
-  zones, extra/unknown visual conditions; supported intent preserved.
-- **M2-003, P1 — FIXED:** a timed-out request no longer frees the concurrency
-  slot; a deferred slot + reaper caps active transport workers to max_concurrency.
-- **M2-007, P1 — FIXED:** approval read + outbound admission are one atomic
-  boundary under `dispatch_admission_lock`; a committed disable cannot admit a
-  new Teacher request mid-route.
-- **M2-008, P1 — FIXED:** `confidence` must be an actual JSON number; booleans,
-  strings, NaN and infinities are rejected and cannot authorize an action.
-- **M2-009, P2 — NOT in scope** for this exceptional recovery (P1-only).
+## Executed evidence
 
-## Actual verification
+- Before implementation, all four original reviewer reproductions ran on a clean
+  frozen `a93d983` worktree and reproduced the defects. Their four passing
+  characterization assertions describe bugs, not acceptance passes.
+- Claude's single focused pass completed in 1328s/73 turns and committed code
+  and exact handoff. It added 17 regression cases. No extra implementation call.
+- Full `make check`: **160 tests passed**, four existing warnings; frontend
+  production build passed. This is the exact `0250feb` snapshot.
+- `make smoke`: real YOLO processed 30 frames; mean inference **70.1 ms**; bus
+  entry at 4.2s, confidence 0.76, JPEG evidence and local notification persisted.
+  Synthetic motion of photographic content; not natural held-out accuracy.
+- Independent suite: **160 passed**, four warnings, 22.88s, using disclosed
+  temporary runner-only 10ms asyncio heartbeat after sandbox startup stalls.
+  Frontend build and UI fixture handlers passed; full browser/network not tested.
+- Independent 25 focused cases included bug-characterization assertions and
+  reported remaining defects; these are not milestone acceptance passes.
+- Supplemental desired-behavior QA: **2 failed**, three warnings, 0.68s, on the
+  exact snapshot; no application changes.
+- Ten fake-CLI/temp-Git recovery-policy checks passed: single-call enforcement,
+  timeouts, failure stops, committed-handoff resume and normal M3-only-after-PASS.
 
-Controller `make check`: **143 tests passed, four warnings**, structure check
-passed, frontend production build passed. Controller `make smoke`: real YOLO
-processed 30 frames, emitted a bus-entry event at 4.2 seconds/confidence 0.76,
-served JPEG evidence and persisted a local notification; mean detector inference
-60.4 ms. This uses synthetic motion of photographic content and is a limited
-smoke measurement, not held-out model accuracy or a VLM savings comparison.
+The controller was held while its single reviewer continued under a separate
+25-minute watchdog, preventing premature M3 despite confirmed supplementary
+failures. After validating CHANGES_REQUIRED for the exact SHA, the hold was
+released; the controller published the report and stopped at its fix limit.
+No implementation/review subprocess remains active.
 
-Independent QA: **143 tests passed, four warnings** using the disclosed
-runner-only 10 ms asyncio heartbeat in the restricted TestClient environment;
-seven focused characterization tests reproduced material defects; frontend
-build and fixture-based component handlers passed. No full browser test ran.
-All four exceptional M1 P1 recovery regressions remain covered and pass.
+## Smallest safe demo scope
 
-## Recovery audit
+Recommended reduction: manually reviewed JSON geometric workflows with real
+uploaded-video detection/tracking, temporal events, evidence and local
+notifications. Keep the disclosed unavailable Teacher fallback; disable or avoid
+NL compilation and Teacher-backed automation until their gates are satisfied.
+This recommendation is not another implementation cycle or an M2 PASS.
 
-The original M2 review completed its 111-test command, then returned no final
-structured result. Controller-parent interruption removed its 1,200-second
-supervision; the orphan reviewer exceeded that limit and was terminated. The
-logs do not establish the reason for no further model/transport output.
+## Architecture and honest limitations
 
-The user authorized **ONE exceptional review-only recovery**, completed in
-602 seconds against original target `36e7ca84d4fe2048cd9c21522e2adfbfc5174798`.
-Original implementation `c746fc098afd69dedc9cab54d6262e589212abc0` and handoff
-remain intact in history. That review returned CHANGES_REQUIRED, permitting
-the normal bounded policy: two focused Claude fixes and two exact-commit
-reviews. The last review completed in 923 seconds and still found four P1s.
-The controller stopped at its limit, without a synthesized PASS or extra cycle.
+Preserve committed PRD/VLM_ARCHITECTURE/METRICS requirements: cheap continuous
+detection/tracking and temporal rules; selective event/ROI Teacher routing;
+sampling, deduplication, caching and call budgets; secure self-hosted compatible
+provider; Teacher labels -> verified data -> frozen embeddings -> lightweight
+Student; session-disjoint held-out/shadow/manual activation/rollback; identical
+held-out full-frame/ROI/foveated comparisons and actual Vast.ai/GPU cost evidence.
 
-Claude completed the fixes and regression tests; the controller committed
-those artifacts when the agent left committing to it after compound Bash
-commands were denied. No additional implementation call was used to recover
-commits. Runtime checkpoints, original handoffs, logs and hashed reproductions
-are preserved under ignored `.agents/runtime/`; they are not public artifacts.
-
-## Architecture and unverified capabilities
-
-PRD section 16, `docs/VLM_ARCHITECTURE.md`, and `docs/METRICS.md` retain the
-OpenVector-inspired cheap detector/tracker/temporal path, event-selected
-Teacher inputs, sampling/deduplication/caching/budgets, self-hosted compatible
-adapter, Teacher -> verified data -> frozen embeddings -> Student plan,
-held-out/shadow/manual activation/rollback, and identical-input comparisons.
-
-The user-authorized unavailable-provider fallback remains disclosed. No GPU
-instance is connected and no external VLM API key is required at this stage.
-Real Teacher inference/labels and quality, full-frame/ROI/foveated performance,
-Student held-out evaluation, GPU activity/throughput, actual Vast.ai rental
-costs and savings remain **UNVERIFIED**. Foveated strategy selection is planned;
-ROI selection and full-frame fallback are implemented. No measured percentage
-of savings is claimed. M3/M4 implementation awaits a passing M2 gate.
-
-No main merge, force push, hardware operation, GPU rental, purchase, new paid
-service or public deployment occurred. Public deployment still requires the
-explicit approval specified in the original goal.
-
-## Newly authorized exceptional M2 recovery
-
-The human authorized exactly ONE additional implementation/review cycle for
-M2-001, M2-003, M2-007, M2-008 in final review `a93d983`. Before implementation,
-the controller replayed all four original reviewer reproductions against that
-frozen snapshot: unsupported/negated commands were accepted, four active body
-readers exceeded concurrency one, HTTP started after disable acknowledgment,
-and boolean confidence created a local notification. These are reproduced
-defects, not acceptance passes. Original logs/reproduction hashes are preserved
-in ignored runtime storage.
-
-One Claude pass, full checks/build/real YOLO smoke, and ONE fresh exact-commit
-Codex review are authorized. No retries or further exception cycles; remaining
-P0/P1 or inconclusive review leaves M2 BLOCKED. Only independent PASS permits
-M2 acceptance and automatic M3 advancement. M1 remains accepted and unchanged.
-Real Teacher, foveated performance, and unexecuted savings remain UNVERIFIED.
+No GPU instance is connected, no external provider API key is required now.
+Real Teacher labels/inference/quality, foveated gains, Student evaluation and
+unexecuted latency/GPU/throughput/rental-cost/savings comparisons remain
+**UNVERIFIED**. No savings percentage or fabricated result is claimed.
+No main merge, force push, hardware operation, purchase, GPU rental or public
+deployment occurred.
