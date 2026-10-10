@@ -1,0 +1,440 @@
+{
+  "sequential_version_snapshot": {
+    "train1": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "version": 1,
+        "version_id": 1,
+        "threshold": 0.5,
+        "counts": {
+          "train": 18,
+          "val": 6,
+          "test": 6
+        },
+        "metrics": {
+          "confusion_matrix": {
+            "tp": 3,
+            "fp": 0,
+            "fn": 0,
+            "tn": 3
+          },
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "accuracy": 1.0,
+          "support": 6,
+          "positives": 3,
+          "negatives": 3,
+          "latency": {
+            "count": 6,
+            "p50_ms": 42.977,
+            "p95_ms": 47.283
+          },
+          "threshold": 0.5
+        },
+        "train_duration_ms": 165.58834199531702,
+        "dataset_hash": "9f7a1b3fa1443d6a17c211ba802e063f8d58056ce94bf30ee542105785cd8a06",
+        "split_hash": "500a58f77cc7fa0bf272b27380fa419e9681a1df24748cf661137f9afa89ab5b"
+      }
+    },
+    "train2": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "version": 2,
+        "version_id": 2,
+        "threshold": 0.5,
+        "counts": {
+          "train": 24,
+          "val": 6,
+          "test": 12
+        },
+        "metrics": {
+          "confusion_matrix": {
+            "tp": 6,
+            "fp": 0,
+            "fn": 0,
+            "tn": 6
+          },
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "accuracy": 1.0,
+          "support": 12,
+          "positives": 6,
+          "negatives": 6,
+          "latency": {
+            "count": 12,
+            "p50_ms": 46.612,
+            "p95_ms": 51.295
+          },
+          "threshold": 0.5
+        },
+        "train_duration_ms": 179.49554900405928,
+        "dataset_hash": "47f816c04a375d59569d923f04e82e22f0fbd35be2f6377fad54ada46a655e9f",
+        "split_hash": "7506323beaa709b0b13cdc8f66e23629c8e3ca6f87b4a1e4d1d8ee00a3502469"
+      }
+    },
+    "old_evaluation": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "version": 1,
+        "metrics": {
+          "confusion_matrix": {
+            "tp": 3,
+            "fp": 0,
+            "fn": 0,
+            "tn": 3
+          },
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "accuracy": 1.0,
+          "support": 6,
+          "positives": 3,
+          "negatives": 3,
+          "latency": {
+            "count": 6,
+            "p50_ms": 44.799,
+            "p95_ms": 49.998
+          },
+          "threshold": 0.5
+        }
+      }
+    },
+    "old_manifest_unchanged": true,
+    "old_artifact_unchanged": true,
+    "old_test_ids": [
+      13,
+      14,
+      15,
+      16,
+      17,
+      18
+    ]
+  },
+  "declined_activation": {
+    "http": 200,
+    "body": {
+      "experimental": true,
+      "activated": false,
+      "reason": "human declined",
+      "gate": {
+        "passed": true,
+        "f1": 1.0,
+        "support": 6,
+        "min_f1": 0.75,
+        "test_count": 6,
+        "min_test": 4,
+        "reasons": []
+      }
+    }
+  },
+  "normal_gates_rollback": {
+    "activate1": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "activated": true,
+        "version": 1,
+        "gate": {
+          "passed": true,
+          "f1": 1.0,
+          "support": 6,
+          "min_f1": 0.75,
+          "test_count": 6,
+          "min_test": 4,
+          "reasons": []
+        }
+      }
+    },
+    "activate2": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "activated": true,
+        "version": 2,
+        "gate": {
+          "passed": true,
+          "f1": 1.0,
+          "support": 12,
+          "min_f1": 0.75,
+          "test_count": 12,
+          "min_test": 4,
+          "reasons": []
+        }
+      }
+    },
+    "rollback": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "rolled_back_to": 1
+      }
+    },
+    "classify": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "status": "student",
+        "label": "occupied",
+        "confidence": 1.0,
+        "version": 1,
+        "action": "none"
+      }
+    }
+  },
+  "lost_manifest_gate": {
+    "http": 200,
+    "body": {
+      "experimental": true,
+      "version": 2,
+      "gate": {
+        "passed": true,
+        "f1": 1.0,
+        "support": 12,
+        "min_f1": 0.75,
+        "test_count": 12,
+        "min_test": 4,
+        "reasons": []
+      }
+    }
+  },
+  "lost_manifest_activate": {
+    "http": 200,
+    "body": {
+      "experimental": true,
+      "activated": true,
+      "version": 2,
+      "gate": {
+        "passed": true,
+        "f1": 1.0,
+        "support": 12,
+        "min_f1": 0.75,
+        "test_count": 12,
+        "min_test": 4,
+        "reasons": []
+      }
+    }
+  },
+  "lost_manifest_evaluate": {
+    "http": 200,
+    "body": {
+      "experimental": true,
+      "version": 2,
+      "metrics": {
+        "confusion_matrix": {
+          "tp": 5,
+          "fp": 0,
+          "fn": 0,
+          "tn": 6
+        },
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "accuracy": 1.0,
+        "support": 11,
+        "positives": 5,
+        "negatives": 6,
+        "latency": {
+          "count": 11,
+          "p50_ms": 45.808,
+          "p95_ms": 60.357
+        },
+        "threshold": 0.5
+      }
+    }
+  },
+  "lost_manifest_gate_after_evaluate": {
+    "http": 200,
+    "body": {
+      "experimental": true,
+      "version": 2,
+      "gate": {
+        "passed": false,
+        "f1": 1.0,
+        "support": 11,
+        "min_f1": 0.75,
+        "test_count": 12,
+        "min_test": 4,
+        "reasons": [
+          "evaluated support 11 != frozen snapshot test count 12; membership is inconsistent"
+        ]
+      }
+    }
+  },
+  "missing_artifact_rollback": {
+    "http": 200,
+    "body": {
+      "experimental": true,
+      "rolled_back_to": 1
+    }
+  },
+  "missing_artifact_classify": {
+    "http": 500,
+    "body": "Internal Server Error"
+  },
+  "nan_student_offline": {
+    "http": 500,
+    "body": "Internal Server Error"
+  },
+  "concurrent_train_collision": {
+    "responses": [
+      {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "version": 1,
+          "version_id": 3,
+          "threshold": 0.5,
+          "counts": {
+            "train": 18,
+            "val": 6,
+            "test": 6
+          },
+          "metrics": {
+            "confusion_matrix": {
+              "tp": 3,
+              "fp": 0,
+              "fn": 0,
+              "tn": 3
+            },
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "accuracy": 1.0,
+            "support": 6,
+            "positives": 3,
+            "negatives": 3,
+            "latency": {
+              "count": 6,
+              "p50_ms": 54.769,
+              "p95_ms": 57.503
+            },
+            "threshold": 0.5
+          },
+          "train_duration_ms": 151.15099599643145,
+          "dataset_hash": "9f7a1b3fa1443d6a17c211ba802e063f8d58056ce94bf30ee542105785cd8a06",
+          "split_hash": "92cbd17ebec30ed8a9422868010b174a8a8fc3a6783835a9f44a603fc1820758"
+        }
+      },
+      {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "version": 1,
+          "version_id": 4,
+          "threshold": 0.5,
+          "counts": {
+            "train": 24,
+            "val": 6,
+            "test": 12
+          },
+          "metrics": {
+            "confusion_matrix": {
+              "tp": 6,
+              "fp": 0,
+              "fn": 0,
+              "tn": 6
+            },
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "accuracy": 1.0,
+            "support": 12,
+            "positives": 6,
+            "negatives": 6,
+            "latency": {
+              "count": 12,
+              "p50_ms": 49.244,
+              "p95_ms": 53.51
+            },
+            "threshold": 0.5
+          },
+          "train_duration_ms": 164.00800200062804,
+          "dataset_hash": "47f816c04a375d59569d923f04e82e22f0fbd35be2f6377fad54ada46a655e9f",
+          "split_hash": "7c49257ab65c945dae4e81f979af799e7a342d5757a5f43a1c47f64cea64be5b"
+        }
+      }
+    ],
+    "save_paths": [
+      {
+        "thread": 139690830755520,
+        "path": "/tmp/visionflow-c-qa-5938b6d/version-data/autolearn/models/task_2/v1.pt",
+        "dataset_hash": "9f7a1b3fa1443d6a17c211ba802e063f8d58056ce94bf30ee542105785cd8a06",
+        "split_hash": "92cbd17ebec30ed8a9422868010b174a8a8fc3a6783835a9f44a603fc1820758"
+      },
+      {
+        "thread": 139690822362816,
+        "path": "/tmp/visionflow-c-qa-5938b6d/version-data/autolearn/models/task_2/v1.pt",
+        "dataset_hash": "47f816c04a375d59569d923f04e82e22f0fbd35be2f6377fad54ada46a655e9f",
+        "split_hash": "7c49257ab65c945dae4e81f979af799e7a342d5757a5f43a1c47f64cea64be5b"
+      }
+    ],
+    "registry": [
+      {
+        "id": 3,
+        "version": 1,
+        "artifact_path": "/tmp/visionflow-c-qa-5938b6d/version-data/autolearn/models/task_2/v1.pt",
+        "dataset_hash": "9f7a1b3fa1443d6a17c211ba802e063f8d58056ce94bf30ee542105785cd8a06",
+        "split_hash": "92cbd17ebec30ed8a9422868010b174a8a8fc3a6783835a9f44a603fc1820758",
+        "status": "trained"
+      },
+      {
+        "id": 4,
+        "version": 1,
+        "artifact_path": "/tmp/visionflow-c-qa-5938b6d/version-data/autolearn/models/task_2/v1.pt",
+        "dataset_hash": "47f816c04a375d59569d923f04e82e22f0fbd35be2f6377fad54ada46a655e9f",
+        "split_hash": "7c49257ab65c945dae4e81f979af799e7a342d5757a5f43a1c47f64cea64be5b",
+        "status": "trained"
+      }
+    ],
+    "actual_artifact_metadata": {
+      "threshold": 0.5,
+      "class_mapping": {
+        "empty": 0,
+        "occupied": 1
+      },
+      "encoder_name": "resnet18",
+      "encoder_weights_version": "resnet18-f37072fd.pth",
+      "preprocess_version": "resnet18-imagenet1k-v1-rgb-224-centercrop",
+      "dataset_hash": "9f7a1b3fa1443d6a17c211ba802e063f8d58056ce94bf30ee542105785cd8a06",
+      "split_hash": "92cbd17ebec30ed8a9422868010b174a8a8fc3a6783835a9f44a603fc1820758"
+    }
+  },
+  "post_save_training_failure": {
+    "response": {
+      "http": 500,
+      "body": "Internal Server Error"
+    },
+    "detail": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "task": {
+          "id": 3,
+          "name": "QA_ONLY failed training",
+          "visual_prompt": "is it occupied?",
+          "positive_label": "occupied",
+          "negative_label": "empty",
+          "teacher_model": null,
+          "status": "collecting",
+          "active_version_id": null,
+          "created_at": "2026-10-10T22:48:39.856890"
+        },
+        "counts": {
+          "samples": 30,
+          "verified": 30,
+          "pending_teacher": 30,
+          "sessions": 5
+        },
+        "versions": []
+      }
+    },
+    "orphan_artifacts": [
+      "/tmp/visionflow-c-qa-5938b6d/version-data/autolearn/models/task_3/v1.pt"
+    ]
+  }
+}

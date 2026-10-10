@@ -1,0 +1,318 @@
+{
+  "label_budget1_two_API_workers": {
+    "responses": [
+      {
+        "http": 200,
+        "body": {
+          "status": "done",
+          "provider_configured": true,
+          "labeled": 1,
+          "cached": 0,
+          "failed": 0,
+          "suppressed_budget": 0,
+          "attempts_made": 1,
+          "budget_remaining": 0
+        }
+      },
+      {
+        "http": 200,
+        "body": {
+          "status": "done",
+          "provider_configured": true,
+          "labeled": 1,
+          "cached": 0,
+          "failed": 0,
+          "suppressed_budget": 0,
+          "attempts_made": 1,
+          "budget_remaining": 0
+        }
+      }
+    ],
+    "actual_provider_posts": 2,
+    "provider_peak": 1,
+    "audit": [
+      {
+        "id": 2,
+        "sample_id": 1,
+        "provider_host": "127.0.0.1",
+        "model": "QA_ONLY/alias",
+        "image_hash": "3cc71be282c31ed38094a0fb18a7fd9f5427b1b516277a048a4157d8a0bc577f",
+        "session_id": "QA_ONLY-1",
+        "status": "labeled",
+        "latency_ms": 804.2051160009578,
+        "created_at": "2026-10-10T22:49:33.219599"
+      },
+      {
+        "id": 1,
+        "sample_id": 1,
+        "provider_host": "127.0.0.1",
+        "model": "QA_ONLY/alias",
+        "image_hash": "3cc71be282c31ed38094a0fb18a7fd9f5427b1b516277a048a4157d8a0bc577f",
+        "session_id": "QA_ONLY-1",
+        "status": "labeled",
+        "latency_ms": 412.1956519957166,
+        "created_at": "2026-10-10T22:49:32.811594"
+      }
+    ]
+  },
+  "fallback_budget1_two_API_workers": {
+    "responses": [
+      {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "status": "teacher_fallback",
+          "student_confidence": 0.5,
+          "margin": 0.0,
+          "teacher_status": "labeled",
+          "label": "occupied",
+          "action": "none"
+        }
+      },
+      {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "status": "teacher_fallback",
+          "student_confidence": 0.5,
+          "margin": 0.0,
+          "teacher_status": "labeled",
+          "label": "occupied",
+          "action": "none"
+        }
+      }
+    ],
+    "actual_provider_posts": 2,
+    "provider_peak": 1,
+    "audit": [
+      {
+        "id": 4,
+        "sample_id": null,
+        "provider_host": "127.0.0.1",
+        "model": "QA_ONLY/alias",
+        "image_hash": "2823eca6f146d4e019098f56a6134350cf1cc32191a7350b07e16e7edd7cf2ff",
+        "session_id": null,
+        "status": "labeled",
+        "latency_ms": 800.1349730038783,
+        "created_at": "2026-10-10T22:49:34.086911"
+      },
+      {
+        "id": 3,
+        "sample_id": null,
+        "provider_host": "127.0.0.1",
+        "model": "QA_ONLY/alias",
+        "image_hash": "2823eca6f146d4e019098f56a6134350cf1cc32191a7350b07e16e7edd7cf2ff",
+        "session_id": null,
+        "status": "labeled",
+        "latency_ms": 410.38587899674894,
+        "created_at": "2026-10-10T22:49:33.681782"
+      }
+    ]
+  },
+  "repeated_identical_fallback": {
+    "responses": [
+      {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "status": "teacher_fallback",
+          "student_confidence": 0.5,
+          "margin": 0.0,
+          "teacher_status": "labeled",
+          "label": "occupied",
+          "action": "none"
+        }
+      },
+      {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "status": "teacher_fallback",
+          "student_confidence": 0.5,
+          "margin": 0.0,
+          "teacher_status": "labeled",
+          "label": "occupied",
+          "action": "none"
+        }
+      },
+      {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "status": "teacher_fallback",
+          "student_confidence": 0.5,
+          "margin": 0.0,
+          "teacher_status": "labeled",
+          "label": "occupied",
+          "action": "none"
+        }
+      }
+    ],
+    "actual_provider_posts": 3
+  },
+  "admission_timeout_accounting": {
+    "responses": [
+      {
+        "http": 200,
+        "body": {
+          "status": "done",
+          "provider_configured": true,
+          "labeled": 1,
+          "cached": 0,
+          "failed": 0,
+          "suppressed_budget": 0,
+          "attempts_made": 1,
+          "budget_remaining": 4
+        }
+      },
+      {
+        "http": 200,
+        "body": {
+          "status": "done",
+          "provider_configured": true,
+          "labeled": 0,
+          "cached": 0,
+          "failed": 1,
+          "suppressed_budget": 0,
+          "attempts_made": 1,
+          "budget_remaining": 4
+        }
+      }
+    ],
+    "actual_provider_posts": 1,
+    "audits": [
+      [
+        {
+          "id": 9,
+          "sample_id": 2,
+          "provider_host": "127.0.0.1",
+          "model": "QA_ONLY/alias",
+          "image_hash": "6a4a40ad3e354994cb4c5a6830f11883dce6f1b73f4fddaa3b16979ed825fcea",
+          "session_id": "QA_ONLY-5",
+          "status": "labeled",
+          "latency_ms": 610.4941009980394,
+          "created_at": "2026-10-10T22:49:34.876092"
+        }
+      ],
+      [
+        {
+          "id": 8,
+          "sample_id": 3,
+          "provider_host": "127.0.0.1",
+          "model": "QA_ONLY/alias",
+          "image_hash": "80c80dda2129acdcdae2cbd097943ba2681fa4bdd29783f8ad9cbda37546e0e5",
+          "session_id": "QA_ONLY-6",
+          "status": "timeout",
+          "latency_ms": null,
+          "created_at": "2026-10-10T22:49:34.400460"
+        }
+      ]
+    ]
+  },
+  "local_preflight_accounting": {
+    "response": {
+      "http": 200,
+      "body": {
+        "status": "done",
+        "provider_configured": true,
+        "labeled": 0,
+        "cached": 0,
+        "failed": 1,
+        "suppressed_budget": 0,
+        "attempts_made": 1,
+        "budget_remaining": 4
+      }
+    },
+    "actual_provider_posts": 0,
+    "budget_spent": 1
+  },
+  "two_async_event_loops": {
+    "statuses": [
+      "labeled",
+      "labeled"
+    ],
+    "actual_provider_posts": 2,
+    "provider_peak": 2
+  },
+  "trickle_deadline": {
+    "status": "timeout",
+    "seconds": 0.2031723449981655
+  },
+  "post_cancellation_reuse": "labeled",
+  "scoring_provenance": {
+    "status": "labeled",
+    "label": "occupied",
+    "confidence": 0.8,
+    "model": "QA_ONLY/scoring-alias",
+    "latency_ms": 20.442556000489276,
+    "provider_host": "127.0.0.1",
+    "detail": null,
+    "method": "chat_json",
+    "confidence_calibrated": false,
+    "raw": {
+      "method": "chat_json",
+      "configured_alias": "QA_ONLY/alias",
+      "response_model": "QA_ONLY/scoring-alias",
+      "usage": {
+        "total_tokens": 8
+      },
+      "content_preview": "{\"label\": \"occupied\", \"confidence\": 0.8}"
+    }
+  },
+  "malformed_content_confidence": [
+    "invalid_response",
+    "invalid_response",
+    "invalid_response",
+    "invalid_response",
+    "invalid_response",
+    "invalid_response"
+  ],
+  "malformed_model": {
+    "status": "labeled",
+    "label": "occupied",
+    "confidence": 0.8,
+    "model": {
+      "invalid": "object"
+    },
+    "latency_ms": 20.926384997437708,
+    "provider_host": "127.0.0.1",
+    "detail": null,
+    "method": "chat_json",
+    "confidence_calibrated": false,
+    "raw": {
+      "method": "chat_json",
+      "configured_alias": "QA_ONLY/alias",
+      "response_model": {
+        "invalid": "object"
+      },
+      "usage": null,
+      "content_preview": "{\"label\": \"occupied\", \"confidence\": 0.8}"
+    }
+  },
+  "malformed_model_API": {
+    "response": {
+      "http": 500,
+      "body": "Internal Server Error"
+    },
+    "actual_provider_posts": 1,
+    "audit": []
+  },
+  "one_video_arbitrary_sessions": {
+    "source_id": 1,
+    "counts": {
+      "train": 6,
+      "val": 2,
+      "test": 4
+    },
+    "group_split": {
+      "src:1|ses:caller-name-4": "test",
+      "src:1|ses:caller-name-3": "test",
+      "src:1|ses:caller-name-5": "val",
+      "src:1|ses:caller-name-2": "train",
+      "src:1|ses:caller-name-1": "train",
+      "src:1|ses:caller-name-0": "train"
+    },
+    "dataset_hash": "6e2102f56149adbdfc9a6aacbab97a6edddfeb181042581ee68dff770e929099",
+    "split_hash": "e1e134dfff6fceb020e5bf1dd3bd8a0bc4b2d7f83066e167bbed2a0d0078ea88"
+  }
+}

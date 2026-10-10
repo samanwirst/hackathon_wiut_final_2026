@@ -1,0 +1,209 @@
+{
+  "disclosure": "QA_ONLY deterministic actual-component harness; owned fetch fixtures only",
+  "label": {
+    "before": {
+      "selected": 2,
+      "task": 2,
+      "samples": [
+        20
+      ]
+    },
+    "after": {
+      "selected": 2,
+      "detailTask": 1,
+      "visibleReviewButtons": [
+        "A_yes",
+        "A_no"
+      ],
+      "shadow": null,
+      "classifyResult": null,
+      "error": null,
+      "visibleErrorBanner": []
+    },
+    "posts": [
+      {
+        "path": "/api/autolearn/tasks/1/label",
+        "search": ""
+      },
+      {
+        "path": "/api/autolearn/versions/101/activate",
+        "search": "",
+        "body": "{\"approve\":true,\"approver\":\"operator\"}"
+      }
+    ],
+    "getCalls": [
+      "/api/autolearn/tasks",
+      "/api/autolearn/status",
+      "/api/autolearn/tasks/1",
+      "/api/autolearn/tasks/1/samples",
+      "/api/autolearn/tasks/2",
+      "/api/autolearn/tasks/2/samples",
+      "/api/autolearn/tasks/1",
+      "/api/autolearn/tasks/1/samples",
+      "/api/autolearn/tasks/2",
+      "/api/autolearn/tasks/2/samples"
+    ]
+  },
+  "shadow": {
+    "before": {
+      "selected": 2,
+      "task": 2,
+      "samples": [
+        20
+      ]
+    },
+    "after": {
+      "selected": 2,
+      "detailTask": 2,
+      "visibleReviewButtons": [
+        "B_yes",
+        "B_no"
+      ],
+      "shadow": {
+        "version": 1,
+        "items": [
+          {
+            "task_id": 1,
+            "action": "none",
+            "teacher_label": "A_yes"
+          }
+        ]
+      },
+      "classifyResult": null,
+      "error": null,
+      "visibleErrorBanner": []
+    },
+    "posts": [],
+    "getCalls": [
+      "/api/autolearn/tasks",
+      "/api/autolearn/status",
+      "/api/autolearn/tasks/1",
+      "/api/autolearn/tasks/1/samples",
+      "/api/autolearn/tasks/1/shadow",
+      "/api/autolearn/tasks/2",
+      "/api/autolearn/tasks/2/samples"
+    ]
+  },
+  "classify": {
+    "before": {
+      "selected": 2,
+      "task": 2,
+      "samples": [
+        20
+      ]
+    },
+    "after": {
+      "selected": 2,
+      "detailTask": 2,
+      "visibleReviewButtons": [
+        "B_yes",
+        "B_no"
+      ],
+      "shadow": null,
+      "classifyResult": {
+        "task_id": 1,
+        "label": "A_yes",
+        "action": "none"
+      },
+      "error": null,
+      "visibleErrorBanner": []
+    },
+    "posts": [
+      {
+        "path": "/api/autolearn/tasks/1/classify",
+        "search": "",
+        "body": [
+          "file"
+        ]
+      }
+    ],
+    "getCalls": [
+      "/api/autolearn/tasks",
+      "/api/autolearn/status",
+      "/api/autolearn/tasks/1",
+      "/api/autolearn/tasks/1/samples",
+      "/api/autolearn/tasks/2",
+      "/api/autolearn/tasks/2/samples"
+    ]
+  },
+  "upload": {
+    "before": {
+      "selected": 2,
+      "task": 2,
+      "samples": [
+        20
+      ]
+    },
+    "after": {
+      "selected": 2,
+      "detailTask": 1,
+      "visibleReviewButtons": [
+        "A_yes",
+        "A_no"
+      ],
+      "shadow": null,
+      "classifyResult": null,
+      "error": null,
+      "visibleErrorBanner": []
+    },
+    "posts": [
+      {
+        "path": "/api/autolearn/tasks/1/images",
+        "search": "?session_id=QA_ONLY+real+upload+session&source_id=7",
+        "body": [
+          "file"
+        ]
+      }
+    ],
+    "getCalls": [
+      "/api/autolearn/tasks",
+      "/api/autolearn/status",
+      "/api/autolearn/tasks/1",
+      "/api/autolearn/tasks/1/samples",
+      "/api/autolearn/tasks/2",
+      "/api/autolearn/tasks/2/samples",
+      "/api/autolearn/tasks/1",
+      "/api/autolearn/tasks/1/samples"
+    ]
+  },
+  "upload_error": {
+    "before": {
+      "selected": 2,
+      "task": 2,
+      "samples": [
+        20
+      ]
+    },
+    "after": {
+      "selected": 2,
+      "detailTask": 2,
+      "visibleReviewButtons": [
+        "B_yes",
+        "B_no"
+      ],
+      "shadow": null,
+      "classifyResult": null,
+      "error": "Error: QA_ONLY upload rejected 413",
+      "visibleErrorBanner": [
+        "Error: QA_ONLY upload rejected 413Dismiss"
+      ]
+    },
+    "posts": [
+      {
+        "path": "/api/autolearn/tasks/1/images",
+        "search": "?session_id=QA_ONLY+real+upload+session&source_id=7",
+        "body": [
+          "file"
+        ]
+      }
+    ],
+    "getCalls": [
+      "/api/autolearn/tasks",
+      "/api/autolearn/status",
+      "/api/autolearn/tasks/1",
+      "/api/autolearn/tasks/1/samples",
+      "/api/autolearn/tasks/2",
+      "/api/autolearn/tasks/2/samples"
+    ]
+  }
+}

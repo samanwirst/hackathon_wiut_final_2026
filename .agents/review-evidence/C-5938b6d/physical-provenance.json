@@ -1,0 +1,106 @@
+{
+  "disclosure": "QA_ONLY one actual generated video; no quality claim",
+  "video_path": "/tmp/visionflow-c-qa-5938b6d/QA_ONLY-one-video.avi",
+  "video_sha256": "88e5aa3de4aee9c16ea2668be84ab7f4a019e0d52e9a141c20440d778d087ded",
+  "source_id": 1,
+  "decoded_frames": 12,
+  "counts": {
+    "train": 6,
+    "val": 2,
+    "test": 4
+  },
+  "group_split": {
+    "src:1|ses:arbitrary-3": "test",
+    "src:1|ses:arbitrary-2": "test",
+    "src:1|ses:arbitrary-0": "val",
+    "src:1|ses:arbitrary-5": "train",
+    "src:1|ses:arbitrary-4": "train",
+    "src:1|ses:arbitrary-1": "train"
+  },
+  "rows": [
+    {
+      "sample_id": 1,
+      "source_id": 1,
+      "session_id": "arbitrary-0",
+      "timestamp": 0.0,
+      "split": "val"
+    },
+    {
+      "sample_id": 2,
+      "source_id": 1,
+      "session_id": "arbitrary-0",
+      "timestamp": 0.5,
+      "split": "val"
+    },
+    {
+      "sample_id": 3,
+      "source_id": 1,
+      "session_id": "arbitrary-1",
+      "timestamp": 1.0,
+      "split": "train"
+    },
+    {
+      "sample_id": 4,
+      "source_id": 1,
+      "session_id": "arbitrary-1",
+      "timestamp": 1.5,
+      "split": "train"
+    },
+    {
+      "sample_id": 5,
+      "source_id": 1,
+      "session_id": "arbitrary-2",
+      "timestamp": 2.0,
+      "split": "test"
+    },
+    {
+      "sample_id": 6,
+      "source_id": 1,
+      "session_id": "arbitrary-2",
+      "timestamp": 2.5,
+      "split": "test"
+    },
+    {
+      "sample_id": 7,
+      "source_id": 1,
+      "session_id": "arbitrary-3",
+      "timestamp": 3.0,
+      "split": "test"
+    },
+    {
+      "sample_id": 8,
+      "source_id": 1,
+      "session_id": "arbitrary-3",
+      "timestamp": 3.5,
+      "split": "test"
+    },
+    {
+      "sample_id": 9,
+      "source_id": 1,
+      "session_id": "arbitrary-4",
+      "timestamp": 4.0,
+      "split": "train"
+    },
+    {
+      "sample_id": 10,
+      "source_id": 1,
+      "session_id": "arbitrary-4",
+      "timestamp": 4.5,
+      "split": "train"
+    },
+    {
+      "sample_id": 11,
+      "source_id": 1,
+      "session_id": "arbitrary-5",
+      "timestamp": 5.0,
+      "split": "train"
+    },
+    {
+      "sample_id": 12,
+      "source_id": 1,
+      "session_id": "arbitrary-5",
+      "timestamp": 5.5,
+      "split": "train"
+    }
+  ]
+}
