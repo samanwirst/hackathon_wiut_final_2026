@@ -1,109 +1,121 @@
 # HANDOFF — Workstream A (ten-hour, M2 defect resolution)
 
-- Milestone: M2 (visual workflow product) — historical workstream-A defects.
-- Base HEAD: `088b17aded860bd5d926600573184c883919d20e`
-- Implementation SHA (code + tests): `7d10e0d2024b6dfdfa54f4b2ec3d8d7c389d249b`
+- Milestone: M2 (visual workflow product) — remaining workstream-A P1 defects.
+- Prior reviewed SHA: `9d69f6891ebd514876f2b9bff0aa6ab041516c6d` (review verdict
+  CHANGES_REQUIRED; three reproducible P1s: M2-001, M2-003, M2-007).
+- Base before this pass: `9d69f68` (prior handoff of the earlier continuation).
+- Implementation SHA (code + tests): `f04c48d393d10fb4dc45ff5d65cfc316306d1aa4`
 - Branch: `experiment/m2-ten-hour`
-- Continuation: first Claude process hit its 1800s wallclock timeout at 22:02 UTC
-  with no commit; this is the authorized continuation that finished and committed
-  its preserved partial work. Not a historical exception or acceptance override.
+- This is the authorized ONE final focused pass against the fresh independent
+  review `M2-TEN-HOUR-INITIAL.md`. Not an acceptance override.
 
-## Scope (8 files)
+## Findings addressed (from M2-TEN-HOUR-INITIAL.md)
+
+- **M2-001 (P1)** — unsupported command meaning silently discarded.
+- **M2-003 (P1)** — real blocking transport exceeds the absolute deadline.
+- **M2-007 (P1)** — disable acknowledges before an unsent POST starts.
+- M2-008 strict confidence: PRESERVED (untouched, still passing).
+- M2-009 (P2 bounded-cache): DEFERRED with documented risk (unchanged), as
+  authorised by the review and task scope.
+
+## Scope (changed files)
 
 Source:
-- `services/api/app/nl_compiler.py` — M2-001 grammar completeness.
-- `services/api/app/teacher.py` — M2-003 transport, M2-008 preserved.
-- `services/api/app/vlm_router.py` — M2-007 admission boundary.
+- `services/api/app/nl_compiler.py` — M2-001 grammar-first rewrite.
+- `services/api/app/teacher.py` — M2-003/M2-007 owned raw-socket transport.
+- `services/api/app/vlm_router.py` — M2-007 send-coupled admission guard.
 
-Tests (regressions preserved with behavioral intent, not vacuous seam tests):
-- `tests/unit/test_nl_compiler.py`
-- `tests/unit/test_teacher.py`
-- `tests/unit/test_transport.py`
-- `tests/unit/test_vlm_router.py`
-- `tests/integration/test_m2_visual.py`
+Tests (added):
+- `tests/unit/test_transport_realtcp.py` — real loopback-TCP regressions for
+  M2-003/M2-007 (no MockTransport, no moved pause).
+
+Existing unit/integration tests unchanged and still pass.
 
 ## What was implemented
 
 ### M2-001 — complete supported grammar (nl_compiler.py)
-- Reject imperative part actuation ("open its hood", "pop the trunk",
-  "close the door") via `_PART_ACTUATION`; distinguished from the state
-  condition "hood open" by the determiner. Not downgraded to a notification.
-- Tighten visual-condition matching: `_COND_GAP` whitelists only small
-  scaffolding words between a part and its state, so clauses that smuggle
-  unsupported semantics ("hood emitting smoke and open") are rejected rather
-  than silently reduced by a greedy `.*`.
-- Reject fractional object counts ("more than 5.5 cars") instead of truncating.
-- Reject a duration on a non-dwell trigger ("enters ... for 5 minutes",
-  "count ... for 10 min") and reject multiple ambiguous durations ("5 or 10
-  minutes"); intent is never dropped — the request is rejected with a reason.
-- Negation / unsupported comparisons / multiple-or-unrecognised conditions
-  remain rejected (unchanged behaviour retained).
+Replaced the "patch another blacklist" approach with clause-positional parsing:
+- `_split_action` separates the trigger/condition clause from the action clause
+  (the only supported action is an in-app alert/notification). Visual conditions,
+  durations and counts are now recognised ONLY in the trigger clause, so
+  "create an alert for 5 minutes" no longer donates "5 minutes" to a dwell rule,
+  and content attached to the action clause is rejected.
+- Visual conditions are **part-first** ("hood open", "hood is open", "lights on").
+  The verb-first form ("open hood") is an **actuation** handled by
+  `_PART_ACTUATION` (determiner now optional) and rejected — so "then open hood"
+  is rejected as an unsupported action instead of being read as a condition.
+- Every part+state clause is counted via `_COND_CANDIDATE`; **more than one**
+  condition ("hood open and trunk up") is rejected rather than keeping only the
+  first and dropping the rest. A single unsupported candidate is also rejected.
+- Durations are **anchored**: `_BAD_DURATION` rejects ".5 minutes" (leading-dot)
+  and "-5 minutes" (negative); a well-formed "2.5 minutes" still parses. Multiple
+  durations and **multiple count comparisons** ("more than 3 or more than 5")
+  are rejected (the latter fixes the accidental "3 or more" → threshold 2 match).
+- The residual-token backstop runs on the trigger clause so no stray token
+  survives. Narrow supported wording is documented in the module docstring and
+  inline; simple geometric and explicitly-supported visual rules are preserved.
 
-### M2-003 — cancellable actual transport / fixed deadline / admission (teacher.py)
-- Removed the abandoned-daemon-worker + reaper + slot-defer design. Replaced
-  with an owned, in-thread cancellable `httpx.Client.stream` body read. The
-  wall-clock `deadline` is checked after response headers and between every
-  chunk; on expiry the `with` block closes the response/connection, so the
-  request is truly cancelled — no background worker survives.
-- `max_response_bytes` (default 2 MiB; `get_teacher` reads optional
-  `VLM_MAX_RESPONSE_BYTES` via getattr, no required config change) caps body
-  accumulation so an endless/trickling stream cannot grow unboundedly.
-- The concurrency permit is always released in `finally` once the (possibly
-  cancelled) request returns, so slot capacity is never held while an
-  underlying request is active. `_ConcurrencySlot.deferred` retained as a
-  constant `False` for call-site compatibility.
-- Trickling/stall/cancel are exercised over an injected `httpx.MockTransport`
-  (`_transport` seam) driving the real streaming/body-read/cancel path; no
-  discarded fake-worker result.
+### M2-003 / M2-007 — owned cancellable transport (teacher.py)
+Production path (`self._transport is None`) now uses an owned raw-socket HTTP/1.1
+client (`_post_raw_socket` + `_recv_http_response` + `_read_chunked`):
+- M2-003: connect, send, and every header/body `recv` are bounded by the
+  remaining wall-clock budget; on expiry the socket is actually closed in
+  `finally` and a `timeout` result is returned. A header byte-trickle, a
+  header-then-body-stall, a slow admit and a slow connect are all cut near the
+  deadline instead of running the full slow transfer. `max_response_bytes` still
+  caps body accumulation (incl. chunked).
+- M2-007: the connection is opened OUTSIDE the router dispatch lock (so a slow
+  connect never blocks a disable); the actual `sock.sendall` is passed to the
+  router guard and executed WHILE the `dispatch_admission_lock` is held, after an
+  authoritative `admit()` recheck and a final deadline recheck. A disable that
+  returned 200 therefore guarantees no POST is ever written; a disable landing
+  during connect revokes the unsent attempt (`cancelled`, 0 outbound). The lock
+  is released before the response is read (never held across inference). Budget /
+  outbound-attempt accounting is consumed only on an actual send.
+- `vlm_router._attempt_guard(remaining, send=None)` performs admit-recheck +
+  send + budget grant atomically under the lock; the budget is granted only after
+  a successful send.
+- The `httpx.MockTransport` path (`_post_via_httpx`) is retained unchanged for the
+  response-validation / byte-cap unit tests.
 
-### M2-007 — disable ACK coupled to actual new HTTP request start (vlm_router.py)
-- The approval recheck AND the budget grant occur under
-  `dispatch_admission_lock` inside `_attempt_guard`, which the adapter calls
-  immediately before opening the connection. A disable that committed and
-  returned 200 is serialized against this boundary, so no new Teacher POST can
-  start after a successful disable, including the paused-post-boundary race.
-- Admission is bounded by remaining wall-clock budget: `_attempt_guard(remaining)`
-  acquires the lock with a timeout; if contention holds it past the deadline the
-  attempt is denied WITHOUT sending (raised as `_AttemptNotAdmitted`), rather
-  than blocking and then posting late. The lock is never held across inference.
-- The integration race test hook pauses at the ACTUAL send-boundary admission
-  (the second `_workflow_enabled` read, held under the lock), not an earlier
-  admission flag.
-
-### M2-008 — strict confidence validation (preserved)
-- Boolean confidence still cannot authorize an action across
-  provider -> router -> event -> local action (`test_boolean_confidence_cannot_fire_action`).
-
-Preserved from prior architecture (unchanged): event selectivity, zero Teacher
-geometric calls, shared per-task budgets, caching, security, provider-failure
-handling, no exactly-once delivery claim.
-
-## Commands run and actual results
-- `git diff` (all 8 scoped files) — reviewed; changes coherent and consistent.
-- Static checks: no stray references to removed `defer`/`_deferred`/`_reap`/`box`
-  APIs; single `_post_with_deadline` caller; `on_attempt` only ever called with a
-  positional `remaining`; `VLM_MAX_RESPONSE_BYTES` guarded by getattr fallback.
-- Root (after the timeout) ran the four changed unit files
-  `test_nl_compiler.py test_teacher.py test_transport.py test_vlm_router.py`:
-  **92 passed in 3.34s** (root `.agents/runtime/ten-hour/A/stopped-pass-targeted-tests.txt`).
-  This is ROOT's result, cited — not re-run by this continuation.
+## Commands run and ACTUAL results
+- Repro (pre-fix, frozen behaviour) via direct `compile_text` and the six
+  reviewer texts: all six returned ok=true drafts — confirmed the defect.
+- `pytest tests/unit/test_nl_compiler.py` → **44 passed**.
+- `pytest tests/unit/test_teacher.py tests/unit/test_transport.py tests/unit/test_vlm_router.py`
+  → **48 passed** (MockTransport path intact).
+- `pytest tests/unit/test_transport_realtcp.py` → **8 passed** (real loopback TCP:
+  fast-confirm control, slow-header trickle bounded <0.45s, header-then-stall
+  bounded, capacity freed after cancel, slow-admit no late POST, slow-connect no
+  late POST, disable-during-connect revokes with 0 outbound, 503→200 retry
+  consumes budget and confirms).
+- `pytest tests/` (full) → **179 passed, 4 warnings** in ~25s. (Warnings are the
+  pre-existing simulated-crash resource/thread warnings in
+  `tests/integration/test_m1_fixes.py`.)
+- API-layer verification via `TestClient`: the six reviewer compile texts each
+  return `ok=false, draft=None`; the control "…with hood open, create an alert"
+  still compiles with a visual predicate.
 
 ## Known limitations / honest notes
-- This continuation could NOT execute pytest or any Python itself: the Bash
-  permission mode denied all `pytest`/`python` invocations. The integration file
-  `tests/integration/test_m2_visual.py` was therefore NOT run in this session;
-  its changes are mechanical transport-seam swaps (httpx.post monkeypatch ->
-  `_transport` MockTransport) mirroring the already-passing unit transport tests.
-  Root should run the full targeted integration/regression suite to confirm.
-- No frontend build / full YOLO smoke was run here (root runs these independently).
-- Real Teacher semantic quality / foveated savings remain UNVERIFIED (mock
-  transport only; no live VLM). No exactly-once delivery is claimed.
-- No push performed. No other worktrees / protected fallback / old M2
-  reports/state/handoff / M1 engines touched.
+- The `on_attempt` guard contract changed to couple the send
+  (`on_attempt(remaining, send=...)`) so admission and the actual write are one
+  boundary (M2-007). The reviewer's ORIGINAL probes used the prior
+  `on_attempt(remaining)` bool contract and patched `httpx.Client`/`socket`; the
+  new real-TCP regressions reproduce the same scenarios under the new contract
+  over genuine loopback TCP. The behaviours (no late POST, disable revokes unsent
+  attempt, deadline-bounded receipt) are verified, not the verbatim old scripts.
+- The raw-socket transport runs synchronously in the calling worker thread; it is
+  not invoked from an asyncio event loop (the pipeline is sync). No background
+  worker survives a cancelled request.
+- Real Teacher semantic quality / live VLM / GPU / foveated savings remain
+  UNVERIFIED (owned loopback fixtures only; labels are not model-quality evidence).
+- M2-009 bounded-cache P2 deferred (documented risk), per scope.
+- No frontend build / YOLO smoke run here — root runs `make check`/`make smoke`
+  and ONE fresh review at the exact commit. No push performed. No other
+  worktrees / protected fallback / old reviews / state / M1 touched.
 
 ## Questions for Codex
-- Confirm the in-thread `client.stream` cancel closes the generator's `finally`
-  synchronously on all supported httpx versions (the `peak == 1` invariant in
-  `test_timeout_cancels_transport_and_never_overlaps` depends on it).
-- Confirm the admission-lock `acquire(timeout=remaining)` deadline bound is the
-  desired behaviour vs. a hard pre-lock deadline check only.
+- Confirm the raw-socket deadline bounds (connect/send/recv) and socket close on
+  expiry are acceptable as the "genuinely owned cancellable transport".
+- Confirm the send-coupled `_attempt_guard` (lock held across connect's successor
+  write, released before response read) satisfies the disable→provider boundary.
