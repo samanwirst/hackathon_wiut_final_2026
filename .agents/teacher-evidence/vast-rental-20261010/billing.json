@@ -1,0 +1,52 @@
+{
+  "owned_instance_id": 55296142,
+  "checked_utc": "2026-10-10T22:59:29.976793+00:00",
+  "provider_endpoint": "Vast per-instance charges",
+  "provider_response_success": true,
+  "owned_charge_rows": [
+    {
+      "start": 1791590400,
+      "end": 1791590400,
+      "type": "instance",
+      "source": "instance-55296142",
+      "amount": 0.001,
+      "items": [
+        {
+          "start": 1791590400,
+          "end": 1791590400,
+          "type": "gpu",
+          "source": null,
+          "description": "GPU",
+          "amount": 0.0
+        },
+        {
+          "start": 1791590400,
+          "end": 1791590400,
+          "type": "disk",
+          "source": null,
+          "description": "0.065 hours at $0.009/hour",
+          "amount": 0.001
+        },
+        {
+          "start": 1791590400,
+          "end": 1791590400,
+          "type": "bwd",
+          "source": null,
+          "description": "Bandwidth (download)",
+          "amount": 0.0
+        },
+        {
+          "start": 1791590400,
+          "end": 1791590400,
+          "type": "bwu",
+          "source": null,
+          "description": "Bandwidth (upload)",
+          "amount": 0.0
+        }
+      ]
+    }
+  ],
+  "provider_total_amount_rounding_decimals": 3,
+  "finalized_invoice_verified": false,
+  "credential_printed": false
+}
