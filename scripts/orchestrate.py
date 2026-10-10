@@ -20,9 +20,9 @@ import time
 MILESTONES = ("M1", "M2", "M3", "M4")
 TASKS = {
     "M1": "Real MP4 -> YOLO tracking -> polygon temporal rules -> persisted events, evidence and real notification. Fix correctness/security defects; do not fake inference.",
-    "M2": "Usable NL-to-strict-JSON workflow drafts, reject unsupported/ambiguous instructions, editable explicit confirmation and enable/disable, dashboard/timeline, local mock CRM action, webhook SSRF protections and API/UI consistency. A disclosed deterministic compiler is acceptable without API credentials. No arbitrary generated code. Preserve real pipeline.",
-    "M3": "Working AutoLearn: session-traceable diverse samples, teacher candidate labels or disclosed manual labeling with UI review, frozen pretrained embeddings, actual small student fitting/save/load, held-out SESSION split and computed metrics/latency, executable shadow comparison that cannot execute actions, explicit quality-gated activation, teacher/manual fallback and rollback. No fabricated teacher calls. Provide a small reproducible real training demo. Keep ML jobs sequential and memory bounded.",
-    "M4": "Delivery: reliable startup, practical Docker config, full check/smoke commands, unseen/held-out-video real inference smoke, measured metrics with sample sizes/limits, licensed consent-safe demo data, source/evidence cleanup, privacy/auth boundaries, deployment readiness, honest README and demo, 3-month pilot/business model, seven-minute pitch outline. Public deployment REQUIRES human approval; prepare artifacts only. Optional robot unavailable, never operate hardware. Do not claim untested robustness or fake metrics.",
+    "M2": "Satisfy PRD M2-AC1 through M2-AC5: usable strict NL workflow drafts with rejection, editing and manual approval; preserve cheap real detector/tracker/temporal rules. Add candidate-event-triggered VLM reasoning on selected frames/object ROIs, a real configurable Teacher adapter, strict response validation and explicit unknown/error states. Geometric rules make zero VLM calls. Implement configurable sampling/cooldowns/budgets, in-flight dedupe, bounded versioned caching/invalidation and actual routing/usage/timing counters. Test API/UI and authorization/SSRF boundaries. A disclosed deterministic NL compiler is acceptable without text-model credentials; mocked Teacher tests do not verify real visual inference. No generated code execution or per-frame VLM loop. Missing provider access is a documented blocker, never fabricated success.",
+    "M3": "Satisfy PRD M3-AC1 through M3-AC6: real Teacher labels -> human-verified traceable diverse dataset -> frozen pretrained embeddings -> genuinely fitted lightweight Student with saved/reloaded artifacts. Session-disjoint train/validation/held-out splits must prevent adjacent-frame/near-duplicate leakage. Compute held-out metrics/counts/coverage/latency, not constants. Shadow compares real Teacher/Student without actions; activation needs a predefined quality gate and explicit approval. Test budgeted Teacher fallback, previous-version rollback and restart persistence. Manual-only labeling is a disclosed development fallback, not verification of the Teacher stage. Provide a small reproducible training demo; sequential memory-bounded ML. Never train on unverified Student labels.",
+    "M4": "Satisfy PRD M4-AC1 through M4-AC4: reproducible paired baseline VLM-per-sampled-frame, event-routed/cached Teacher, and Student/hybrid experiments on the same held-out task/inputs. Preserve raw measured calls/usage/timings/predictions/config/hashes; compare quality, p50/p95 latency, cache/fallback coverage, cold/warm conditions and sample counts. Cost must derive from actual usage with dated cited rates/bill; keep local compute/training distinct. NEVER claim savings percentages without comparable positive measured baselines; missing real-provider runs remain NOT TESTED. Reliable startup/Docker/check/smoke, unseen-video real inference/actions/evidence, consent-safe licensed data, privacy/auth, honest README/metrics/deck, 3-month pilot and 7-minute pitch. Public deployment REQUIRES human approval; prepare artifacts only. No robot hardware operation or fabricated robustness.",
 }
 REVIEW_SCHEMA = {
     "type": "object", "additionalProperties": False,
@@ -108,6 +108,13 @@ class Controller:
         if self.git("status", "--porcelain", cwd=cwd):
             raise Blocked("Working tree is dirty; preserve changes and inspect before resume")
 
+    def fix_limit(self):
+        # An explicit operator exception grants one extra M1 pass only.
+        # It never resets the persisted counter or changes M2-M4 limits.
+        return self.args.max_fix_cycles + int(
+            self.args.exceptional_m1_recovery and self.state.get("milestone") == "M1"
+        )
+
     def checkpoint(self, **values):
         self.state.update(values)
         self.state["updated_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
@@ -127,6 +134,14 @@ class Controller:
         if time.monotonic() - self.started + self.state.get("elapsed_seconds", 0) > self.args.total_timeout:
             raise Blocked("Configured total time limit reached")
         if agent:
+            if (self.args.exceptional_m1_recovery and self.state.get("milestone") == "M1"
+                    and self.state.get("fix_cycles") == 3):
+                role = "implementation" if label == "M1-fix" else "review"
+                attempted = dict(self.state.get("exceptional_m1_calls", {}))
+                if attempted.get(role):
+                    raise Blocked(f"Exceptional M1 {role} was already launched; no additional agent call authorized")
+                attempted[role] = True
+                self.checkpoint(exceptional_m1_calls=attempted)
             if self.state.get("agent_calls", 0) >= self.args.max_agent_calls:
                 raise Blocked("Configured agent-call limit reached")
             self.checkpoint(agent_calls=self.state.get("agent_calls", 0) + 1)
@@ -170,7 +185,9 @@ class Controller:
                                                       "seconds": time.monotonic() - begin, "usage": usage})
         if self.child.returncode:
             kind = classify_failure(stdout + stderr)
-            if kind == "transient" and agent and retry < self.args.transient_retries:
+            if (kind == "transient" and agent and retry < self.args.transient_retries
+                    and not (self.args.exceptional_m1_recovery and self.state.get("milestone") == "M1"
+                             and self.state.get("fix_cycles") == 3)):
                 self.clean(cwd)
                 if self.git("rev-parse", "HEAD", cwd=cwd) == initial_head:
                     time.sleep(min(2 ** retry, 10))
@@ -246,10 +263,19 @@ class Controller:
         findings = ""
         if fix:
             findings = json.dumps(self.state.get("review", {}).get("findings", []), indent=2)
+            if milestone == "M1" and self.args.exceptional_m1_recovery and self.state["fix_cycles"] == 3:
+                findings = json.dumps([f for f in self.state.get("review", {}).get("findings", [])
+                                       if f["severity"] in ("P0", "P1")], indent=2)
+                findings += """\nThis is the ONE exceptional narrowly scoped M1 recovery pass authorized by the operator. Address only M1-010, M1-011, M1-012, M1-013 and their regressions. Read .agents/reviews/M1.md for exact reproductions. Original executable defect reproductions are /tmp/visionflow-m1-cc59523-QS9GQO/test_focused.py (assertions demonstrate bugs; convert to desired regressions).
+M1-010: pause dispatch after event commit; API disable returns enabled=false; then release. Serialize disable and authoritative dispatch admission; cancellation must be explicit. Test the actual race.
+M1-011: receiver returns 200, crash before DB action commit, then recovery/reprocess delivers twice. Prefer simplifying nonessential external integrations. Persist dispatch intent before any external side effect; possibly-delivered interrupted attempts must not blindly replay. Use stable idempotency keys only where receiver enforces them; do not claim generic exactly-once delivery.
+M1-012: allowlisted hostname resolves public during preflight, loopback for HTTPX. Prefer disabling arbitrary outbound webhooks cleanly rather than introducing a risky custom TLS/DNS transport. Retain the working local notification/mock CRM action; reject unavailable external actions visibly and ensure persisted legacy workflows cannot bypass the restriction. Update API/UI/docs/tests honestly if webhook support is removed. No network lookup or delivery may occur for a disabled feature.
+M1-013: 60-frame MP4 -> ffmpeg copy +faststart -> truncate bytes to 65% -> upload/process silently reports processed after only 7/10 samples. Reject input or expose visible failed/partial decode using actual decoded progress versus reliable metadata with tolerance. Test valid videos still complete and real smoke passes.
+Add meaningful regressions for all four reported defects, run full checks/frontend build/real YOLO smoke, and commit exact handoff. No M2/M3/M4 implementation, no P2-only changes in this pass. If safe external action support is infeasible, remove that capability explicitly rather than pretending it is secure.\n"""
             if self.state.get("test_failure"):
                 findings += "\nTest failure: " + self.state["test_failure"]
         prompt = f"""You are the sole VisionFlow implementation agent. Human explicitly authorized the autonomous goal; complete ONLY {milestone} and stop after committed handoff. Do not spawn agents or invoke Claude/Codex recursively. Do not edit scripts/orchestrate.py or tests/orchestrator, review reports, or official source brief. Preserve unrelated files and API contracts. No public deployment, hardware, purchases, secret reads, force push, reset, or main merges. Controller handles pushes and review reports.
-Read CLAUDE.md, docs/source/README.md, relevant docs/PRD.md requirements, .agents/STATE.md and handoff; use focused reads thereafter. The goal's orchestration overrides manual milestone waiting: finish your assigned milestone then return.
+Read CLAUDE.md, docs/source/README.md, relevant docs/PRD.md requirements including the assigned milestone's section 16 acceptance criteria, docs/VISUAL_ANALYTICS_AUDIT.md, .agents/STATE.md and handoff; use focused reads thereafter. The goal's orchestration overrides manual milestone waiting: finish your assigned milestone then return.
 Task: {TASKS[milestone]}
 {'FIX only these P0/P1 or failing-test defects first:' if fix else 'Implement the missing requirements; preserve useful existing implementation.'}
 {findings}
@@ -296,7 +322,7 @@ Run meaningful tests, record actual results/limitations, update docs/TRACEABILIT
             result = self.run(["make", "check"], f"{self.state['milestone']}-check", timeout=self.args.test_timeout)
             result += self.run(["make", "smoke"], f"{self.state['milestone']}-smoke", timeout=self.args.test_timeout)
         except Blocked as exc:
-            if self.state["fix_cycles"] >= self.args.max_fix_cycles:
+            if self.state["fix_cycles"] >= self.fix_limit():
                 raise
             self.checkpoint(phase="FIX", before_sha=self.state["target_sha"],
                             fix_cycles=self.state["fix_cycles"] + 1, test_failure=str(exc))
@@ -328,6 +354,7 @@ Human explicitly requested this milestone review through the deterministic orche
 Read brief docs/source/README.md, relevant PRD/TRACEABILITY/protocol and handoff once. Inspect changed files first. Run existing automated tests plus focused integration/security reproductions. Installed dependencies linked into worktree; editable vision package must resolve to this worktree using PYTHONPATH=packages/vision:services/api. Do not rerun expensive smoke just to repeat this controller evidence unless needed:
 {self.state.get('test_evidence', '')[-7000:]}
 Required scope: {TASKS[milestone]}
+For the exceptional M1 recovery, verify all four prior P1 reproductions and intentional feature simplification. Explicitly unavailable outbound webhooks may be rejected; verify zero egress and safe local actions, rather than requiring arbitrary webhook support. No M2-M4 feature implementation is required for M1 acceptance. In this restricted review sandbox, TestClient startup previously stalled in an asyncio selector wait. If reproduced, a disclosed temporary test-runner-only 10 ms asyncio heartbeat can unblock the unchanged suite; never alter production code or disguise the workaround.
 Verify real functionality and approval boundaries, unsupported input rejection, state transitions/idempotency, SSRF, shadow/activation/rollback where relevant. At most five high-value findings unless more P0/P1 defects. PASS may contain P2/P3 risks; unresolved P0/P1 => CHANGES_REQUIRED. Genuine untestable required behavior => BLOCKED; explicitly document optional/cloud/hardware NOT TESTED without fabricating outcomes.
 Final JSON conforms to supplied schema. Markdown uses AGENTS.md consolidated review structure and MUST contain literal lines VERDICT: <verdict> and TARGET_SHA: {sha}. Include exact base, commands actually executed, tests/results, verified/unverified behaviors, numbered findings severity/file:line/repro/expected/actual/minimal fix, acceptance criteria and recommendation. Explain limitations. Report reviewed SHA, never a different commit.
 """
@@ -375,8 +402,8 @@ Final JSON conforms to supplied schema. Markdown uses AGENTS.md consolidated rev
         if review["verdict"] == "BLOCKED":
             raise Blocked("Independent reviewer blocked acceptance; inspect report")
         if review["verdict"] == "CHANGES_REQUIRED":
-            if self.state["fix_cycles"] >= self.args.max_fix_cycles:
-                raise Blocked("Two fix cycles exhausted; unresolved reviewer defects")
+            if self.state["fix_cycles"] >= self.fix_limit():
+                raise Blocked(f"{self.fix_limit()} fix cycles exhausted; unresolved reviewer defects")
             self.checkpoint(phase="FIX", fix_cycles=self.state["fix_cycles"] + 1,
                             review_attempt=self.state["review_attempt"] + 1, before_sha=self.state["target_sha"])
             return
@@ -480,6 +507,8 @@ def parser():
     p.add_argument("--max-agent-calls", type=int, default=20)
     p.add_argument("--transient-retries", type=int, choices=(0, 1, 2), default=1)
     p.add_argument("--max-fix-cycles", type=int, choices=(0, 1, 2), default=2)
+    p.add_argument("--exceptional-m1-recovery", action="store_true",
+                   help="Operator-authorized ONE extra M1 fix/review cycle; preserves counters and all other milestone limits")
     p.add_argument("--claude-budget", type=float, default=None, help="Optional per-call CLI USD cap; never enables new paid services")
     return p
 
@@ -494,6 +523,7 @@ def main(argv=None):
         print(json.dumps({"milestones": MILESTONES[MILESTONES.index(args.start):MILESTONES.index(args.end)+1],
                           "phases": "IMPLEMENT -> TEST -> REVIEW -> FIX -> RETEST -> REVIEW -> ACCEPT -> NEXT",
                           "limits": {k: getattr(args, k) for k in ("agent_timeout", "review_timeout", "max_fix_cycles", "max_agent_calls", "total_timeout")},
+                          "exceptional_m1_recovery": args.exceptional_m1_recovery,
                           "push": not args.no_push}, indent=2))
         return 0
     runtime = Path(args.repo).resolve() / ".agents/runtime"

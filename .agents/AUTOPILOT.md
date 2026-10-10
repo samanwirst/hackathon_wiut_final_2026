@@ -38,7 +38,16 @@ or changed SHAs stop execution, preserving changes for inspection.
 Defaults: 30 minutes implementation, 20 minutes review, 15 minutes test gate,
 six hours total, 20 agent calls, two fix cycles (three reviews) per milestone,
 and one retry for transient CLI failures only when HEAD/tree is unchanged.
-Each limit is configurable via `--help`; fix cycles cannot exceed two.
+Each limit is configurable via `--help`; ordinary fix cycles cannot exceed two.
+The operator authorized one exceptional M1 recovery on 2026-10-10:
+`python3 scripts/orchestrate.py --resume --exceptional-m1-recovery`.
+This raises only M1's limit to three, preserves its existing two attempts,
+and permits one focused fix followed by one fresh review. A failed check or
+remaining P0/P1 stops again; repeated resume cannot grant further attempts.
+M2–M4 retain the normal two-cycle limit. This flag requires explicit operator
+authorization; it is not an automatic retry policy.
+Exceptional implementation/review calls are individually persisted and are
+never automatically retried, including timeout/transient failures.
 Authentication, quota, dependency, deterministic test and compute failures
 are recorded, never blindly retried. Failed tests enter bounded FIX; an
 authentication/compute blocker requires operator recovery. Optional

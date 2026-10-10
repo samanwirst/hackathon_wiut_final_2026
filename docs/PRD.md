@@ -1,12 +1,12 @@
 # VisionFlow AI — Product & Technical Requirements
 
-**Version:** 1.0  
+**Version:** 1.1
 **Project type:** Automotive Computer Vision / Visual AI Agents  
 **Duration:** 24-hour hackathon  
 **Team:** 3 students  
 **Primary vertical:** Automotive service operations  
 **Product inspiration:** OpenVector  
-**Differentiator:** AutoLearn — automatic specialization for recurring visual tasks
+**Differentiator:** Cost-efficient visual analytics and AutoLearn specialization
 
 ## 1. Mission
 
@@ -15,6 +15,13 @@ Build a deployed, working visual AI automation platform that allows a user to co
 The platform must additionally demonstrate how a frequently repeated visual task can be transferred from a general-purpose Vision-Language Model (Teacher) to a smaller specialized model (Student), subject to validation and human approval.
 
 The GVERA robot is an optional physical output device, not a dependency of the core product.
+
+The primary innovation is an OpenVector-inspired inference hierarchy:
+cheap continuous detection/tracking and temporal rules → event-selected
+frames/ROIs → deduplicated, budgeted Teacher VLM requests → verified labels
+→ frozen embeddings and a lightweight Student. Detection-only dashboards
+do not satisfy this architectural requirement. Savings are an experimental
+question; never claim a percentage without measured comparable runs.
 
 ## 2. Hackathon alignment
 
@@ -65,12 +72,15 @@ Expected deliverables, subject to verification against the original Final Task:
 
 1. Identify recurring visual classification tasks.
 2. Collect representative, non-duplicate image examples.
-3. Use a Teacher VLM to propose labels, or explicitly fall back to manual labeling.
+3. Use a real Teacher VLM to propose labels and preserve their provenance.
+   Manual labeling is a disclosed development fallback; it does not verify
+   the teacher-label stage or satisfy the full AutoLearn acceptance gate.
 4. Provide a UI for correcting labels.
 5. Extract visual embeddings using a pretrained model.
 6. Train a small Student classifier on those embeddings.
 7. Evaluate Student on held-out video sessions.
-8. Compare Teacher and Student by accuracy, latency, and estimated cost.
+8. Compare baseline VLM, event-routed Teacher, and approved Student pipelines
+   using measured quality, latency, usage, and documented cost calculations.
 9. Run Student in shadow mode before activation.
 10. Activate only after explicit approval and a passed quality gate.
 11. Support fallback to Teacher and model rollback.
@@ -162,11 +172,35 @@ Initially, a Teacher VLM helps classify selected images. The platform then colle
 
 Pipeline:
 
-Camera/Video → Frame Sampling → Object Detection → Tracking → Zone Logic → Temporal Event Engine → Workflow Engine → Authorized Action → Evidence & Event History.
+Camera/Video → Configured Frame Sampling → Cheap Object Detection + Tracking
+→ Zone/Temporal Rules → Candidate Event → Validated Workflow → Authorized
+Action → Evidence & Event History.
 
 For visual tasks that cannot be resolved by object detection alone:
 
-Camera/Video → Selected Frame/ROI → Teacher VLM or Approved Student → Temporal Event Engine.
+Candidate Event → Selected Frame/Object ROI → Deduplication + Versioned Cache
+→ Approved Student or Budgeted Teacher VLM → Strict Visual Result Validation
+→ Confirmed Event → Authorized Action.
+
+The cheap pipeline remains the continuous path. Expensive VLM calls occur
+only for supported visual predicates on eligible candidate events or
+explicit AutoLearn labeling requests, never as an unconditional per-frame
+processing step. A separate, explicit benchmark mode may call the VLM on
+every frame at a documented sampling rate to measure the baseline.
+
+The router must enforce configurable per-task/source sampling intervals,
+in-flight deduplication, cooldowns, and request limits. Its decision records
+must expose sampled candidates, suppressed duplicates, cache hits/misses,
+actual Teacher calls, Student decisions, fallback reasons, and unknown/error
+results. A provider timeout, invalid response, exhausted budget, or missing
+credential cannot be converted to a positive visual condition.
+
+Cache keys include the visual task/prompt, model and preprocessing versions,
+image/ROI identity, and applicable scope. TTL/invalidation and bounded
+storage must prevent stale reuse after task/model changes; near-duplicate
+suppression is distinct from asserting that two images have equal labels.
+Cache entries are never treated as newly verified training labels. ROI
+selection and cloud transmission must be disclosed and consented.
 
 The frontend must not contain authoritative business logic. All event decisions and actions are validated server-side.
 
@@ -417,11 +451,93 @@ Where the sample size is small, state that results are preliminary.
 2. A Student model is genuinely fitted and saved.
 3. Held-out evaluation runs.
 4. Metrics are displayed.
-5. Shadow mode compares Teacher and Student.
+5. Shadow mode compares real Teacher and Student outputs without actions.
 6. Activation is gated.
 7. Rollback works.
 
 A decorative progress bar or hardcoded Student predictions do not count as AutoLearn.
+
+### M2 — Event-routed visual reasoning and workflow product
+
+- **M2-AC1:** Natural language compiles to a strict editable DSL. Unsupported
+  or ambiguous requests are rejected; drafts remain disabled until explicit
+  validation and approval. Generated code is never executed.
+- **M2-AC2:** The real detector/tracker and temporal rules remain the cheap
+  continuous path. A supported visual predicate selects a timestamped frame
+  or object ROI only after an eligible candidate event. Ordinary geometric
+  rules make zero Teacher calls. API and UI expose the visual predicate and
+  its routing settings consistently.
+- **M2-AC3:** A real image-capable Teacher adapter returns a validated label,
+  confidence/unknown result, model/version, timing, and actual usage where
+  exposed. Timeout, invalid response, missing credentials, or request-budget
+  exhaustion remain visible and cannot trigger a confirmed visual action.
+  Stub adapter tests alone do not verify real Teacher operation.
+- **M2-AC4:** Configurable sampling, per-task/source budgets, cooldowns,
+  in-flight deduplication, and a bounded versioned cache are exercised.
+  Tests prove repeated candidates suppress unnecessary calls, changed
+  task/model/ROI inputs invalidate reuse, and action deduplication remains
+  correct. No ordinary processing loop calls the VLM on every frame.
+- **M2-AC5:** Events expose evidence and routing provenance; counters reflect
+  actual calls, hits, misses, suppressed requests, and failures. Webhooks,
+  enable/disable, and provider-bound data retain their authorization and
+  privacy boundaries. The new-user workflow runs without source edits.
+
+### M3 — Verified teacher-to-student AutoLearn
+
+- **M3-AC1:** A real Teacher labels selected examples; a user reviews/corrects
+  them before training. Each sample stores task, image/ROI reference or hash,
+  source/session/timestamp, Teacher model/prompt/result, label provenance,
+  verification decision, and dataset version. Both classes and diverse
+  sessions are present. Manual-only data is disclosed as a partial fallback.
+- **M3-AC2:** Deduplication and source/session-level train/validation/test
+  partitioning prevent adjacent-frame and near-duplicate leakage. The held-out
+  set is never used for fitting, threshold selection, or label propagation.
+  The split manifest and sample counts are inspectable.
+- **M3-AC3:** A real pretrained embedding encoder stays frozen; an actual
+  lightweight classifier is fitted on verified training embeddings. Save
+  encoder/version, preprocessing, class mapping, dataset/split hashes,
+  trained weights, duration, and environment. Reloaded inference uses the
+  same preprocessing; a progress bar is not training evidence.
+- **M3-AC4:** Held-out precision, recall, F1, confusion matrix, counts,
+  coverage, and latency are computed from predictions against verified
+  ground truth. Teacher/Student disagreement is distinct from accuracy.
+  Small samples and unsupported conditions are disclosed.
+- **M3-AC5:** Shadow mode records Teacher/Student comparisons without
+  executing actions or changing the active model. Activation requires a
+  predefined quality/sample-count gate plus an explicit human decision;
+  missing or failed evaluation cannot be activated.
+- **M3-AC6:** Low-confidence/unsupported Student outputs use a tested Teacher
+  fallback within M2 budgets, otherwise an explicit unknown state. Rollback
+  restores a working previous model plus encoder/preprocessing/configuration.
+  Activation/rollback history persists across restart; unverified Student
+  predictions cannot silently become training labels.
+
+### M4 — Measured efficiency and deliverable evidence
+
+- **M4-AC1:** A reproducible benchmark runs a VLM-per-sampled-frame baseline,
+  the M2 event-routed/cached Teacher pipeline, and the M3 Student/hybrid
+  pipeline on the same held-out videos, visual task, ground truth, sample
+  schedule, and documented settings. Real provider calls are required for
+  provider performance claims; unavailable access is marked NOT TESTED.
+- **M4-AC2:** Preserve input/split hashes, code/model/prompt versions,
+  hardware, commands, repetitions, raw predictions, call/usage records,
+  cache state, and actual timing. Report Teacher call counts, input/output
+  usage, cache-hit rate, sampling/drop counts, Student/fallback coverage,
+  frame and event-to-action p50/p95 latency, and verified quality for every
+  variant. Compare the same semantic task and disclose latency boundaries.
+- **M4-AC3:** Derive provider cost from measured billable usage and a dated,
+  cited rate source or actual bill. Report local compute/training separately
+  with its measurement method; unknown usage/cost remains unknown. Normalize
+  by video duration and/or checks with denominators stated. Report quality
+  tradeoffs and cold/warm-cache conditions. Savings percentages may be
+  calculated only from actual comparable positive baseline measurements;
+  no hardcoded savings or substituting fewer calls for measured dollar cost.
+- **M4-AC4:** Clean startup/deployment checks, unseen supported-video smoke,
+  real authorized actions, evidence/logs, secrets/privacy/license checks,
+  and the official frontend/backend/repository/pitch deliverables pass.
+  README, UI, deck, and metrics distinguish implemented, measured, pending,
+  and untested behavior. Optional robot hardware is not a demo dependency.
+  Public deployment follows the operator's explicit approval requirement.
 
 ## 17. Scope and fallback policy
 
@@ -431,7 +547,8 @@ If time is limited:
 2. Protect support for new input videos.
 3. Protect deployment and reproducibility.
 4. Reduce the number of event types if necessary.
-5. Use manual labeling as an explicitly disclosed fallback for AutoLearn.
+5. Use manual labeling as an explicitly disclosed development fallback;
+   keep the real Teacher-label acceptance criterion unverified until run.
 6. Defer RTSP, Telegram, GVERA, and advanced foveated vision.
 7. Never replace real functionality with an undisclosed mock.
 

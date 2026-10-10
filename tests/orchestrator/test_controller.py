@@ -123,6 +123,48 @@ class ControllerTests(unittest.TestCase):
         self.assertEqual(self.state()["fix_cycles"], 1)
         self.assertEqual(self.state()["agent_calls"], 4)
 
+    def test_exceptional_m1_recovery_resumes_once_and_accepts(self):
+        self.assertEqual(self.run_controller(env={"FAKE_REVIEW_FAILS": "3"}).returncode, 2)
+        self.assertEqual(self.state()["fix_cycles"], 2)
+        result = self.run_controller("--resume", "--exceptional-m1-recovery", env={"FAKE_REVIEW_FAILS": "3"})
+        self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+        self.assertEqual(self.state()["fix_cycles"], 3)
+        self.assertEqual(self.state()["agent_calls"], 8)
+        self.assertEqual(int((self.fake.parent / "fake-count").read_text()), 4)
+        self.assertEqual(self.run_controller("--resume", "--exceptional-m1-recovery").returncode, 0)
+        self.assertEqual(self.state()["agent_calls"], 8)
+
+    def test_exceptional_m1_recovery_failure_cannot_repeat(self):
+        self.assertEqual(self.run_controller(env={"FAKE_REVIEW_FAILS": "99"}).returncode, 2)
+        result = self.run_controller("--resume", "--exceptional-m1-recovery", env={"FAKE_REVIEW_FAILS": "99"})
+        self.assertEqual(result.returncode, 2)
+        self.assertEqual(self.state()["fix_cycles"], 3)
+        self.assertEqual(self.state()["agent_calls"], 8)
+        self.assertIn("3 fix cycles exhausted", self.state()["reason"])
+        result = self.run_controller("--resume", "--exceptional-m1-recovery", env={"FAKE_REVIEW_FAILS": "99"})
+        self.assertEqual(result.returncode, 2)
+        self.assertEqual(self.state()["agent_calls"], 8)
+        self.assertEqual(int((self.fake.parent / "fake-count").read_text()), 4)
+
+    def test_exception_is_scoped_to_m1(self):
+        result = self.run_controller("--from", "M2", "--to", "M2", "--exceptional-m1-recovery",
+                                     env={"FAKE_REVIEW_FAILS": "99"})
+        self.assertEqual(result.returncode, 2)
+        self.assertEqual(self.state()["milestone"], "M2")
+        self.assertEqual(self.state()["fix_cycles"], 2)
+        self.assertEqual(self.state()["agent_calls"], 6)
+
+    def test_exceptional_review_timeout_cannot_launch_a_second_review(self):
+        self.assertEqual(self.run_controller(env={"FAKE_REVIEW_FAILS": "99"}).returncode, 2)
+        result = self.run_controller("--resume", "--exceptional-m1-recovery", "--review-timeout", "1",
+                                     env={"FAKE_TIMEOUT": "1"})
+        self.assertEqual(result.returncode, 2)
+        self.assertEqual(self.state()["agent_calls"], 8)
+        result = self.run_controller("--resume", "--exceptional-m1-recovery")
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("review was already launched", self.state()["reason"])
+        self.assertEqual(self.state()["agent_calls"], 8)
+
     def test_wrong_review_sha_never_accepted(self):
         result = self.run_controller(env={"FAKE_WRONG_SHA": "1"})
         self.assertEqual(result.returncode, 2)

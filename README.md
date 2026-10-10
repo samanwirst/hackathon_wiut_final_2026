@@ -4,17 +4,40 @@ Visual AI automation for automotive operations: upload a video (or connect a
 camera), draw a zone, describe a condition, and get real detections turned into
 events, evidence, and authorized actions. Track: Computer Vision.
 
+The product's innovation is **cost-efficient visual analytics inspired by
+OpenVector**: cheap detection and tracking run continuously at a configured
+sampling rate; temporal events select frames or object ROIs for expensive
+visual reasoning. Deduplication and versioned caches limit repeated teacher
+calls. AutoLearn transfers verified teacher labels to a lightweight student
+over frozen visual embeddings, with held-out evaluation, shadow comparison,
+manual activation, fallback, and rollback.
+
+These are implementation requirements, not a claim that all stages are
+already available. Cost savings require an actual paired baseline experiment.
+
 The official task is in [docs/source/README.md](docs/source/README.md);
 product requirements in [docs/PRD.md](docs/PRD.md);
 architecture in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
-## Current state (M1)
+## Current state (M1 awaiting fixes)
 
 Working end-to-end pipeline: **MP4 upload → YOLO11n detection + ByteTrack
 tracking → polygon-zone temporal events (enter / exit / dwell / count) →
 SQLite persistence + evidence JPEG → authorized action (notification,
 allowlisted webhook) → web UI** (upload, canvas zone drawing, workflow
 builder, event timeline).
+
+The ordinary real-YOLO smoke works. Independent review of `cc59523` found
+four remaining P1 defects: dispatch after disable, ambiguous webhook delivery
+after interruption, DNS rebinding, and truncated video reported complete.
+M1 has not passed QA; the controller stopped at its two-fix-cycle limit.
+See [.agents/reviews/M1.md](.agents/reviews/M1.md).
+
+VLM routing/caching is assigned to M2, verified teacher-to-student learning
+to M3, and measured baseline comparisons to M4. These stages are pending.
+The [architecture audit](docs/VISUAL_ANALYTICS_AUDIT.md) and
+[milestone acceptance criteria](docs/PRD.md#16-acceptance-criteria) define
+the remaining work. No VLM savings or held-out quality result is established.
 
 ## Run locally
 
