@@ -19,14 +19,25 @@ Branch: `feature/visionflow`.
   with env allowlist, empty = reject), events/notifications/metrics endpoints.
 - `apps/web`: single-page Next.js UI — upload, canvas zone drawing, workflow
   form, event timeline with evidence thumbnails, notifications. Polls every 2.5 s.
-- Tests: 32 passing (`pytest tests/`); real-YOLO smoke `scripts/smoke_e2e.py` PASS.
+- Tests: 60 passing (`pytest tests/`); real-YOLO smoke `scripts/smoke_e2e.py` PASS.
 - Docs: TRACEABILITY (brief verified at docs/source/README.md), ARCHITECTURE,
   LICENSES (AGPL note for ultralytics), README quickstart, .env.example.
 - CI: structure check + unit tests + frontend build.
 
+## M1 review fix cycle 1 (2026-10-10) — all FIXED
+
+- M1-001 webhook SSRF: userinfo rejected + canonical scheme/host/port match +
+  path prefix + internal-resolution guard (`actions.py`).
+- M1-002 count re-arm dedupe: per-rising-crossing episode counter in dedupe key.
+- M1-003 disable during run: authoritative `enabled` re-checked each frame.
+- M1-004 shared tracker: full session serialized by `_session_lock`.
+- M1-005 interrupted recovery: startup marks stale `processing` rows failed.
+- New tests: `tests/unit/test_webhook_auth.py`, count re-arm case in
+  `tests/unit/test_events.py`, `tests/integration/test_m1_fixes.py`.
+
 ## Verified by actual execution (2026-10-10)
 
-- `pytest tests/` → 32 passed.
+- `pytest tests/` → 60 passed.
 - `scripts/smoke_e2e.py` → PASS: bus detected (conf 0.76), enter event at
   t=4.2 s, evidence JPEG, notification; 136.9 ms avg CPU inference (cold),
   62 ms warm.

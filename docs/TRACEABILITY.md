@@ -22,11 +22,21 @@ Statuses: planned | in_progress | implemented | verified | blocked.
 | R9 | Real authorized action | PRD P0.8 | `services/api/app/actions.py` (notification persisted; webhook allowlisted) | integration: notification row created; non-allowlisted webhook rejected | verified |
 | R10 | Event persistence with evidence | PRD P0.9 | `TrackEvent` + evidence JPEG in `app/pipeline.py` | smoke + integration: evidence URL serves image/jpeg | verified |
 | R11 | Working web interface | PRD P0.10 | `apps/web/app/page.tsx` | manual browser run 2026-10-10: full flow exercised | verified |
-| R12 | Automated tests | PRD P0.11 | `tests/` | `pytest tests/` — 32 passed 2026-10-10 | verified |
+| R12 | Automated tests | PRD P0.11 | `tests/` | `pytest tests/` — 60 passed 2026-10-10 | verified |
 | R13 | NL → workflow compilation | PRD P0.6 | — | planned for M2 | planned |
 | R14 | Live camera source | PRD P0.2 | — | planned (M2+, hardware-dependent) | planned |
 | R15 | Public deployment | Brief "publicly available" | — | planned for M4 | planned |
 | R16 | AutoLearn | PRD P1 | `packages/autolearn` | planned for M3 | planned |
+
+## M1 review fixes (cycle 1, 2026-10-10)
+
+| ID | Severity | Resolution | File | Test |
+| --- | --- | --- | --- | --- |
+| M1-001 | P1 | FIXED | `services/api/app/actions.py` — URL canonicalized; userinfo rejected; scheme/host/port exact match; path-prefix enforced; internal-resolution guard | `tests/unit/test_webhook_auth.py` (userinfo never reaches MockTransport; allowlisted delivered) |
+| M1-002 | P1 | FIXED | `packages/vision/visionflow_vision/events.py` — aggregate episode counter advances per rising crossing, included in dedupe key | `tests/unit/test_events.py::test_count_rearms_with_distinct_dedupe_keys` |
+| M1-003 | P1 | FIXED | `services/api/app/pipeline.py` — authoritative `enabled` re-checked per frame via fresh session before emitting/acting | `tests/integration/test_m1_fixes.py::test_disable_during_processing_revokes_actions` |
+| M1-004 | P1 | FIXED | `services/api/app/pipeline.py` — complete session serialized by `_session_lock` around reset + all frame calls | `tests/integration/test_m1_fixes.py::test_concurrent_sources_are_serialized` |
+| M1-005 | P1 | FIXED | `services/api/app/{pipeline,main}.py` — startup marks interrupted `processing` rows failed and permits retry | `tests/integration/test_m1_fixes.py::test_interrupted_processing_recovered_and_retryable` |
 
 ## Discrepancies / notes
 

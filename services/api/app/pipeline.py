@@ -29,6 +29,11 @@ _running_lock = threading.Lock()
 _detector: BaseDetectorTracker | None = None
 _detector_lock = threading.Lock()
 
+# Serializes a complete processing session (detector reset + every frame call)
+# so concurrent sources cannot reset or contaminate each other's shared tracker
+# state. This also keeps CPU/RAM use sequential, which suits the M1 target.
+_session_lock = threading.Lock()
+
 # Tests may replace this factory to inject a deterministic stub detector.
 # Production always builds the real YOLO detector.
 detector_factory = None
@@ -65,6 +70,49 @@ def start_processing(source_id: int) -> bool:
 def is_running(source_id: int) -> bool:
     with _running_lock:
         return source_id in _running
+
+
+def recover_interrupted_sources() -> int:
+    """Mark sources stuck in 'processing' (from a crash/restart) as failed so
+    they can be retried. Single-worker model: on startup nothing is running, so
+    any persisted 'processing' row represents an interrupted run. Returns the
+    number of rows recovered."""
+    session = get_session()
+    try:
+        stale = (
+            session.query(VideoSource)
+            .filter(VideoSource.status == "processing")
+            .all()
+        )
+        count = 0
+        for source in stale:
+            if is_running(source.id):
+                continue
+            source.status = "failed"
+            source.error = "processing interrupted by restart; retry to reprocess"
+            count += 1
+        if count:
+            session.commit()
+            logger.info("recovered %d interrupted processing source(s)", count)
+        return count
+    finally:
+        session.close()
+
+
+def _workflow_enabled(workflow_id: int) -> bool:
+    """Authoritative, fresh read of a workflow's current enabled state.
+
+    Uses its own short-lived session so a disable committed by the API during
+    an active run is observed immediately (no stale worker-session snapshot)."""
+    session = get_session()
+    try:
+        return bool(
+            session.query(Workflow.enabled)
+            .filter(Workflow.id == workflow_id)
+            .scalar()
+        )
+    finally:
+        session.close()
 
 
 def _build_engines(session, source: VideoSource) -> list[tuple[Workflow, ZoneEventEngine]]:
@@ -132,6 +180,7 @@ def _save_evidence(frame, objects, zone: Zone, event, frame_w: int, frame_h: int
 
 def _process_source(source_id: int) -> None:
     session = get_session()
+    session_locked = False
     try:
         source = session.get(VideoSource, source_id)
         if source is None:
@@ -157,6 +206,11 @@ def _process_source(source_id: int) -> None:
         if not engines:
             logger.info("source %s: no enabled workflows; detection-only pass", source_id)
 
+        # Serialize the whole session: reset + every frame call must be
+        # isolated from any other source so tracker identities cannot be
+        # contaminated by a concurrent reset (M1-004).
+        _session_lock.acquire()
+        session_locked = True
         detector = _get_detector()
         detector.reset()
 
@@ -178,7 +232,14 @@ def _process_source(source_id: int) -> None:
             processed += 1
 
             for wf, engine in engines:
-                for ev in engine.update(objects, timestamp):
+                # Advance the engine exactly once per frame to keep debounce /
+                # cooldown state consistent, then re-check authoritative enabled
+                # state: a disable committed by the API during this run must
+                # revoke further events and actions (M1-003).
+                emitted = engine.update(objects, timestamp)
+                if not _workflow_enabled(wf.id):
+                    continue
+                for ev in emitted:
                     existing = (
                         session.query(TrackEvent)
                         .filter(TrackEvent.dedupe_key == ev.dedupe_key)
@@ -233,6 +294,8 @@ def _process_source(source_id: int) -> None:
         except Exception:
             pass
     finally:
+        if session_locked:
+            _session_lock.release()
         session.close()
         with _running_lock:
             _running.discard(source_id)

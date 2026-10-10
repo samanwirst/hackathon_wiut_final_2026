@@ -111,6 +111,10 @@ class ZoneEventEngine:
         self._last_event_at: dict[str, float] = {}  # cooldown per dedupe scope
         self._count_above: bool = False
         self._visit_counter: dict[int, int] = {}
+        # Deterministic episode counter for aggregate (track-less) events; it
+        # advances on every rising threshold crossing so that each distinct
+        # crossing produces a unique dedupe key instead of a fixed "visit0".
+        self._count_episode: int = 0
 
     # ------------------------------------------------------------------
 
@@ -129,12 +133,18 @@ class ZoneEventEngine:
         now: float,
         confidence: float,
         detail: str = "",
+        *,
+        episode: int | None = None,
     ) -> ZoneEvent | None:
-        visit = self._visit_counter.get(track_id, 0) if track_id is not None else 0
+        # Track-based events are keyed by their per-track visit counter;
+        # aggregate (track_id is None) events pass an explicit episode so each
+        # rising crossing is distinct.
+        if episode is None:
+            episode = self._visit_counter.get(track_id, 0) if track_id is not None else 0
         scope = f"{self.rule_key}:{etype.value}:{track_id}"
         if not self._cooldown_ok(scope, now):
             return None
-        dedupe_key = f"{scope}:visit{visit}"
+        dedupe_key = f"{scope}:visit{episode}"
         return ZoneEvent(
             type=etype,
             track_id=track_id,
@@ -217,12 +227,14 @@ class ZoneEventEngine:
             inside_count = sum(1 for s in self._tracks.values() if s.inside)
             if inside_count > self.count_threshold and not self._count_above:
                 self._count_above = True
+                self._count_episode += 1
                 ev = self._emit(
                     EventType.COUNT_EXCEEDED, None, self.object_class, now, 1.0,
                     detail=(
                         f"{inside_count} x {self.object_class} in {self.zone.name} "
                         f"(threshold {self.count_threshold})"
                     ),
+                    episode=self._count_episode,
                 )
                 if ev:
                     events.append(ev)

@@ -125,6 +125,24 @@ def test_count_exceeded_fires_on_rising_edge_only():
     assert len(events) == 1
 
 
+def test_count_rearms_with_distinct_dedupe_keys():
+    """Each rising threshold crossing must produce a distinct dedupe key so
+    persistence does not silently discard later crossings (M1-002)."""
+    eng = make_engine(EventType.COUNT_EXCEEDED, count_threshold=1, cooldown_seconds=0.0)
+    keys: list[str] = []
+    # crossing 1: two cars enter
+    for i in range(3):
+        keys += [e.dedupe_key for e in eng.update([obj(1, 80), obj(2, 90)], i * 0.2)]
+    # drop below threshold: both leave (debounced true exit)
+    for i in range(3, 6):
+        keys += [e.dedupe_key for e in eng.update([obj(1, 20), obj(2, 20)], i * 0.2)]
+    # crossing 2: both re-enter
+    for i in range(6, 10):
+        keys += [e.dedupe_key for e in eng.update([obj(1, 80), obj(2, 90)], i * 0.2)]
+    assert len(keys) == 2
+    assert keys[0] != keys[1]
+
+
 def test_independent_tracks_each_get_enter():
     eng = make_engine(EventType.ENTER, cooldown_seconds=5.0)
     events = []

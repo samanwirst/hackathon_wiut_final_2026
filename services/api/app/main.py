@@ -45,6 +45,8 @@ app = FastAPI(title="VisionFlow AI", version="0.1.0")
 def _startup() -> None:
     config.ensure_dirs()
     init_db()
+    # Recover rows left in 'processing' by a crash/restart so they can be retried.
+    pipeline.recover_interrupted_sources()
     app.mount("/media/evidence", StaticFiles(directory=str(config.EVIDENCE_DIR)), name="evidence")
 
 
