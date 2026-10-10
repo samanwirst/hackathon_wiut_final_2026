@@ -36,7 +36,12 @@ def test_labeled_valid_response(provider, monkeypatch):
     assert cand.status == "labeled"
     assert cand.label == "occupied"
     assert cand.confidence == 0.88
-    assert cand.model == "qa/mock-vlm"
+    # The provider omitted a model: the ACTUAL model is unknown and is NOT faked
+    # from the configured alias (C-007). The alias stays separately in raw.
+    assert cand.model is None
+    assert cand.raw["configured_alias"] == "qa/mock-vlm"
+    assert cand.method == "chat_json"
+    assert cand.attempted is True
 
 
 def test_invalid_json_surfaced(provider, monkeypatch):

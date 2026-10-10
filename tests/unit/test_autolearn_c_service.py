@@ -170,18 +170,25 @@ def test_same_session_arbitrary_groups_cannot_span_split(db):
         service.build_split_plan(db, task)
 
 
-def test_inconsistent_group_metadata_rejected(db):
+def test_uploaded_source_is_one_partition_regardless_of_session_names(db):
+    # An immutable uploaded asset (source_id set) is ONE partition no matter how
+    # many arbitrary session/group names a caller attaches (C-003): all rows
+    # collapse to a single canonical "src:<id>" group, so they can never straddle
+    # the split. With only one physical source there are too few independent groups
+    # and training is refused honestly (M3-AC2) rather than fabricating a split.
     task = service.create_task(db, name="QA", visual_prompt="is it occupied?",
                               positive_label="occupied", negative_label="empty")
-    # One group_key reused across two distinct sessions -> inconsistent metadata.
-    for ses in ("sesA", "sesB"):
-        db.add(TrainingSample(
-            task_id=task.id, source_id=1, session_id=ses, group_key="shared",
-            image_path="none", image_hash=f"h-{ses}", verified=True,
-            verified_label="occupied", origin="qa_synthetic",
-        ))
+    for i in range(6):
+        for ses, lab in ((f"name-{i}-a", "occupied"), (f"name-{i}-b", "empty")):
+            db.add(TrainingSample(
+                task_id=task.id, source_id=7, session_id=ses, group_key=f"group-{i}",
+                image_path="none", image_hash=f"h{i}_{lab}", verified=True,
+                verified_label=lab, origin="qa_synthetic",
+            ))
     db.commit()
-    with pytest.raises(service.AutoLearnError, match="inconsistent group metadata"):
+    groups = {service._canonical_group(r) for r in service._verified_rows(db, task)}
+    assert groups == {"src:7"}
+    with pytest.raises(dataset.DatasetError):
         service.build_split_plan(db, task)
 
 
@@ -244,20 +251,32 @@ def _mock_ml(monkeypatch):
 
 
 def _version_with_manifest(db, task, test_sample_ids):
+    # Freeze a COMPLETE manifest (train/val/test) like real train() does, so the
+    # gate/evaluate completeness checks (C-002) operate on a realistic snapshot.
+    all_ids = [
+        s.id for s in db.query(TrainingSample)
+        .filter(TrainingSample.task_id == task.id)
+        .order_by(TrainingSample.id)
+    ]
+    rest = [i for i in all_ids if i not in test_sample_ids]
+    val_ids = rest[:2]
+    train_ids = rest[2:]
     mv = ModelVersion(
         task_id=task.id, version=1, artifact_path="QA-mock", encoder_name="resnet18",
         encoder_weights_version="QA", preprocess_version="QA",
         class_mapping={"empty": 0, "occupied": 1}, dataset_hash="d", split_hash="sp",
-        train_count=4, val_count=2, test_count=len(test_sample_ids), threshold=0.5,
+        train_count=len(train_ids), val_count=len(val_ids),
+        test_count=len(test_sample_ids), threshold=0.5,
         train_duration_ms=1.0, environment={"disclosure": "QA mock"}, status="trained",
     )
     db.add(mv)
     db.flush()
-    for sid in test_sample_ids:
-        s = db.get(TrainingSample, sid)
-        db.add(ModelVersionSample(model_version_id=mv.id, sample_id=sid,
-                                  image_hash=s.image_hash, verified_label=s.verified_label,
-                                  split="test"))
+    for sids, split in ((train_ids, "train"), (val_ids, "val"), (test_sample_ids, "test")):
+        for sid in sids:
+            s = db.get(TrainingSample, sid)
+            db.add(ModelVersionSample(model_version_id=mv.id, sample_id=sid,
+                                      image_hash=s.image_hash, verified_label=s.verified_label,
+                                      split=split))
     db.commit()
     return mv
 
