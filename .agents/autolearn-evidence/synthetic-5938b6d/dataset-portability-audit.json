@@ -1,0 +1,23 @@
+{
+  "checked_at_utc": "2026-10-10T23:37:27.508324+00:00",
+  "scope": "Read-only archive audit, no application/model execution or migration; this is not a new-source evaluation or acceptance verdict.",
+  "archive_sha256_before_and_after": "ed863af929a21dc0968e1298e1c0203b7220139003757d8d9f71000f535735d9",
+  "verified_image_hashes": 24,
+  "matching_explicit_human_labels": 24,
+  "immutable_manifest_members": 24,
+  "heldout_sample_ids": [
+    13,
+    14,
+    15,
+    16,
+    23,
+    24
+  ],
+  "dataset_hash": "3a83ca9c28de3115a9d932c4d7731fb708f63f4f73bd6bd3adf88085104a8e77",
+  "split_hash": "b338f78465b9245ef8fde6a6f12f0a28cb45fba8ec37a781beb2523dfedf741a",
+  "artifact_sha256": "72541bb2b6fa8790610169ad1087128a9ae8c28501221ff878438480d401bcb2",
+  "active_version_id": null,
+  "activation_rows": 0,
+  "portable_paths": false,
+  "required_portability_step": "Copy owned images/artifact to private deployment storage, explicitly relocate image/artifact paths in a COPY of the database and validate hashes/metadata after final code review. Never mutate this archive."
+}
