@@ -15,6 +15,7 @@ import io
 import json
 import os
 from pathlib import Path
+import re
 import threading
 import time
 import uuid
@@ -33,6 +34,10 @@ MAX_IMAGES = 2
 MAX_GENERATION_SECONDS = 60
 Image.MAX_IMAGE_PIXELS = 4_000_000
 token = os.environ.get("LOCAL_TEACHER_TOKEN", "")
+scoring_labels = [x.strip() for x in os.environ.get("LOCAL_TEACHER_SCORING_LABELS", "").split(",") if x.strip()]
+if scoring_labels and (not 2 <= len(scoring_labels) <= 8 or len(set(scoring_labels)) != len(scoring_labels)
+                       or any(not re.fullmatch(r"[A-Za-z0-9 _-]{1,40}", x) for x in scoring_labels)):
+    raise SystemExit("Invalid explicitly configured candidate scoring labels")
 evidence_dir = Path(os.environ.get("LOCAL_TEACHER_EVIDENCE", ".agents/runtime/local-teacher/evidence"))
 evidence_dir.mkdir(parents=True, exist_ok=True)
 capacity = threading.BoundedSemaphore(1)
@@ -85,6 +90,8 @@ def load_model():
         "max_images": MAX_IMAGES, "max_concurrency": 1,
         "input_longest_edge": 512, "experimental": True,
         "teacher_actions_enabled": False,
+        "output_mode": "candidate_sequence_scoring" if scoring_labels else "raw_generation",
+        "scoring_labels": scoring_labels,
     }
     (evidence_dir / "model.json").write_text(json.dumps(metadata, indent=2) + "\n")
     print(json.dumps(metadata), flush=True)
@@ -109,7 +116,9 @@ def models(request: Request):
     with active_lock:
         current = active_request
     return {"object": "list", "data": [{"id": MODEL_ID, "object": "model", "owned_by": "local-experiment", "revision": REVISION}],
-            "experimental": {"active_request": current, "max_concurrency": 1}}
+            "experimental": {"active_request": current, "max_concurrency": 1,
+                             "output_mode": "candidate_sequence_scoring" if scoring_labels else "raw_generation",
+                             "scoring_labels": scoring_labels}}
 
 
 def parse_payload(payload):
@@ -179,6 +188,8 @@ def infer(chat, images, max_tokens, request_id):
     try:
         torch.cuda.reset_peak_memory_stats()
         prompt = processor.apply_chat_template(chat, add_generation_prompt=True)
+        if scoring_labels:
+            prompt += '{"label":"'
         inputs = processor(text=prompt, images=images, return_tensors="pt")
         inputs = inputs.to("cuda")
         for key, value in inputs.items():
@@ -186,15 +197,44 @@ def infer(chat, images, max_tokens, request_id):
                 inputs[key] = value.to(torch.bfloat16)
         input_tokens = int(inputs["input_ids"].shape[-1])
         deadline = time.monotonic() + MAX_GENERATION_SECONDS
+        scoring = None
         with torch.inference_mode():
-            generated = model.generate(
-                **inputs, max_new_tokens=max_tokens, do_sample=False,
-                stopping_criteria=StoppingCriteriaList([Deadline(deadline)]),
-            )
+            if scoring_labels:
+                log_likelihoods, actual_tokens, candidate_token_ids = [], 0, []
+                for label in scoring_labels:
+                    if time.monotonic() >= deadline:
+                        raise HTTPException(504, "actual scoring deadline reached")
+                    # Include the closing quote so candidates represent complete
+                    # labels, rather than merely matching a candidate prefix.
+                    ids = processor.tokenizer.encode(label + '"', add_special_tokens=False)
+                    suffix = torch.tensor([ids], device="cuda", dtype=torch.long)
+                    candidate = dict(inputs)
+                    candidate["input_ids"] = torch.cat((inputs["input_ids"], suffix), dim=1)
+                    candidate["attention_mask"] = torch.cat((inputs["attention_mask"], torch.ones_like(suffix)), dim=1)
+                    logits = model(**candidate, use_cache=False).logits[:, input_tokens - 1:input_tokens + len(ids) - 1, :]
+                    token_log_probabilities = torch.log_softmax(logits.float(), dim=-1).gather(-1, suffix.unsqueeze(-1)).squeeze(-1)
+                    log_likelihoods.append(float(token_log_probabilities.sum().item()))
+                    actual_tokens += input_tokens + len(ids)
+                    candidate_token_ids.append(ids)
+                probabilities = torch.softmax(torch.tensor(log_likelihoods, dtype=torch.float64), dim=0).tolist()
+                winner = max(range(len(probabilities)), key=probabilities.__getitem__)
+                text = json.dumps({"label": scoring_labels[winner], "confidence": probabilities[winner]})
+                generation_tokens = 0
+                scoring = {"method": "candidate_sequence_softmax", "uncalibrated": True,
+                           "formula": "s(label)=sum_t log P(candidate_token_t | image(s), prompt, prior_candidate_tokens); p(label)=exp(s)/sum_candidates exp(s)",
+                           "candidate_labels": scoring_labels, "candidate_token_ids": candidate_token_ids,
+                           "candidate_log_likelihoods": log_likelihoods, "normalized_probabilities": probabilities,
+                           "model_forward_calls": len(scoring_labels), "actual_model_processed_tokens": actual_tokens,
+                           "output_is_generated_json": False}
+            else:
+                generated = model.generate(
+                    **inputs, max_new_tokens=max_tokens, do_sample=False,
+                    stopping_criteria=StoppingCriteriaList([Deadline(deadline)]),
+                )
+                output = generated[:, input_tokens:]
+                text = processor.batch_decode(output, skip_special_tokens=True)[0]
+                generation_tokens = int(output.shape[-1])
         torch.cuda.synchronize()
-        output = generated[:, input_tokens:]
-        text = processor.batch_decode(output, skip_special_tokens=True)[0]
-        generation_tokens = int(output.shape[-1])
         metrics = {
             "request_id": request_id, "model": MODEL_ID, "revision": REVISION,
             "image_count": len(images), "input_tokens": input_tokens,
@@ -203,6 +243,7 @@ def infer(chat, images, max_tokens, request_id):
             "gpu_peak_allocated_bytes": torch.cuda.max_memory_allocated(),
             "gpu_peak_reserved_bytes": torch.cuda.max_memory_reserved(),
             "deadline_reached": time.monotonic() >= deadline,
+            "scoring": scoring,
         }
         with (evidence_dir / "requests.jsonl").open("a") as stream:
             stream.write(json.dumps(metrics) + "\n")
