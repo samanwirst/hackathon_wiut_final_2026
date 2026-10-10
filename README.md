@@ -81,3 +81,18 @@ docs/                  task source, PRD, architecture, traceability, licenses
 
 Instructions: [AGENTS.md](AGENTS.md) · Protocol: [.agents/PROTOCOL.md](.agents/PROTOCOL.md) ·
 State: [.agents/STATE.md](.agents/STATE.md) · Handoff: [.agents/HANDOFF.md](.agents/HANDOFF.md)
+
+The sequential Claude/Codex controller is documented in
+[.agents/AUTOPILOT.md](.agents/AUTOPILOT.md). With both CLIs authenticated:
+
+```sh
+python3 scripts/orchestrate.py --dry-run
+make autopilot
+python3 scripts/orchestrate.py --resume
+python3 scripts/orchestrate.py --stop
+```
+
+`make check` runs the structure check, tests and frontend build. `make smoke`
+runs real YOLO inference. The controller reviews frozen commits, saves local
+checkpoints, caps fix cycles, pushes validated feature work and never merges
+into main or publishes without approval.

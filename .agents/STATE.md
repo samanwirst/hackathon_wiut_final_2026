@@ -38,6 +38,19 @@ Branch: `feature/visionflow`.
 NL → workflow compilation (LLM structured output + Pydantic), multiple
 triggers UX, dashboard/timeline pages, SSE updates, security/failure handling.
 
+## Autonomous execution (operator-authorized 2026-10-10)
+
+- Main controller: `scripts/orchestrate.py`; sequential Claude implementation
+  and independent Codex reviews; full workflow in `.agents/AUTOPILOT.md`.
+- Controller recovery/gate tests: 15 passed using real temporary Git repos
+  and mocked CLI subprocesses (not product-inference evidence).
+- Current controller phase: preparing first exact-commit M1 review.
+- Runtime JSON/logs are local and ignored; durable milestone acceptance is
+  recorded in review reports. Maximum two fix cycles per milestone.
+- Claude/Codex/GitHub authenticated; CPU, FFmpeg, Python/Node available.
+- Public deployment is required by the brief and awaits explicit approval
+  once the reviewable deployment result is prepared.
+
 ## Known limitations
 
 - Processing is a single background thread per source; no queue.
