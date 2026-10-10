@@ -1,0 +1,24 @@
+{
+  "generator": "QA_ONLY reverse movement, hold, then exit; parameters chosen before processing, no detector output used",
+  "source_asset": "ultralytics/assets/bus.jpg",
+  "crop_xyxy": [
+    350,
+    220,
+    755,
+    665
+  ],
+  "canvas": [
+    1280,
+    720
+  ],
+  "fps": 20,
+  "frames": 200,
+  "bus_size": [
+    288,
+    316
+  ],
+  "motion": "right to left; hold inside zone4.5s; move out",
+  "source_photo_sha256": "c02019c4979c191eb739ddd944445ef408dad5679acab6fd520ef9d434bfbc63",
+  "video_sha256": "46462147d8e99e0a52be583bd36f4a247841e6b8b97cf2e21da7406013ce796c",
+  "limits": "New video bytes/path/resolution/timing, same upstream photo. This is NOT unseen natural footage or natural-video quality evidence."
+}

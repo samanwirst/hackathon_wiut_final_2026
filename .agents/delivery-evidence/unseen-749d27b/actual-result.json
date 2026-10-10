@@ -1,0 +1,177 @@
+{
+  "actual_yolo": true,
+  "container_source_snapshot": "749d27b",
+  "input": {
+    "generator": "QA_ONLY reverse movement, hold, then exit; parameters chosen before processing, no detector output used",
+    "source_asset": "ultralytics/assets/bus.jpg",
+    "crop_xyxy": [
+      350,
+      220,
+      755,
+      665
+    ],
+    "canvas": [
+      1280,
+      720
+    ],
+    "fps": 20,
+    "frames": 200,
+    "bus_size": [
+      288,
+      316
+    ],
+    "motion": "right to left; hold inside zone4.5s; move out",
+    "source_photo_sha256": "c02019c4979c191eb739ddd944445ef408dad5679acab6fd520ef9d434bfbc63",
+    "video_sha256": "46462147d8e99e0a52be583bd36f4a247841e6b8b97cf2e21da7406013ce796c",
+    "limits": "New video bytes/path/resolution/timing, same upstream photo. This is NOT unseen natural footage or natural-video quality evidence."
+  },
+  "source": {
+    "id": 5,
+    "type": "upload",
+    "name": "QA_ONLY unseen reverse-hold.mp4",
+    "status": "processed",
+    "error": null,
+    "width": 1280,
+    "height": 720,
+    "fps": 20.0,
+    "frame_count": 200,
+    "frames_processed": 50,
+    "avg_inference_ms": 63.30704647989478,
+    "created_at": "2026-10-10T23:07:30.378339"
+  },
+  "workflows": [
+    {
+      "id": 4,
+      "source_id": 5,
+      "name": "QA_ONLY unseen object_entered_zone",
+      "dsl": {
+        "name": "QA_ONLY unseen object_entered_zone",
+        "source_id": 5,
+        "object_class": "bus",
+        "trigger": {
+          "type": "object_entered_zone",
+          "zone_id": 5,
+          "duration_seconds": null,
+          "threshold": null
+        },
+        "action": {
+          "type": "create_notification",
+          "config": {
+            "title": "QA_ONLY real unseen event"
+          }
+        },
+        "visual_predicate": null,
+        "cooldown_seconds": 10.0,
+        "requires_approval": true
+      },
+      "enabled": false,
+      "created_at": "2026-10-10T23:07:30.407187Z"
+    },
+    {
+      "id": 5,
+      "source_id": 5,
+      "name": "QA_ONLY unseen dwell_in_zone",
+      "dsl": {
+        "name": "QA_ONLY unseen dwell_in_zone",
+        "source_id": 5,
+        "object_class": "bus",
+        "trigger": {
+          "type": "dwell_in_zone",
+          "zone_id": 5,
+          "duration_seconds": 2.0,
+          "threshold": null
+        },
+        "action": {
+          "type": "create_notification",
+          "config": {
+            "title": "QA_ONLY real unseen event"
+          }
+        },
+        "visual_predicate": null,
+        "cooldown_seconds": 10.0,
+        "requires_approval": true
+      },
+      "enabled": false,
+      "created_at": "2026-10-10T23:07:30.420294Z"
+    }
+  ],
+  "events": [
+    {
+      "event": {
+        "id": 2,
+        "source_id": 5,
+        "workflow_id": 4,
+        "track_id": 1,
+        "type": "object_entered_zone",
+        "class_name": "bus",
+        "video_timestamp": 2.2,
+        "confidence": 0.913407564163208,
+        "detail": "bus #1 entered QA_ONLY unseen left bay",
+        "evidence_url": "/media/evidence/event_src5-wf4_object_entered_zone_1_visit1.jpg",
+        "action_status": "done",
+        "visual_status": null,
+        "visual_label": null,
+        "visual_confidence": null,
+        "visual_routing": null,
+        "created_at": "2026-10-10T23:07:31.998055"
+      },
+      "actions": [
+        {
+          "id": 2,
+          "event_id": 2,
+          "action_type": "create_notification",
+          "status": "success",
+          "attempt_count": 1,
+          "error": null,
+          "executed_at": "2026-10-10T23:07:32.043965"
+        }
+      ],
+      "evidence_sha256": "b64b42759b843d3b937f5052f09edf81f0fb408f40da1efc160c9955f5fcaf83"
+    },
+    {
+      "event": {
+        "id": 3,
+        "source_id": 5,
+        "workflow_id": 5,
+        "track_id": 1,
+        "type": "dwell_in_zone",
+        "class_name": "bus",
+        "video_timestamp": 4.2,
+        "confidence": 0.9349781274795532,
+        "detail": "bus #1 stayed in QA_ONLY unseen left bay >= 2s",
+        "evidence_url": "/media/evidence/event_src5-wf5_dwell_in_zone_1_visit1.jpg",
+        "action_status": "done",
+        "visual_status": null,
+        "visual_label": null,
+        "visual_confidence": null,
+        "visual_routing": null,
+        "created_at": "2026-10-10T23:07:32.548513"
+      },
+      "actions": [
+        {
+          "id": 3,
+          "event_id": 3,
+          "action_type": "create_notification",
+          "status": "success",
+          "attempt_count": 1,
+          "error": null,
+          "executed_at": "2026-10-10T23:07:32.556207"
+        }
+      ],
+      "evidence_sha256": "bae4981aa54397a4e88e716d1eb8469e1ab295308b759a568659861ee1ce1b35"
+    }
+  ],
+  "teacher_stats": {
+    "live": {
+      "status": "disabled_demo_safe",
+      "teacher_provider": "disabled",
+      "teacher_available": false,
+      "reason": "Teacher-routed visual-predicate workflows are disabled in demo-safe mode. Only the real geometric detector / tracker / zone rules run in this demo."
+    },
+    "persisted_by_route_status": {},
+    "persisted_by_teacher_status": {},
+    "total_decisions": 0
+  },
+  "student_activation": false,
+  "limits": "New video bytes/path/resolution/timing, same upstream photo. This is NOT unseen natural footage or natural-video quality evidence."
+}

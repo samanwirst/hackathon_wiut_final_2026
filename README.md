@@ -51,6 +51,8 @@ The [architecture audit](docs/VISUAL_ANALYTICS_AUDIT.md) and
 [milestone acceptance criteria](docs/PRD.md#16-acceptance-criteria) define
 the remaining work. No cost savings or natural-video quality result is established.
 
+Current experimental verdicts and limits are in [the execution status](docs/TEN_HOUR_STATUS.md).
+
 The delivery candidate uses [a private reproducible container deployment](deploy/README.md)
 and an optional authenticated same-origin gateway. [Executed evidence](.agents/delivery-evidence/private-749d27b/VALIDATION.md)
 records a real YOLO event, evidence and notification in the fresh unprivileged
