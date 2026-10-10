@@ -1,0 +1,19 @@
+{
+  "tested_harness_commit": "3bbd19c",
+  "raw_generation_commit": "7a936cd",
+  "all_data_bodies_excluded": true,
+  "teacher_workflow_actions_enabled": false,
+  "files": {
+    "candidate-scoring-smoke.json": "933396d879ed693e714af29ab0cfc70ea705f8dd5384415c4f27f16e386ccc0e",
+    "generative-selected-video.json": "01c5182bfbb0d11bb052f27fc325471cec44d8a2d4d6af20ab70c4acfff954b5",
+    "scoring-model.json": "cbff9d9b557751e49245601f51919c39d7fccc805d7218c11985bbd0b826950e",
+    "selected-video-manifest.json": "231b016b11ee3e292bdde81e2a74b0b61808ed91d07dfa3751c15a4d54a845e5",
+    "generative-service-bay.json": "05d69f213fc902104cecbbdc1be5430603eb3a1c3e20e22a56b5032537aa2e0d",
+    "image-crop-manifest.json": "b857c3dde71c1100cc40782dbe2ee958826274b60c515a21e8ac2a983e42b979",
+    "model-source.json": "2cecf69e9516186058ed5574081bd9f827edc54e4e1add994b652f37844cabf8",
+    "generative-model.json": "ef168225a1f6d47a3642ae591fd4a3603fcbbd72951d8d6f758f65133ca60963",
+    "requirements.lock.txt": "bd011dbce69c487d0778e255d1e1e0a5c22d226c7b861d87cef9706dcf77bd1f",
+    "boundary-probes.json": "52da1859eb51d777afec696d9cbd2ea899377283fcc704043fca80bac53a7d1a",
+    "listener.txt": "06bda0d3808cb6142c60e8d4f3c692fc9911ed958b5af25d8bb902d6bf6baf12"
+  }
+}

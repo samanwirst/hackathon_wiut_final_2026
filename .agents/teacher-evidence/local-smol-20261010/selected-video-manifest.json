@@ -1,0 +1,26 @@
+{
+  "source": "demo_bus_private_crop.mp4",
+  "source_sha256": "3521fe25192c35a201bdf75682c9a351ff1a259aff961df40ea0e26b1fdfcf37",
+  "real_video_decoding": true,
+  "generation_method": "bus-only crop of Ultralytics photo; synthetic left-to-right motion on graycanvas; no fabricated predictions",
+  "rows": [
+    {
+      "file": "video_frame_0.jpg",
+      "frame_index": 0,
+      "time_seconds": 0.0,
+      "sha256": "0f036f8c68a65c6fd533f52bddd51fd509a7d437a9499d772191efd66741c1cb"
+    },
+    {
+      "file": "video_frame_126.jpg",
+      "frame_index": 126,
+      "time_seconds": 4.2,
+      "sha256": "32ed4c4b9608b87ec77282c2da6d208bdb164c50ea3e233ba660dd88872008da"
+    },
+    {
+      "file": "video_frame_156.jpg",
+      "frame_index": 156,
+      "time_seconds": 5.2,
+      "sha256": "fba8f016034ddc03bf2a0c02c6e9b884885c23aeed9ff6b6b47033e882a642bc"
+    }
+  ]
+}

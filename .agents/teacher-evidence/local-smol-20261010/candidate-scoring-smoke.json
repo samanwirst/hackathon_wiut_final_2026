@@ -1,0 +1,153 @@
+{
+  "model": {
+    "object": "list",
+    "data": [
+      {
+        "id": "HuggingFaceTB/SmolVLM-500M-Instruct",
+        "object": "model",
+        "owned_by": "local-experiment",
+        "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47"
+      }
+    ],
+    "experimental": {
+      "active_request": null,
+      "max_concurrency": 1,
+      "output_mode": "candidate_sequence_scoring",
+      "scoring_labels": [
+        "occupied",
+        "empty"
+      ]
+    }
+  },
+  "prompt": "Is a vehicle present inside the marked service bay? Reply only with a JSON object with exactly label and confidence. Allowed labels: [\"occupied\", \"empty\"]. Confidence must be a numeric value from0 to1, your own estimate. Example format: {\"label\":\"unknown\",\"confidence\":0.0}. Do not explain.",
+  "allowed_labels": [
+    "occupied",
+    "empty"
+  ],
+  "records": [
+    {
+      "image": "s00-f00.png",
+      "image_sha256": "8a0206495f5cb56aa9508c092f87f6ab2c7597b6f9fbec9d5560969d78417dbc",
+      "http_status": 200,
+      "wall_seconds": 1.2300384109985316,
+      "actual_content": "{\"label\": \"occupied\", \"confidence\": 0.9918345113763214}",
+      "usage": {
+        "prompt_tokens": 144,
+        "completion_tokens": 0,
+        "total_tokens": 144
+      },
+      "metrics": {
+        "request_id": "local-b42ab4f079364c03bc664a4a7629578c",
+        "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+        "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+        "image_count": 1,
+        "input_tokens": 144,
+        "output_tokens": 0,
+        "inference_seconds": 1.2157343010039767,
+        "gpu_peak_allocated_bytes": 1064910848,
+        "gpu_peak_reserved_bytes": 1086324736,
+        "deadline_reached": false,
+        "scoring": {
+          "method": "candidate_sequence_softmax",
+          "uncalibrated": true,
+          "formula": "s(label)=sum_t log P(candidate_token_t | image(s), prompt, prior_candidate_tokens); p(label)=exp(s)/sum_candidates exp(s)",
+          "candidate_labels": [
+            "occupied",
+            "empty"
+          ],
+          "candidate_token_ids": [
+            [
+              27450,
+              18
+            ],
+            [
+              16451,
+              18
+            ]
+          ],
+          "candidate_log_likelihoods": [
+            -8.125248908996582,
+            -12.924888610839844
+          ],
+          "normalized_probabilities": [
+            0.9918345113763214,
+            0.008165488623678649
+          ],
+          "model_forward_calls": 2,
+          "actual_model_processed_tokens": 292,
+          "output_is_generated_json": false
+        }
+      },
+      "strict_schema_valid": true,
+      "parsed_teacher_label": {
+        "label": "occupied",
+        "confidence": 0.9918345113763214
+      },
+      "human_verified": false
+    },
+    {
+      "image": "s00-f01.png",
+      "image_sha256": "ba8f3169ac956dc5dbf9e7294b053dab673fd6f21961679c7ab433ebdca1d65b",
+      "http_status": 200,
+      "wall_seconds": 0.121315678996325,
+      "actual_content": "{\"label\": \"occupied\", \"confidence\": 0.9519567196932494}",
+      "usage": {
+        "prompt_tokens": 144,
+        "completion_tokens": 0,
+        "total_tokens": 144
+      },
+      "metrics": {
+        "request_id": "local-6c8d5fcb86eb49e98559b3afd0148e44",
+        "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+        "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+        "image_count": 1,
+        "input_tokens": 144,
+        "output_tokens": 0,
+        "inference_seconds": 0.11891124599787872,
+        "gpu_peak_allocated_bytes": 1064910848,
+        "gpu_peak_reserved_bytes": 1086324736,
+        "deadline_reached": false,
+        "scoring": {
+          "method": "candidate_sequence_softmax",
+          "uncalibrated": true,
+          "formula": "s(label)=sum_t log P(candidate_token_t | image(s), prompt, prior_candidate_tokens); p(label)=exp(s)/sum_candidates exp(s)",
+          "candidate_labels": [
+            "occupied",
+            "empty"
+          ],
+          "candidate_token_ids": [
+            [
+              27450,
+              18
+            ],
+            [
+              16451,
+              18
+            ]
+          ],
+          "candidate_log_likelihoods": [
+            -7.587574481964111,
+            -10.573991775512695
+          ],
+          "normalized_probabilities": [
+            0.9519567196932494,
+            0.04804328030675073
+          ],
+          "model_forward_calls": 2,
+          "actual_model_processed_tokens": 292,
+          "output_is_generated_json": false
+        }
+      },
+      "strict_schema_valid": true,
+      "parsed_teacher_label": {
+        "label": "occupied",
+        "confidence": 0.9519567196932494
+      },
+      "human_verified": false
+    }
+  ],
+  "accuracy": "UNVERIFIED: no human-verified held-out labels",
+  "rental_cost": "no rented GPU; no external paid inference",
+  "local_electricity_cost": "UNVERIFIED; not measured",
+  "teacher_workflow_actions": "disabled"
+}

@@ -1,0 +1,26 @@
+{
+  "source": "ultralytics/assets/bus.jpg",
+  "source_sha256": "c02019c4979c191eb739ddd944445ef408dad5679acab6fd520ef9d434bfbc63",
+  "crop_xyxy": [
+    350,
+    220,
+    755,
+    665
+  ],
+  "privacy": "foreground pedestrians excluded; subject rights unverified",
+  "method": "crop/thumbnail and compose real bus pixels on declared synthetic neutral canvas",
+  "images": {
+    "empty_context.jpg": {
+      "sha256": "55b5c73c3b9b17c839b62863c9eb65096e112b97fbca73066b3428c3cd7e0611",
+      "bytes": 3187
+    },
+    "bus_context.jpg": {
+      "sha256": "9b9de0f6455cb82067d39621705853ab81fc39eba36c927c79ab272c7e985f25",
+      "bytes": 29560
+    },
+    "bus_roi.jpg": {
+      "sha256": "46bba5482b8c5da0470e51bfcf3a1be14ed1857710c942cd592dd8d6f5135fd1",
+      "bytes": 48614
+    }
+  }
+}
