@@ -13,18 +13,21 @@ from urllib.parse import urlsplit
 import httpx
 
 MODEL = "HuggingFaceTB/SmolVLM-500M-Instruct"
-PROMPT = ('Look at the image. Classify the visible main vehicle. Reply only with '
-          'JSON using exactly these two fields: {"label":"bus" or "not_bus" or '
-          '"unknown","confidence":number from 0 to 1}. Use unknown if uncertain. '
-          'Do not explain. The confidence is your own estimate.')
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("images", nargs="+", type=Path)
     parser.add_argument("--url", default="http://127.0.0.1:18081/v1")
+    parser.add_argument("--question", default="Is the main visible vehicle a bus?")
+    parser.add_argument("--labels", default="bus,not_bus,unknown")
     parser.add_argument("--output", type=Path, default=Path(".agents/runtime/local-teacher/smoke.json"))
     args = parser.parse_args()
+    labels = args.labels.split(",")
+    prompt = (args.question + ' Reply only with a JSON object with exactly label and confidence. '
+              + 'Allowed labels: ' + json.dumps(labels) + '. '
+              + 'Confidence must be a numeric value from0 to1, your own estimate. '
+              + 'Example format: {"label":"unknown","confidence":0.0}. Do not explain.')
     endpoint = urlsplit(args.url)
     if endpoint.scheme != "http" or endpoint.hostname != "127.0.0.1":
         raise SystemExit("Only a private loopback Teacher is supported by this smoke")
@@ -38,8 +41,8 @@ def main():
             raw = path.read_bytes()
             request = {"model": MODEL, "max_tokens": 64, "temperature": 0,
                        "messages": [{"role": "user", "content": [
-                           {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64," + base64.b64encode(raw).decode()}},
-                           {"type": "text", "text": PROMPT},
+                           {"type": "image_url", "image_url": {"url": "data:image/" + ("png" if path.suffix.lower() == ".png" else "jpeg") + ";base64," + base64.b64encode(raw).decode()}},
+                           {"type": "text", "text": prompt},
                        ]}]}
             t0 = time.monotonic()
             response = client.post(args.url + "/chat/completions", json=request)
@@ -53,7 +56,7 @@ def main():
                 try:
                     label = json.loads(content)
                     valid = (isinstance(label, dict) and set(label) == {"label", "confidence"}
-                             and label["label"] in {"bus", "not_bus", "unknown"}
+                             and label["label"] in labels
                              and type(label["confidence"]) in {int, float}
                              and math.isfinite(label["confidence"]) and 0 <= label["confidence"] <= 1)
                     record["strict_schema_valid"] = valid
@@ -65,7 +68,7 @@ def main():
                 record["error"] = response.text[:500]
             record["human_verified"] = False
             records.append(record)
-    result = {"model": model.json(), "prompt": PROMPT, "records": records,
+    result = {"model": model.json(), "prompt": prompt, "allowed_labels": labels, "records": records,
               "accuracy": "UNVERIFIED: no human-verified held-out labels",
               "rental_cost": "no rented GPU; no external paid inference",
               "local_electricity_cost": "UNVERIFIED; not measured",

@@ -36,6 +36,8 @@ token = os.environ.get("LOCAL_TEACHER_TOKEN", "")
 evidence_dir = Path(os.environ.get("LOCAL_TEACHER_EVIDENCE", ".agents/runtime/local-teacher/evidence"))
 evidence_dir.mkdir(parents=True, exist_ok=True)
 capacity = threading.BoundedSemaphore(1)
+active_lock = threading.Lock()
+active_request = None
 executor = concurrent.futures.ThreadPoolExecutor(max_workers=1, thread_name_prefix="real-teacher")
 processor = None
 model = None
@@ -104,7 +106,10 @@ def check_private(request):
 @app.get("/v1/models")
 def models(request: Request):
     check_private(request)
-    return {"object": "list", "data": [{"id": MODEL_ID, "object": "model", "owned_by": "local-experiment", "revision": REVISION}]}
+    with active_lock:
+        current = active_request
+    return {"object": "list", "data": [{"id": MODEL_ID, "object": "model", "owned_by": "local-experiment", "revision": REVISION}],
+            "experimental": {"active_request": current, "max_concurrency": 1}}
 
 
 def parse_payload(payload):
@@ -168,6 +173,7 @@ def parse_payload(payload):
 
 
 def infer(chat, images, max_tokens, request_id):
+    global active_request
     # This slot is released by the real underlying worker, never by an HTTP timeout.
     t0 = time.monotonic()
     try:
@@ -211,11 +217,14 @@ def infer(chat, images, max_tokens, request_id):
             "experimental_metrics": metrics,
         }
     finally:
+        with active_lock:
+            active_request = None
         capacity.release()
 
 
 @app.post("/v1/chat/completions")
 async def completion(request: Request):
+    global active_request
     check_private(request)
     body = bytearray()
     try:
@@ -235,7 +244,10 @@ async def completion(request: Request):
     chat, images, max_tokens = parse_payload(payload)
     if not capacity.acquire(blocking=False):
         raise HTTPException(429, "one genuine inference already running; no queue")
-    future = asyncio.get_running_loop().run_in_executor(executor, infer, chat, images, max_tokens, "local-" + uuid.uuid4().hex)
+    request_id = "local-" + uuid.uuid4().hex
+    with active_lock:
+        active_request = request_id
+    future = asyncio.get_running_loop().run_in_executor(executor, infer, chat, images, max_tokens, request_id)
     # Cancelled callers do not cancel/abandon/release the underlying inference slot.
     return await asyncio.shield(future)
 
