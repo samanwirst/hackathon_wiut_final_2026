@@ -1,0 +1,12 @@
+{
+  "created_with": "@oai/artifact-tool ES modules; native editable text/shapes and actual UI bitmaps",
+  "slides": 8,
+  "rendered_pngs": 8,
+  "visual_qa": "All slides rendered and inspected; slide3 crop and slide6 title corrected. Updated slides4/5/6 re-rendered and inspected.",
+  "pitch_script": "docs/DEFENSE_SCRIPT.md",
+  "experimental_status": "C snapshot5938b6d independent CHANGES_REQUIRED; final focused correction in progress. Not M3 acceptance.",
+  "activation": false,
+  "rental": "Destroyed; provider rounded diskcharge0.001USD, finalinvoiceUNVERIFIED, remoteinferenceabsent",
+  "pptx_sha256": "d192d0f2418d5e7546cc72d7edc304dc5ff8bc51511c334c4a6f0044f5932815",
+  "actual_student_ui_sha256": "48f93ccf54e5d8c3b76bd5618daafaef8a6a24bd3ccf482b0fc4b59d22408ed9"
+}
