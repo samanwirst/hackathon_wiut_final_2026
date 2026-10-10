@@ -37,11 +37,20 @@ ships. See [.agents/reviews/M1.md](.agents/reviews/M1.md) and
 [docs/TRACEABILITY.md](docs/TRACEABILITY.md).
 
 M2's experimental VLM routing/compiler implementation remains BLOCKED.
-Verified teacher-to-student learning in M3 and measured comparisons in M4
-have not started.
+The isolated ten-hour experiment has executed actual private GPU Teacher
+labeling and applied the user's verification of 24 exact synthetic images.
+Twelve biased Teacher proposals needed correction. Student fitting and
+activation remain pending QA; this is not M3 acceptance. The verified fallback
+is protected on `feature/demo-safe`.
 The [architecture audit](docs/VISUAL_ANALYTICS_AUDIT.md) and
 [milestone acceptance criteria](docs/PRD.md#16-acceptance-criteria) define
-the remaining work. No VLM savings or held-out quality result is established.
+the remaining work. No cost savings or natural-video quality result is established.
+
+The delivery candidate uses [a private reproducible container deployment](deploy/README.md)
+and an optional authenticated same-origin gateway. [Executed evidence](.agents/delivery-evidence/private-749d27b/VALIDATION.md)
+records a real YOLO event, evidence and notification in the fresh unprivileged
+container. No public tunnel is active. Use the [seven-minute defence script](docs/DEFENSE_SCRIPT.md)
+and [actual recorded fallback](docs/presentation/VisionFlow-fallback-demo.mp4).
 
 ## Demo-safe build (current deliverable)
 
