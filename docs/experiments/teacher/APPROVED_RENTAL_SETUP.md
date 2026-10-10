@@ -1,4 +1,10 @@
-# Approved private Teacher rental — not yet created
+# Approved private Teacher rental — historical setup
+
+**Closed update:** the single authorized instance was subsequently created and
+destroyed because the available watcher could not guarantee the total unattended
+spend cap. No replacement is authorized. See [actual outcome and cleanup](RENTAL_OUTCOME.md).
+The following is the historical preparation plan; its monitoring assumptions
+are not a verified hard monetary cap.
 
 The user approved **one private RTX 3090 instance**, with a **hard USD $3 total
 incremental rental, storage and network limit**, no automatic funding and

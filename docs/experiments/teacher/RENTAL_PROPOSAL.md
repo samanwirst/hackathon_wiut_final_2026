@@ -1,5 +1,9 @@
 # Teacher GPU rental proposal — approval required
 
+Historical proposal: the later single approved rental was destroyed under the
+user's fail-closed budget requirement. See [actual rental outcome](RENTAL_OUTCOME.md).
+No replacement rental is authorized; only the validated local Teacher remains.
+
 Observed **2026-10-10 21:29 UTC** by a public read-only Vast.ai offer search.
 No account was accessed, credits added, instance rented or charge incurred.
 Offer availability and prices must be checked again immediately before purchase.

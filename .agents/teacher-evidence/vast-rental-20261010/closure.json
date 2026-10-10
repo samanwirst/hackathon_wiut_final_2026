@@ -1,0 +1,9 @@
+{
+  "instance_id": 55296142,
+  "closure_utc": "2026-10-10T22:59:49.663321+00:00",
+  "reason": "User-required fail-closed shutdown: planned traffic and null provider counters could not guarantee USD3 total",
+  "new_rental_authorized": false,
+  "owned_private_ssh_key_discarded": true,
+  "account_api_key_file_unchanged": true,
+  "local_teacher_pid_untouched": 677309
+}
