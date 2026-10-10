@@ -60,7 +60,7 @@ type TrackEventT = {
 
 type NotificationT = { id: number; event_id: number; title: string; message: string; created_at: string };
 
-type ReviewTarget = { workflowId: number; dsl: Dsl; kind: "new" | "reenable" };
+type ReviewTarget = { workflowId: number; sourceId: number; dsl: Dsl; kind: "new" | "reenable" };
 
 const TRIGGERS = [
   { value: "object_entered_zone", label: "Object enters the zone" },
@@ -146,6 +146,15 @@ export default function Home() {
   const [runPending, setRunPending] = useState<{ id: number; from: string } | null>(null);
   // Read-only JSON inspection of a workflow (used for unavailable visual rules).
   const [jsonView, setJsonView] = useState<Workflow | null>(null);
+  // True only once the source-scoped lists (zones/workflows/events) have finished
+  // loading for the CURRENTLY selected source. Reset to false on every switch so
+  // a previous recording's data can never be rendered or treated as eligible
+  // while the new source's requests are still in flight.
+  const [scopeReady, setScopeReady] = useState(false);
+  // Marks an in-flight form transition (save draft / approve / edit) during which
+  // the builder fields must stay locked so a late server copy cannot clobber an
+  // instant edit (e.g. the dwell field disappearing mid-fill).
+  const [formPending, setFormPending] = useState(false);
   // Tracks the source a source-scoped refresh must still be relevant for, so a
   // stale in-flight response cannot overwrite a newly selected source.
   const selectedSourceRef = useRef<number | null>(null);
@@ -178,10 +187,31 @@ export default function Home() {
   // run; run/arming/edit are unavailable during it, Disable stays available.
   const analyzing = isProcessing || runPending?.id === selectedSource;
   const canMutate = demoSafe === true;
-  // Run requires the selected source to have an approved ENABLED geometric rule.
+
+  // Source-scoped views. A record only belongs to the current workspace when its
+  // source_id matches the selected source AND the scoped lists have finished
+  // loading for that source. This keeps a previous recording's zones, rules and
+  // events (and the notifications derived from those events) from ever appearing
+  // under a newly selected source while its requests are still in flight.
+  const scopeReadyNow = scopeReady && selectedSource != null;
+  const scopeLoading = selectedSource != null && !scopeReady;
+  const scopedZones = useMemo(
+    () => (scopeReadyNow ? zones.filter((z) => z.source_id === selectedSource) : []),
+    [zones, selectedSource, scopeReadyNow],
+  );
+  const scopedWorkflows = useMemo(
+    () => (scopeReadyNow ? workflows.filter((w) => w.source_id === selectedSource) : []),
+    [workflows, selectedSource, scopeReadyNow],
+  );
+  const scopedEvents = useMemo(
+    () => (scopeReadyNow ? events.filter((e) => e.source_id === selectedSource) : []),
+    [events, selectedSource, scopeReadyNow],
+  );
+  // Run requires THIS source to have an approved ENABLED geometric rule whose
+  // data is ready — never one inherited from the previously selected source.
   const approvedGeometric = useMemo(
-    () => workflows.some((w) => w.enabled && w.dsl.visual_predicate == null),
-    [workflows],
+    () => scopedWorkflows.some((w) => w.enabled && w.dsl.visual_predicate == null),
+    [scopedWorkflows],
   );
 
   // A list-returning GET that fails or returns a non-array is treated as a
@@ -229,11 +259,14 @@ export default function Home() {
             getArray(`${API}/api/workflows?source_id=${sid}`),
             getArray(`${API}/api/events?source_id=${sid}&limit=100`),
           ]);
-          // Drop the response if the user switched sources while it was in flight.
+          // Drop the response if the user switched sources (or cleared the
+          // selection) while it was in flight — a stale/null-source callback must
+          // never install another recording's data.
           if (selectedSourceRef.current === sid) {
             setZones(z as Zone[]);
             setWorkflows(w as Workflow[]);
             setEvents(e as TrackEventT[]);
+            setScopeReady(true);
           }
         } catch {
           // Source-scoped data (e.g. workflows) failed to load — surface it and
@@ -246,6 +279,7 @@ export default function Home() {
         setZones([]);
         setWorkflows([]);
         setEvents([]);
+        setScopeReady(false);
       }
       setLoaded(true);
       setError((prev) => (prev && prev.startsWith("Cannot reach") ? null : prev));
@@ -262,11 +296,21 @@ export default function Home() {
     return () => clearInterval(t);
   }, [refresh]);
 
-  // Switching source clears any in-progress draft/approval, drawing and edit note.
+  // Switching source clears the previous recording's scoped lists and every
+  // dependent surface (draft/approval, drawing, edit note, read-only JSON and
+  // evidence modals) so nothing from the old source survives under the new one.
+  // scopeReady stays false until the new source's data loads.
   useEffect(() => {
     selectedSourceRef.current = selectedSource;
+    setScopeReady(false);
+    setZones([]);
+    setWorkflows([]);
+    setEvents([]);
     setReview(null);
     setEditNote(null);
+    setFormPending(false);
+    setJsonView(null);
+    setModalEvent(null);
     setPoints([]);
     setDrawing(false);
     setWfZone(null);
@@ -294,7 +338,7 @@ export default function Home() {
     if (!ctx) return;
     ctx.clearRect(0, 0, w, h);
 
-    for (const z of zones) {
+    for (const z of scopedZones) {
       ctx.strokeStyle = "#4f8cff";
       ctx.fillStyle = "rgba(79, 140, 255, 0.14)";
       ctx.lineWidth = 2;
@@ -324,7 +368,7 @@ export default function Home() {
         ctx.fill();
       }
     }
-  }, [zones, points]);
+  }, [scopedZones, points]);
 
   useEffect(() => {
     drawOverlay();
@@ -390,13 +434,15 @@ export default function Home() {
   const touchBuilder = () => setReview(null);
 
   const saveDraft = async () => {
-    if (!canMutate) return;
+    if (!canMutate || formPending) return;
     if (!selectedSource || !wfZone) {
       setError("Pick a zone for this rule first.");
       return;
     }
+    const sid = selectedSource;
     setError(null);
     setBusy(true);
+    setFormPending(true);
     const trigger: Record<string, unknown> = { type: wfTrigger, zone_id: wfZone };
     if (wfTrigger === "dwell_in_zone") trigger.duration_seconds = wfDuration;
     if (wfTrigger === "object_count_exceeded") trigger.threshold = wfThreshold;
@@ -416,16 +462,26 @@ export default function Home() {
       });
       if (!r.ok) return apiError(r);
       const wf: Workflow = await r.json();
-      setReview({ workflowId: wf.id, dsl: wf.dsl, kind: "new" });
+      // If the user switched sources mid-save, do not install a review that
+      // belongs to the previous source.
+      if (selectedSourceRef.current !== sid || wf.source_id !== sid) return;
+      setReview({ workflowId: wf.id, sourceId: wf.source_id, dsl: wf.dsl, kind: "new" });
       setEditNote(null);
       await refresh();
     } finally {
       setBusy(false);
+      setFormPending(false);
     }
   };
 
   const approve = async () => {
-    if (!review || !canMutate) return;
+    if (!review || !canMutate || formPending) return;
+    // Never approve a review that no longer belongs to the selected source (e.g.
+    // a switch happened before the user clicked approve).
+    if (review.sourceId !== selectedSource) {
+      setReview(null);
+      return;
+    }
     // Defense-in-depth: never activate a rule carrying a visual predicate from
     // the UI (the backend also rejects this). These are view/disable only.
     if (review.dsl.visual_predicate != null) {
@@ -433,14 +489,22 @@ export default function Home() {
       setReview(null);
       return;
     }
+    const sid = selectedSource;
     setBusy(true);
+    setFormPending(true);
     try {
       const r = await fetch(`${API}/api/workflows/${review.workflowId}/enable`, { method: "POST" });
       if (!r.ok) return apiError(r);
+      // A delayed enable must never install an old-source approval.
+      if (selectedSourceRef.current !== sid) {
+        setReview(null);
+        return;
+      }
       setReview(null);
       await refresh();
     } finally {
       setBusy(false);
+      setFormPending(false);
     }
   };
 
@@ -453,37 +517,63 @@ export default function Home() {
 
   const reviewEnable = (wf: Workflow) => {
     // Visual-predicate rules are unavailable: never offer re-arming for them.
-    if (wf.dsl.visual_predicate != null || !canMutate || analyzing) return;
-    setReview({ workflowId: wf.id, dsl: wf.dsl, kind: "reenable" });
+    // Only re-arm a rule that belongs to the selected source.
+    if (wf.dsl.visual_predicate != null || !canMutate || analyzing || formPending) return;
+    if (wf.source_id !== selectedSource) return;
+    setReview({ workflowId: wf.id, sourceId: wf.source_id, dsl: wf.dsl, kind: "reenable" });
     builderRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   const editWorkflow = async (wf: Workflow) => {
     // Never copy a visual rule into the geometric builder (that silently drops
-    // its visual predicate). Edit is unavailable during analysis.
-    if (wf.dsl.visual_predicate != null || !canMutate || analyzing) return;
-    if (wf.enabled) {
-      const r = await fetch(`${API}/api/workflows/${wf.id}/disable`, { method: "POST" });
-      if (!r.ok) return apiError(r);
-    }
-    setWfName(wf.name);
-    setWfClass(wf.dsl.object_class);
-    setWfTrigger(wf.dsl.trigger.type);
-    setWfZone(wf.dsl.trigger.zone_id);
-    // Preserve the exact valid dwell value (fractional seconds too); do not round.
-    if (wf.dsl.trigger.duration_seconds) setWfDuration(wf.dsl.trigger.duration_seconds);
-    if (wf.dsl.trigger.threshold) setWfThreshold(wf.dsl.trigger.threshold);
-    setReview(null);
+    // its visual predicate). Edit is unavailable during analysis, during another
+    // form transition, or for a rule that is not bound to the selected source.
+    if (wf.dsl.visual_predicate != null || !canMutate || analyzing || formPending) return;
+    if (wf.source_id !== selectedSource) return;
+    const sid = selectedSource;
+    // Lock the builder for the whole transition so an instant edit cannot be
+    // clobbered by the awaited copy (e.g. the dwell field disappearing mid-fill).
+    setFormPending(true);
+    // Guide the user while the previous rule is being disabled and reloaded.
     setEditNote(
       `Editing “${wf.name}”. The previous rule (#${wf.id}) has been disabled; its past ` +
         `events and evidence are preserved. Saving creates a new reviewed version.`,
     );
-    await refresh();
-    builderRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    try {
+      if (wf.enabled) {
+        const r = await fetch(`${API}/api/workflows/${wf.id}/disable`, { method: "POST" });
+        if (!r.ok) {
+          setEditNote(null);
+          return apiError(r);
+        }
+      }
+      // Abort cleanly if the user switched sources during the disable round-trip;
+      // never install an old-source rule into the new source's builder.
+      if (selectedSourceRef.current !== sid) {
+        setEditNote(null);
+        return;
+      }
+      setWfName(wf.name);
+      setWfClass(wf.dsl.object_class);
+      setWfTrigger(wf.dsl.trigger.type);
+      setWfZone(wf.dsl.trigger.zone_id);
+      // Preserve the exact valid dwell value (fractional seconds too); do not round.
+      if (wf.dsl.trigger.duration_seconds) setWfDuration(wf.dsl.trigger.duration_seconds);
+      if (wf.dsl.trigger.threshold) setWfThreshold(wf.dsl.trigger.threshold);
+      setReview(null);
+      await refresh();
+      if (selectedSourceRef.current !== sid) return;
+      builderRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    } finally {
+      setFormPending(false);
+    }
   };
 
   const processSource = async (s: Source) => {
-    if (!canMutate || analyzing) return; // never start a second run on top of one
+    if (!canMutate || analyzing || formPending) return; // never start a second run on top of one
+    // Only run the selected source, and only once its own data is ready — never
+    // inherit another recording's approval while this source is still loading.
+    if (s.id !== selectedSource || !scopeReady) return;
     if (!approvedGeometric) {
       setError("Approve an enabled geometric rule for this source before running it.");
       return;
@@ -500,7 +590,9 @@ export default function Home() {
 
   /* -------------------------------------------------- derived */
 
-  const sourceEventIds = useMemo(() => new Set(events.map((e) => e.id)), [events]);
+  // Notifications are scoped through the source's own events; during loading
+  // scopedEvents is empty, so no previous source's notifications leak through.
+  const sourceEventIds = useMemo(() => new Set(scopedEvents.map((e) => e.id)), [scopedEvents]);
   const scopedNotifications = useMemo(
     () => (selectedSource ? notifications.filter((n) => sourceEventIds.has(n.event_id)) : notifications),
     [notifications, selectedSource, sourceEventIds],
@@ -609,7 +701,12 @@ export default function Home() {
           ) : (
             <table>
               <thead>
-                <tr><th>#</th><th>Name</th><th>Status</th><th>Frames</th><th>Inference</th><th /></tr>
+                <tr>
+                  <th>#</th><th>Name</th><th>Status</th>
+                  <th title="Frames sampled and analyzed by YOLO so far (not a completion target)">Samples analyzed</th>
+                  <th title="Total frames reported by the clip's container metadata">Clip frames</th>
+                  <th>Inference</th><th />
+                </tr>
               </thead>
               <tbody>
                 {sources.map((s) => (
@@ -620,15 +717,22 @@ export default function Home() {
                       <span className={`badge ${s.status}`}><span className="dot" />{s.status}</span>
                       {s.error && <div className="faint" style={{ marginTop: 3 }}>{s.error}</div>}
                     </td>
-                    <td>{s.frames_processed || "—"}{s.frame_count ? ` / ~${s.frame_count}` : ""}</td>
+                    <td>{s.frames_processed || "—"}</td>
+                    <td>{s.frame_count ? `~${s.frame_count}` : "—"}</td>
                     <td>{s.avg_inference_ms ? `${s.avg_inference_ms.toFixed(0)} ms` : "—"}</td>
                     <td className="row" style={{ justifyContent: "flex-end" }} onClick={(e) => e.stopPropagation()}>
                       <button className="secondary sm" onClick={() => setSelectedSource(s.id)}>Select</button>
                       {s.id === selectedSource && (
                         <button
                           className="sm"
-                          disabled={analyzing || !approvedGeometric || !canMutate}
-                          title={!approvedGeometric ? "Approve an enabled geometric rule for this source first" : undefined}
+                          disabled={analyzing || !approvedGeometric || !canMutate || formPending || !scopeReady}
+                          title={
+                            scopeLoading
+                              ? "Loading this source's rules…"
+                              : !approvedGeometric
+                                ? "Approve an enabled geometric rule for this source first"
+                                : undefined
+                          }
                           onClick={() => processSource(s)}
                         >
                           {analyzing ? <><span className="spinner" />Analyzing</> : <>{I.play} Run</>}
@@ -654,7 +758,14 @@ export default function Home() {
             </div>
           )}
 
-          {current && !approvedGeometric && !analyzing && (
+          {current && scopeLoading && (
+            <div className="hint" style={{ marginTop: 10 }}>
+              <span className="spinner" />
+              <span>Loading this source&apos;s zones, rules and events…</span>
+            </div>
+          )}
+
+          {current && !scopeLoading && !approvedGeometric && !analyzing && (
             <div className="hint warn" style={{ marginTop: 10 }}>
               {I.info}
               <span>Build, review and <strong>approve</strong> a geometric rule below before running this source.</span>
@@ -711,9 +822,9 @@ export default function Home() {
                 )}
               </div>
 
-              {zones.length > 0 && (
+              {scopedZones.length > 0 && (
                 <div className="tag-list" style={{ marginTop: 12 }}>
-                  {zones.map((z) => (
+                  {scopedZones.map((z) => (
                     <span key={z.id} className="badge neutral">{z.name} · #{z.id}</span>
                   ))}
                 </div>
@@ -739,50 +850,56 @@ export default function Home() {
 
               <div className="form-grid">
                 <label className="field">Rule name
-                  <input value={wfName} onChange={(e) => { setWfName(e.target.value); touchBuilder(); }} disabled={analyzing || !canMutate} />
+                  <input value={wfName} onChange={(e) => { setWfName(e.target.value); touchBuilder(); }} disabled={analyzing || !canMutate || formPending} />
                 </label>
                 <label className="field">Object class
-                  <select value={wfClass} onChange={(e) => { setWfClass(e.target.value); touchBuilder(); }} disabled={analyzing || !canMutate}>
+                  <select value={wfClass} onChange={(e) => { setWfClass(e.target.value); touchBuilder(); }} disabled={analyzing || !canMutate || formPending}>
                     {CLASSES.map((c) => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </label>
                 <label className="field">Zone
-                  <select value={wfZone ?? ""} onChange={(e) => { setWfZone(Number(e.target.value) || null); touchBuilder(); }} disabled={analyzing || !canMutate}>
+                  <select value={wfZone ?? ""} onChange={(e) => { setWfZone(Number(e.target.value) || null); touchBuilder(); }} disabled={analyzing || !canMutate || formPending}>
                     <option value="">— select zone —</option>
-                    {zones.map((z) => <option key={z.id} value={z.id}>{z.name}</option>)}
+                    {scopedZones.map((z) => <option key={z.id} value={z.id}>{z.name}</option>)}
                   </select>
                 </label>
                 <label className="field" style={{ gridColumn: "1 / -1" }}>Trigger
-                  <select value={wfTrigger} onChange={(e) => { setWfTrigger(e.target.value); touchBuilder(); }} disabled={analyzing || !canMutate}>
+                  <select value={wfTrigger} onChange={(e) => { setWfTrigger(e.target.value); touchBuilder(); }} disabled={analyzing || !canMutate || formPending}>
                     {TRIGGERS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
                   </select>
                 </label>
                 {wfTrigger === "dwell_in_zone" && (
                   <label className="field">Dwell seconds (≥)
-                    <input type="number" min={1} step="any" value={wfDuration} onChange={(e) => { setWfDuration(Number(e.target.value)); touchBuilder(); }} disabled={analyzing || !canMutate} />
+                    <input type="number" min={1} step="any" value={wfDuration} onChange={(e) => { setWfDuration(Number(e.target.value)); touchBuilder(); }} disabled={analyzing || !canMutate || formPending} />
                   </label>
                 )}
                 {wfTrigger === "object_count_exceeded" && (
                   <label className="field">Threshold (count &gt;)
-                    <input type="number" min={1} value={wfThreshold} onChange={(e) => { setWfThreshold(Number(e.target.value)); touchBuilder(); }} disabled={analyzing || !canMutate} />
+                    <input type="number" min={1} value={wfThreshold} onChange={(e) => { setWfThreshold(Number(e.target.value)); touchBuilder(); }} disabled={analyzing || !canMutate || formPending} />
                   </label>
                 )}
               </div>
 
               <div className="row end" style={{ marginTop: 14 }}>
-                <button onClick={saveDraft} disabled={analyzing || busy || !wfZone || !canMutate}>
+                <button onClick={saveDraft} disabled={analyzing || busy || !wfZone || !canMutate || formPending}>
                   {busy ? <span className="spinner" /> : null} Save draft for review
                 </button>
               </div>
 
-              {zones.length === 0 && (
+              {scopeLoading && (
+                <p className="faint" style={{ marginTop: 10, textAlign: "right" }}>Loading this source&apos;s zones and rules…</p>
+              )}
+              {!scopeLoading && scopedZones.length === 0 && (
                 <p className="faint" style={{ marginTop: 10, textAlign: "right" }}>Draw a zone first to enable rule creation.</p>
+              )}
+              {formPending && !analyzing && (
+                <p className="faint" style={{ marginTop: 10, textAlign: "right" }}>Applying the change — the builder is locked until it loads.</p>
               )}
               {analyzing && (
                 <p className="faint" style={{ marginTop: 10, textAlign: "right" }}>Paused while this source is being analyzed (the frame snapshot would be stale).</p>
               )}
 
-              {review && (
+              {review && review.sourceId === selectedSource && (
                 <div className="review">
                   <div className="review-head" style={{ color: "var(--accent-hover)" }}>
                     {I.shield}
@@ -795,20 +912,20 @@ export default function Home() {
                   <pre className="code">{JSON.stringify(review.dsl, null, 2)}</pre>
                   <div className="row end" style={{ marginTop: 12 }}>
                     <button className="ghost" onClick={() => setReview(null)}>Discard</button>
-                    <button className="success" onClick={approve} disabled={busy || analyzing || !canMutate}>
+                    <button className="success" onClick={approve} disabled={busy || analyzing || !canMutate || formPending}>
                       {busy ? <span className="spinner" /> : I.check} Approve &amp; activate
                     </button>
                   </div>
                 </div>
               )}
 
-              {workflows.length > 0 && (
+              {scopedWorkflows.length > 0 && (
                 <>
                   <div className="divider" />
                   <table>
                     <thead><tr><th>#</th><th>Rule</th><th>State</th><th /></tr></thead>
                     <tbody>
-                      {workflows.map((w) => {
+                      {scopedWorkflows.map((w) => {
                         const isVisual = w.dsl.visual_predicate != null;
                         return (
                           <tr key={w.id}>
@@ -841,9 +958,9 @@ export default function Home() {
                                   {w.enabled ? (
                                     <button className="danger sm" onClick={() => disableWorkflow(w)}>Disable</button>
                                   ) : (
-                                    <button className="secondary sm" disabled={analyzing || !canMutate} onClick={() => reviewEnable(w)}>Review &amp; arm</button>
+                                    <button className="secondary sm" disabled={analyzing || !canMutate || formPending} onClick={() => reviewEnable(w)}>Review &amp; arm</button>
                                   )}
-                                  <button className="ghost sm" disabled={analyzing || !canMutate} onClick={() => editWorkflow(w)}>{I.edit} Edit</button>
+                                  <button className="ghost sm" disabled={analyzing || !canMutate || formPending} onClick={() => editWorkflow(w)}>{I.edit} Edit</button>
                                 </>
                               )}
                             </td>
@@ -877,7 +994,9 @@ export default function Home() {
           </div>
           {!current ? (
             <div className="empty">{I.list}<div className="title">No source selected</div><div className="desc">Events are scoped to the selected source.</div></div>
-          ) : events.length === 0 ? (
+          ) : scopeLoading ? (
+            <div className="empty"><span className="spinner" /><div className="desc">Loading this source&apos;s events…</div></div>
+          ) : scopedEvents.length === 0 ? (
             <div className="empty">{I.list}<div className="title">No events yet</div><div className="desc">Draw a zone, build and approve a rule, then run the source.</div></div>
           ) : (
             <table>
@@ -885,7 +1004,7 @@ export default function Home() {
                 <tr><th>#</th><th>Event</th><th>Video time</th><th>Conf.</th><th>Evidence</th><th>Action</th></tr>
               </thead>
               <tbody>
-                {events.map((e) => (
+                {scopedEvents.map((e) => (
                   <tr key={e.id}>
                     <td>{e.id}</td>
                     <td>{e.detail || e.type}</td>
