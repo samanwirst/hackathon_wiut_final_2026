@@ -6,6 +6,13 @@
 <title>Argus — Video Workspace</title>
 <link rel="icon" type="image/jpeg" href="/static/argus-logo.jpg" />
 <link rel="stylesheet" href="/static/style.css" />
+<style>
+.planning-spinner { display:inline-block; width:1em; height:1em; margin-right:8px;
+  vertical-align:-0.15em; border:2px solid currentColor; border-right-color:transparent;
+  border-radius:50%; animation:argus-planning-spin .8s linear infinite; }
+@keyframes argus-planning-spin { to { transform:rotate(360deg); } }
+@media (prefers-reduced-motion:reduce) { .planning-spinner { animation:none; } }
+</style>
 </head>
 <body>
 <div class="topbar">
@@ -45,7 +52,7 @@
     <p class="muted">Every requested condition must be implemented or rejected. No workflow runs before your approval.</p>
     <textarea id="prompt" maxlength="2000" placeholder="Describe an entry, exit or dwell condition with an explicit region and duration."></textarea>
     <button id="planTask" disabled style="margin-top:10px">Generate workflow</button>
-    <div id="planningStatus" class="banner info hidden" role="status" aria-live="polite" style="margin-top:12px">Generating a validated workflow… This may take a few seconds. Video analysis starts only after your approval.</div>
+    <div id="planningStatus" class="banner info hidden" role="status" aria-live="polite" style="margin-top:12px"><span class="planning-spinner" aria-hidden="true"></span>Generating a validated workflow… This may take a few seconds. Video analysis starts only after your approval.</div>
     <div id="draft" class="hidden" style="margin-top:14px">
       <p class="muted">Exact validated JSON for approval:</p>
       <pre id="draftJson" class="code"></pre>

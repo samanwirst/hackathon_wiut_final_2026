@@ -1,69 +1,143 @@
 # Argus — WIUT Hackathon Final 2026
 
-## Current VIDEO engineering candidate
+## Run Argus from zero
 
-The current workstream serves prerecorded video through the standalone
-`app.live` application: `/upload` is the operator page and `/judges` is the
-review-and-approval page. It reuses the accepted detector/tracker and geometric
-analytics. Its final recovery, independent review and public end-to-end tests
-are **pending**; this README does not certify a PASS. M2 and M3 remain BLOCKED.
-Student activation stays OFF. Teacher temporal understanding, bottle opening,
-foveation improvements and savings are UNVERIFIED. The accepted fallback at
-`723a4a73acf33e31843c59d86f942cd5247273c0` remains the private safety net.
+The production entry point is the standalone `app.live` backend, which also
+serves the unified Argus frontend at `/`. Each browser gets its own opaque
+session and private room. There is no in-app PIN, operator/judge choice or
+shared workspace. Select a prepared video or upload a new MP4, inspect real
+sampled images, describe a supported rule, review its exact JSON and explicitly
+approve it before geometric processing. Local notifications contain actual
+event evidence; scene descriptions alone never trigger events.
 
-For private local QA from this checkout, install the backend from its own
-working directory (Python 3.11+; requirements are lower bounds, not a complete
-lock). Use the tested dependency versions recorded with the final handoff;
-a fresh installation is not claimed to reproduce them automatically.
+M2/M3 remain **BLOCKED** and Student activation is **OFF**. The earlier exact
+review of `f49bf098528fcdd0f42024cef30013c3791b6627` remains
+**CHANGES_REQUIRED**. The owner explicitly waived further independent review
+for the final release and authorized fast checks; this is not an independent
+PASS. The protected fallback is `723a4a73acf33e31843c59d86f942cd5247273c0`.
 
-```bash
-cd services/api
+### 1. Install the source and system dependencies
+
+Ubuntu 24.04/Python 3.12 is supported by the deployment setup. Python 3.14 was
+also used in local checks. Run these commands from a fresh checkout:
+
+```sh
+git clone https://github.com/samanwirst/visionflow-hackathon-2026-source.git argus
+cd argus
+sudo apt-get update
+sudo apt-get install -y python3-venv ffmpeg curl
 python3 -m venv .venv
-.venv/bin/python -m pip install -r requirements.txt
-export DETECTOR_MODEL='/absolute/path/to/verified/yolo11n.pt'
-export VISIONFLOW_DATA_DIR='/absolute/path/to/private-writable-runtime'
-export VISIONFLOW_DEMO_PIN='<set privately; never commit or log>'
-export VISIONFLOW_LIVE_ALLOWED_ORIGINS='http://127.0.0.1:19102'
-export VISIONFLOW_LIVE_ALLOWED_HOSTS='127.0.0.1:19102'
-export VISIONFLOW_LIVE_TRUSTED_PROXY_HOPS='0'
-export VISIONFLOW_LIVE_INSECURE_COOKIE='true'
-export VLM_BASE_URL=''
-export LIVE_TEACHER_BASE_URL=''
-export VISIONFLOW_LIVE_ENABLE_CAMERA='false'
-export VISIONFLOW_LIVE_PLANNER_PROVIDER='openai'
-export VISIONFLOW_LIVE_PLANNER_MODEL='gpt-4.1-mini-2025-04-14'
-# Set OPENAI_API_KEY privately in the server environment; never paste it into logs.
-.venv/bin/python -m app.live --host 127.0.0.1 --port 19102
+.venv/bin/python -m pip install --upgrade pip
+(cd services/api && ../../.venv/bin/python -m pip install -r requirements.txt)
+.venv/bin/python -m pip install ultralytics==8.4.175
 ```
 
-This command starts loopback HTTP QA only. The `INSECURE_COOKIE` opt-out must
-never be used publicly. Use separate browser profiles for operator and judge
-roles. The public natural-language planner uses the OpenAI API with pinned
-`gpt-4.1-mini-2025-04-14`; `OPENAI_API_KEY` stays in the private server
-environment. Provider errors and exhausted attempt budgets fail explicitly.
-There is no API-error fallback to a developer CLI subscription. The shared
-persistent attempt ledger is stored under `VISIONFLOW_DATA_DIR`;
-`VISIONFLOW_LIVE_OPENAI_MAX_CALLS` defaults to 50 (maximum 50).
-Optional `VISIONFLOW_DEMO_VIDEO_DIR` selects a private directory containing
-authenticated, owner-authorized demo inputs; these files are not source assets. The VIDEO pages are served by this backend;
-the Next.js build is a separate regression check. Stop the foreground process
-with Ctrl-C. Uploaded media, evidence and credentials are private runtime data.
+`ffmpeg` supplies both `ffmpeg` and `ffprobe`; both are required for bounded,
+validated video decoding. Python requirements use version ranges rather than a
+complete lock, so record resolved versions when reproducing elsewhere. The
+published release archive can alternatively be checksum-verified and extracted;
+its `visionflow-source/` directory is the same application root.
 
-Public deployment is gated: serve only the reviewed standalone app through
-HTTPS, use secure cookies and exact host/origin/trusted-proxy settings, and
-verify room isolation, approval/version guards and bounded upload processing.
-Do not expose the legacy `app.main` API or publish a URL before those checks
-and the corresponding-source release succeed. Existing container startup in
-[deploy/README.md](deploy/README.md) describes the accepted private fallback,
-not a verified public VIDEO deployment. See [docs/LICENSES.md](docs/LICENSES.md).
+### 2. Download and verify the detector
 
-The Judges page also exposes optional nonactioning scene inspection when
-`VISIONFLOW_LIVE_SCENE_ENABLED=true`: it sends at most three real sampled
-512-pixel images to the pinned image-capable OpenAI model and returns frame
-indices, video timestamps, source/JPEG hashes and measured token usage. It shares
-the paid-attempt ledger with planning. This does not enable unfamiliar-object
-tracking/counting or temporal removal/opening alerts. Scene accuracy and savings
-remain unverified until independently evaluated; a model description is not an event.
+```sh
+mkdir -p private-models private-runtime
+chmod 700 private-models private-runtime
+curl --fail --location --proto '=https' --tlsv1.2 \
+  https://github.com/samanwirst/visionflow-hackathon-2026-source/releases/download/hackathon-2026-ui1/yolo11n.pt \
+  --output private-models/yolo11n.pt
+printf '%s  %s\n' 0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1 \
+  private-models/yolo11n.pt | sha256sum -c -
+```
+
+The weight file retains its Ultralytics upstream license; it is not a model
+trained by this team. Preserve its notices and the accompanying upstream source.
+
+### 3. Configure private API access and start locally
+
+Copy `.env.example` to `.env` and run `chmod 600 .env`. Configure your own
+`OPENAI_API_KEY` in that ignored server-only file. Do not paste credentials into
+frontend configuration, URLs, logs or commits. Load it from the application root:
+
+```sh
+cp .env.example .env
+chmod 600 .env
+# Edit .env privately to configure OPENAI_API_KEY before continuing.
+set -a
+. ./.env
+set +a
+export VISIONFLOW_DATA_DIR="$PWD/private-runtime"
+export DETECTOR_MODEL="$PWD/private-models/yolo11n.pt"
+export DETECTOR_DEVICE=cpu
+export VISIONFLOW_THREADS=2
+export VISIONFLOW_DEMO_SAFE=true
+export VISIONFLOW_DEMO_BOOTSTRAP_ENABLED=true
+export VISIONFLOW_LIVE_ENABLE_CAMERA=false
+export VISIONFLOW_LIVE_PLANNER_PROVIDER=openai
+export VISIONFLOW_LIVE_PLANNER_MODEL=gpt-4.1-mini-2025-04-14
+export VISIONFLOW_LIVE_SCENE_ENABLED=true
+export VISIONFLOW_LIVE_OPENAI_MAX_CALLS=50
+export VISIONFLOW_LIVE_MAX_VIDEO_JOBS=1
+export VLM_BASE_URL=
+export LIVE_TEACHER_BASE_URL=
+export VISIONFLOW_LIVE_ALLOWED_ORIGINS=http://127.0.0.1:19113
+export VISIONFLOW_LIVE_ALLOWED_HOSTS=127.0.0.1:19113
+export VISIONFLOW_LIVE_TRUSTED_PROXY_HOPS=0
+export VISIONFLOW_LIVE_FORWARDED_ALLOW_IPS=127.0.0.1,::1
+export VISIONFLOW_LIVE_INSECURE_COOKIE=true
+cd services/api
+../../.venv/bin/python -m app.live --host 127.0.0.1 --port 19113
+```
+
+Open **http://127.0.0.1:19113/**. The final command serves frontend and backend;
+no separate Next.js process is required. Stop it with Ctrl-C. The insecure-cookie
+setting above is exclusively for loopback HTTP. Missing credentials, provider
+errors and exhausted budgets return unavailable without fabricated results;
+there is no public subscription-CLI fallback. The shared, durable OpenAI attempt
+ledger lives in `VISIONFLOW_DATA_DIR` and caps planning plus scene requests.
+
+For an optional private Camera1–Camera5 catalog, set `VISIONFLOW_DEMO_VIDEO_DIR`
+to a directory containing owner-authorized, validated files named
+`Camera1-960x540-cfr24.mp4` through `Camera5-960x540-cfr24.mp4` **before starting**.
+These videos are not distributed as application source. Without this directory,
+use **Upload MP4** for a new supported input; do not invent missing catalog entries.
+Scene inspection samples at most three real 512-pixel images and reports source
+and frame hashes, timestamps, model identity and token usage. Basic unfamiliar
+object descriptions do not establish precise box tracking, aisle blockage,
+removal, bottle opening or other unvalidated temporal actions.
+
+### 4. Deploy securely
+
+Run the same backend on loopback behind an HTTPS proxy/tunnel and the outer
+access-control gate. Set `VISIONFLOW_LIVE_INSECURE_COOKIE=false`, exact HTTPS
+`VISIONFLOW_LIVE_ALLOWED_ORIGINS` and matching `VISIONFLOW_LIVE_ALLOWED_HOSTS`.
+Keep trusted proxy hops at zero and forwarding peers restricted to loopback;
+never expose the backend port, legacy `app.main`, camera ingest or WebSockets.
+Different visitors retain separate session cookies, rooms, prompts and workflows.
+
+Inference runs wherever this backend is deployed: YOLO runs on its configured
+CPU/GPU; planning and sampled-image understanding use the authorized OpenAI API.
+If a VPS receives a provider region/access refusal, it cannot supply those
+capabilities. Use a deployment location and provider account explicitly supported
+by the provider, or leave inference unavailable; do not route around restrictions
+or claim a successful local test proves VPS inference. Uploaded video, evidence,
+API credentials and runtime data remain private and excluded from source.
+
+### 5. Verify your installation
+
+```sh
+make check
+node tests/frontend/argus_single_visitor.cjs
+make smoke
+```
+
+`make check` runs backend tests and the separate historical Next.js build (Node
+22 and `npm ci` in `apps/web` are needed for that build). `make smoke` executes
+real YOLO; it is not proof of the complete public browser workflow. A new
+installation still needs an actual browser upload, novel prompt, exact approval,
+real processing, evidence and visitor-isolation test. Prepared commands are not
+executed-test evidence. Foveation, temporal Teacher quality and savings remain
+**UNVERIFIED** until measured. See [docs/LICENSES.md](docs/LICENSES.md).
 
 ## License and corresponding source
 
@@ -74,7 +148,7 @@ software, weights, data and footage retain their separate upstream licenses.
 
 The corresponding-source download for the final deployed version is:
 
-[https://github.com/samanwirst/visionflow-hackathon-2026-source/releases/download/hackathon-2026/visionflow-source.tar.gz](https://github.com/samanwirst/visionflow-hackathon-2026-source/releases/download/hackathon-2026/visionflow-source.tar.gz)
+[https://github.com/samanwirst/visionflow-hackathon-2026-source/releases/download/hackathon-2026-ui1/visionflow-source.tar.gz](https://github.com/samanwirst/visionflow-hackathon-2026-source/releases/download/hackathon-2026-ui1/visionflow-source.tar.gz)
 
 Before public service launch the controller must publish and anonymously verify the exact accepted
 snapshot at that URL, including build/run source, notices and dependency
@@ -175,34 +249,12 @@ The guided UI builds a rule, shows the exact server-validated JSON, and requires
 a deliberate approval before the real detector → tracker → temporal-rule
 pipeline is armed.
 
-## Run locally
+## Historical geometric fallback startup
 
-Requirements: Python 3.11+ (3.14 tested), Node 20+, ~1 GB disk for ML wheels.
-
-### Backend
-
-```sh
-cd services/api
-python3 -m venv .venv
-.venv/bin/pip install -r requirements.txt
-.venv/bin/uvicorn app.main:app --port 8000
-```
-
-First processing run downloads YOLO11n weights (~5.6 MB) automatically.
-API docs: http://localhost:8000/docs
-
-### Frontend
-
-```sh
-cd apps/web
-npm install
-NEXT_PUBLIC_API_URL=http://localhost:8000 npm run dev
-```
-
-Open http://localhost:3000: upload an MP4, select it, draw a zone on the
-first-frame snapshot, save a draft, review the validated JSON, click
-**Approve & activate**, then **Run**. For an isolated, preflighted demo, follow
-[the Demo Guide](docs/DEMO_GUIDE.md#3-local-startup-loopback-only-isolated-data).
+The previous `app.main` plus Next.js workflow is the protected geometric fallback,
+not the production entry point. Keep it private and use the isolated setup in
+[deploy/README.md](deploy/README.md) or [docs/DEMO_GUIDE.md](docs/DEMO_GUIDE.md).
+The unified production frontend/backend starts with `python -m app.live` as above.
 
 ## Tests
 
