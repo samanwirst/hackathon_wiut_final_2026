@@ -51,7 +51,7 @@
       <div class="card">
         <h2>Create a monitoring task</h2>
         <p class="muted">Describe what to watch in plain language. The AI planner proposes a validated task you review before it runs.</p>
-        <textarea id="prompt" placeholder="e.g. Alert me when a car enters the service bay, or: focus on the bottle if anybody opens it"></textarea>
+        <textarea id="prompt" placeholder="e.g. Notify me when a car enters the whole image; use a cooldown of 2.5 seconds"></textarea>
         <div class="row" style="margin-top:10px">
           <button id="planBtn">Plan task</button>
           <span class="muted" id="planMeta"></span>
@@ -74,6 +74,15 @@
           </details>
         </div>
       </div>
+    </div>
+
+    <div class="card">
+      <h2>Understand the video</h2>
+      <p class="muted">Inspect actual sampled frames with the vision model. This observation never activates a task or creates an alert. Unfamiliar-object tracking, exact counting and temporal state changes are unavailable.</p>
+      <label for="sceneQuestion">Question about visible content</label>
+      <input id="sceneQuestion" value="What objects and environment are visible in this video?" maxlength="1000" />
+      <button id="sceneBtn" style="margin-top:10px">Inspect sampled frames</button>
+      <pre id="sceneResult" class="code" style="white-space:pre-wrap">No visual inspection yet.</pre>
     </div>
 
     <div class="card">
@@ -110,6 +119,7 @@ let pollGeneration=0, pollSequence=0, lastAppliedPoll=0;
 // an earlier in-flight planning response so a late reply cannot install an
 // obsolete task or reveal Approve (LIVE-011).
 let planGen=0;
+let sceneGen=0, sceneIdentity=null;
 
 // A revoked/expired session (401/403) must visibly stop the stale running display
 // and request sign-in rather than silently retaining old frames/state (LIVE-VIDEO-009).
@@ -122,6 +132,8 @@ function requireLogin(msg){
   if (pollTimer) clearInterval(pollTimer); pollTimer=null;
   pollGeneration++; renderedTaskVersion=-1; lastRenderedState=null;
   roomId=null; sourceVideoRoom=null;
+  sceneGen++; sceneIdentity=null;
+  const sr=document.getElementById("sceneResult"); if(sr) sr.textContent="No visual inspection yet.";
   const f=document.getElementById("feed"); if(f) f.src="";
   const sv=document.getElementById("sourceVideo");
   if(sv){ if(sv.pause) sv.pause(); sv.src=""; if(sv.removeAttribute) sv.removeAttribute("src"); if(sv.load) sv.load(); }
@@ -190,6 +202,11 @@ function renderState(s) {
     renderedTaskVersion=s.task_version;
   }
   lastRenderedState=s;
+  const sceneKey=roomId && s.video?.sha256 ? `${roomId}:${s.video.sha256}:${s.task_version}` : null;
+  if(sceneKey!==sceneIdentity){
+    sceneIdentity=sceneKey; sceneGen++;
+    const sr=document.getElementById("sceneResult"); if(sr) sr.textContent="No visual inspection for this source/workflow version.";
+  }
   const m = s.metrics;
   document.getElementById("mFps").textContent = m.observed_fps ? m.observed_fps.toFixed(1) : "—";
   document.getElementById("mInf").textContent = m.last_inference_ms ? m.last_inference_ms+" ms" : "—";
@@ -394,6 +411,23 @@ async function setState(patch){
   catch(e){ if(roomId!==requestedRoom) return; if(isAuthError(e)) requireLogin(); else setBanner("banner","err",e.message); }
 }
 function btn(label,cls,fn){ const b=document.createElement("button"); b.className=cls; b.textContent=label; b.onclick=fn; return b; }
+document.getElementById("sceneBtn").onclick=async()=>{
+  const requestedRoom=roomId, snapshot=lastRenderedState;
+  const output=document.getElementById("sceneResult");
+  if(!requestedRoom || !snapshot?.video?.sha256){output.textContent="Select or upload a video first.";return;}
+  const question=document.getElementById("sceneQuestion").value.trim();
+  if(!question || question.length>1000){output.textContent="Enter a question of 1–1000 characters.";return;}
+  const generation=++sceneGen, identity=sceneIdentity;
+  output.textContent="Inspecting real sampled frames…";
+  try{
+    const result=await api(`/api/live/rooms/${requestedRoom}/scene`,{method:"POST",body:{question,source_sha256:snapshot.video.sha256,expected_version:snapshot.task_version}});
+    if(roomId!==requestedRoom || generation!==sceneGen || identity!==sceneIdentity) return;
+    output.textContent=JSON.stringify(result,null,2);
+  }catch(e){
+    if(roomId!==requestedRoom || generation!==sceneGen || identity!==sceneIdentity) return;
+    if(isAuthError(e)) requireLogin(); else output.textContent=e.message;
+  }
+};
 function escapeHtml(s){ return String(s==null?"":s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 </script>
 

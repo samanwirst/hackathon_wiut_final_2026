@@ -40,14 +40,14 @@ from fastapi.staticfiles import StaticFiles
 
 import secrets
 
-from app.live import auth, config, planner, rooms, teacher, video, worker
+from app.live import auth, config, planner, rooms, scene, teacher, video, worker
 from app.live.dsl import LiveTask, TaskStateRequest
 
 logger = logging.getLogger("visionflow.live.app")
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 
-app = FastAPI(title="VisionFlow Live", version="1.0.0")
+app = FastAPI(title="Argus Video Analytics", version="1.0.0")
 
 
 @app.on_event("startup")
@@ -697,6 +697,28 @@ def process_video(room_id: str, sess: auth.Session = Depends(require_mutation)):
     except RuntimeError as exc:
         raise HTTPException(503, str(exc))
     return {"ok": True, "job_status": "running"}
+
+
+# Scene observations are deliberately separate from executable workflows.
+@app.post("/api/live/rooms/{room_id}/scene")
+def inspect_video_scene(room_id: str, sess: auth.Session = Depends(require_mutation),
+                        body: dict = Body(...)):
+    if sess.role != "judge":
+        raise HTTPException(403, "only a judge can inspect a scene")
+    room = _require_room_member(sess, room_id)
+    if (set(body) != {"question", "source_sha256", "expected_version"}
+            or type(body["question"]) is not str or not 1 <= len(body["question"].strip()) <= 1000
+            or type(body["source_sha256"]) is not str or len(body["source_sha256"]) != 64
+            or any(c not in "0123456789abcdef" for c in body["source_sha256"])
+            or type(body["expected_version"]) is not int or body["expected_version"] < 0):
+        raise HTTPException(422, "invalid scene request")
+
+    def session_is_current():
+        current = auth.get_session(sess.token)
+        return current is sess and current.role == "judge" and current.room_id == room_id
+
+    return scene.inspect_scene(room, body["question"], body["source_sha256"],
+                               body["expected_version"], session_is_current=session_is_current)
 
 
 # ---------------------------------------------------------------- task control (judges)

@@ -57,6 +57,14 @@ and the corresponding-source release succeed. Existing container startup in
 [deploy/README.md](deploy/README.md) describes the accepted private fallback,
 not a verified public VIDEO deployment. See [docs/LICENSES.md](docs/LICENSES.md).
 
+The Judges page also exposes optional nonactioning scene inspection when
+`VISIONFLOW_LIVE_SCENE_ENABLED=true`: it sends at most three real sampled
+512-pixel images to the pinned image-capable OpenAI model and returns frame
+indices, video timestamps, source/JPEG hashes and measured token usage. It shares
+the paid-attempt ledger with planning. This does not enable unfamiliar-object
+tracking/counting or temporal removal/opening alerts. Scene accuracy and savings
+remain unverified until independently evaluated; a model description is not an event.
+
 ## License and corresponding source
 
 Original team-authored software in the current hackathon release is licensed
