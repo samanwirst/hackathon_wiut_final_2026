@@ -156,7 +156,7 @@
     if (!capabilities?.scene || !source || !validVersion(version)) return;
     const requestEpoch = epoch, expectedSource = source, expectedVersion = version;
     el("sceneObservation").textContent = "Inspecting actual sampled images…";
-    const r = await api(owned("/scene"), {method:"POST", body:{question:el("sceneQuestion").value, source_sha256:source, expected_task_version:version}});
+    const r = await api(owned("/scene"), {method:"POST", body:{question:el("sceneQuestion").value, source_sha256:source, expected_version:version}});
     if (requestEpoch !== epoch || expectedSource !== source || expectedVersion !== version) return;
     el("sceneObservation").textContent = JSON.stringify(r, null, 2);
   });

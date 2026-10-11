@@ -9,8 +9,8 @@ from app.live import auth, config, planner, rooms
 from app.live.planner import PlannerResult
 
 
-TASK = {"name": "Car entry", "object_class": "car", "zone": {"type": "full_frame"},
-        "trigger": "entered_zone", "action": "notify"}
+TASK = {"name": "Car presence", "object_class": "car", "zone": {"type": "full_frame"},
+        "trigger": "presence_in_zone", "action": "notify"}
 
 
 def bootstrap(client, monkeypatch):
@@ -108,7 +108,7 @@ def test_inflight_plan_cannot_bind_to_changed_authority(client, monkeypatch, flo
         return PlannerResult(status="ok", proposal={"supported": True, **TASK,
                                                      "explanation": "Car enters region"})
     planner.transport = delayed_result
-    response = flow.post(client, f"/api/live/rooms/{room.room_id}/task/plan", {"text": "notify when a car enters"})
+    response = flow.post(client, f"/api/live/rooms/{room.room_id}/task/plan", {"text": planner.SUPPORTED_COMMAND_EXAMPLES[0]})
     assert response.status_code == (401 if change == "expired_session" else 409)
     from app.live.app import _drafts
     assert room.room_id not in _drafts

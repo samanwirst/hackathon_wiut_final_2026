@@ -219,7 +219,7 @@ def test_005_plan_exposes_draft_binding(vid, monkeypatch):
                             "trigger": "presence_in_zone", "action": "notify",
                             "explanation": "x", "clarification_needed": "",
                             "unsupported_reason": ""}))
-    r = vid.post(j, f"/api/live/rooms/{room.room_id}/task/plan", {"text": "watch a car"})
+    r = vid.post(j, f"/api/live/rooms/{room.room_id}/task/plan", {"text": planner.SUPPORTED_COMMAND_EXAMPLES[0]})
     assert r.status_code == 200
     body = r.json()
     assert body["status"] == "ok" and body["draft_hash"] and body["expected_version"] == 0

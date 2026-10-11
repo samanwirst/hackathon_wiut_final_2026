@@ -51,7 +51,7 @@ def inspect(room, **kwargs):
 
 
 def test_mock_positive_provenance_without_actions(source_room, monkeypatch):
-    monkeypatch.setattr(scene, "_infer", lambda *_: envelope([
+    monkeypatch.setattr(scene, "_infer", lambda *_, **__: envelope([
         {"name": "test object", "description": "mock detail", "evidence_frame_ids": [5]}]))
     result = inspect(source_room)
     assert result["status"] == "ok" and result["nonactioning"] is True
@@ -64,7 +64,7 @@ def test_mock_positive_provenance_without_actions(source_room, monkeypatch):
 
 
 def test_mock_negative_abstains_without_actions(source_room, monkeypatch):
-    monkeypatch.setattr(scene, "_infer", lambda *_: envelope(support="UNCERTAIN"))
+    monkeypatch.setattr(scene, "_infer", lambda *_, **__: envelope(support="UNCERTAIN"))
     result = inspect(source_room)
     assert result["observation"]["answer_support"] == "UNCERTAIN"
     assert result["observation"]["visible_objects"] == []
@@ -74,7 +74,7 @@ def test_mock_negative_abstains_without_actions(source_room, monkeypatch):
 @pytest.mark.parametrize("transition", ["source", "version", "retired", "session"])
 def test_stale_results_never_publish_observations(source_room, monkeypatch, transition):
     current = [True]
-    def infer(*_):
+    def infer(*_, **__):
         if transition == "source":
             source_room.video_sha256 = "0" * 64
         elif transition == "version":
@@ -97,7 +97,7 @@ def test_before_provider_stale_source_does_not_spend(source_room, monkeypatch):
         source_room.task_version += 1
         return []
     monkeypatch.setattr(scene, "_sample", sample)
-    monkeypatch.setattr(scene, "_infer", lambda *_: called.append(True))
+    monkeypatch.setattr(scene, "_infer", lambda *_, **__: called.append(True))
     assert inspect(source_room)["status"] == "stale" and not called
 
 
@@ -116,7 +116,7 @@ def test_invalid_source_frame_count_rejected(source_room, bad):
 def test_source_byte_tampering_rejected(source_room, monkeypatch):
     source_room.video_path.write_bytes(b"changed")
     called = []
-    monkeypatch.setattr(scene, "_infer", lambda *_: called.append(True))
+    monkeypatch.setattr(scene, "_infer", lambda *_, **__: called.append(True))
     assert inspect(source_room)["status"] == "unavailable" and not called
 
 
@@ -133,7 +133,7 @@ def test_invalid_model_output_rejected(source_room, monkeypatch, defect):
         data["structured_output"]["answer_evidence_frame_ids"] = []
     else:
         data["usage"] = {"prompt_tokens": 200, "completion_tokens": 701, "total_tokens": 901}
-    monkeypatch.setattr(scene, "_infer", lambda *_: data)
+    monkeypatch.setattr(scene, "_infer", lambda *_, **__: data)
     assert inspect(source_room)["status"] == "unavailable"
     assert not source_room.events
 
@@ -149,7 +149,7 @@ def test_provider_failure_has_no_secret_or_event(source_room, monkeypatch):
 
 def test_decoder_and_inference_actual_concurrency_bounded(source_room, monkeypatch):
     entered, release = threading.Event(), threading.Event()
-    def blocking(*_):
+    def blocking(*_, **__):
         entered.set()
         assert release.wait(2)
         return envelope()
@@ -165,7 +165,7 @@ def test_decoder_and_inference_actual_concurrency_bounded(source_room, monkeypat
 
 def test_disabled_or_missing_credential_does_not_decode(source_room, monkeypatch):
     called = []
-    monkeypatch.setattr(scene, "_sample", lambda *_: called.append(True))
+    monkeypatch.setattr(scene, "_sample", lambda *_, **__: called.append(True))
     monkeypatch.delenv("OPENAI_API_KEY")
     assert inspect(source_room)["status"] == "unavailable" and not called
     monkeypatch.setenv("OPENAI_API_KEY", "test-token")
@@ -219,7 +219,7 @@ def test_provider_receives_actual_image_bytes_and_strict_schema(monkeypatch):
         def open(self, request, timeout):
             captured.append((request, timeout))
             return Response()
-    monkeypatch.setattr(scene_api_worker.urllib.request, "build_opener", lambda *_: Opener())
+    monkeypatch.setattr(scene_api_worker.urllib.request, "build_opener", lambda *_, **__: Opener())
     source = worker_request()
     result = scene_api_worker.infer(source, "qa-only-token", 2)
     request, timeout = captured[0]
@@ -236,7 +236,7 @@ def test_provider_receives_actual_image_bytes_and_strict_schema(monkeypatch):
 @pytest.mark.parametrize("defect", ["image_budget", "frame_boolean", "timestamp_nan", "extra_frame", "too_many_frames"])
 def test_malformed_image_request_never_reaches_network(monkeypatch, defect):
     called = []
-    monkeypatch.setattr(scene_api_worker.urllib.request, "build_opener", lambda *_: called.append(True))
+    monkeypatch.setattr(scene_api_worker.urllib.request, "build_opener", lambda *_, **__: called.append(True))
     request = worker_request()
     if defect == "image_budget":
         request["frames"][0]["jpeg_base64"] = base64.b64encode(b"\xff\xd8" + b"x" * (256 * 1024)).decode()
