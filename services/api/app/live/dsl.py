@@ -13,6 +13,7 @@ from __future__ import annotations
 from typing import Literal
 
 from pydantic import BaseModel, Field, StrictBool, field_validator, model_validator
+import math
 
 from app.live import config
 
@@ -131,7 +132,7 @@ class LiveTask(BaseModel):
     zone: ZoneSpec = Field(default_factory=ZoneSpec)
     trigger: TriggerType
     duration_seconds: float | None = Field(default=None, ge=1, le=3600)
-    threshold: int | None = Field(default=None, ge=1, le=100)
+    threshold: int | None = Field(default=None, ge=1, le=100, strict=True)
     # Supported event cooldown/debounce in SOURCE-video seconds. When None the
     # VIDEO engine applies config.DEFAULT_COOLDOWN_SECONDS. Faithfully carried,
     # never silently discarded (LIVE-VIDEO-005).
@@ -146,8 +147,15 @@ class LiveTask(BaseModel):
     def _reject_bool_numbers(cls, v):
         # A JSON boolean is NEVER a valid count/duration/cooldown. Reject before
         # type coercion so ``true``/``false`` cannot become 1/0.
-        if isinstance(v, bool):
-            raise ValueError("must be a finite number, not a boolean")
+        if v is not None:
+            if type(v) not in (int, float):
+                raise ValueError("must be a JSON number, never a boolean or string")
+            try:
+                finite = math.isfinite(v)
+            except (OverflowError, TypeError):
+                finite = False
+            if not finite:
+                raise ValueError("must be a finite number")
         return v
 
     @field_validator("object_class")
