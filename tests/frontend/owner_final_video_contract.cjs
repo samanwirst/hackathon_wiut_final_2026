@@ -37,6 +37,7 @@ class Element {
 
 function page(file) {
   const elements = new Map();
+  const intervals = [];
   const document = {
     cookie: "vf_live_csrf=QA_ONLY_CSRF",
     getElementById: (id) => {
@@ -49,7 +50,7 @@ function page(file) {
     document, console, Date, JSON, XMLHttpRequest: class {},
     location: { protocol: "https:", host: "live.qa.invalid" },
     fetch: async () => ({ ok: true, json: async () => ({ teacher_available: false }) }),
-    setInterval: (fn) => fn && 1,
+    setInterval: (fn) => { intervals.push(fn); return intervals.length; },
     clearInterval() {},
     setTimeout: (fn) => fn && 1,
   };
@@ -62,7 +63,7 @@ function page(file) {
   );
   const calls = [];
   context.api = async (path, opts = {}) => { calls.push({ path, opts }); return { ok: true, task_version: 1 }; };
-  return { context, html, calls, get: (id) => document.getElementById(id), eval: (s) => vm.runInContext(s, context) };
+  return { context, html, calls, intervals, get: (id) => document.getElementById(id), eval: (s) => vm.runInContext(s, context) };
 }
 
 const results = [];
@@ -127,9 +128,9 @@ const task = {
     p.context.renderState({
       task, task_version: 1, task_enabled: true, task_paused: false, metrics: {},
       events: [], notifications: [],
-      video: { job_status: "running", job_processed: 1, job_total: 32, meta: { fps: 10 } },
+      video: { sha256: "a".repeat(64), job_status: "running", job_processed: 1, job_total: 32, meta: { fps: 10 } },
     });
-    assert.equal(p.get("sourceVideo").src, "/api/live/rooms/QA_ONLY/video/source");
+    assert.equal(p.get("sourceVideo").src, "/api/live/rooms/QA_ONLY/video/source?sha=" + "a".repeat(64));
   });
 
   await test("judge 401/403 polling visibly revokes stale running state and requests sign-in", async () => {
@@ -263,6 +264,110 @@ const task = {
   await test("operator page exposes a source video replay element", async () => {
     const p = page("upload.html");
     assert.ok(/<video\b/.test(p.html) && /\/video\/source/.test(p.html), "operator source player missing");
+  });
+
+  // Actual production-script source identity and asynchronous control boundaries.
+  const state = (version, sha, extra = {}) => ({
+    task, task_version: version, task_enabled: true, task_paused: false,
+    metrics: {}, events: [], notifications: [],
+    video: { sha256: sha, job_status: "running", job_processed: 1, job_total: 32, meta: { fps: 10 } },
+    ...extra,
+  });
+  await test("judge reloads the source player after a same-room source SHA changes", async () => {
+    const p = page("judges.html"); p.eval('roomId="QA_ONLY"');
+    p.context.renderState(state(1, "a".repeat(64)));
+    const first = p.get("sourceVideo").src;
+    p.context.renderState(state(2, "b".repeat(64)));
+    assert.notEqual(p.get("sourceVideo").src, first);
+    assert.equal(p.get("sourceVideo").src, "/api/live/rooms/QA_ONLY/video/source?sha=" + "b".repeat(64));
+    p.context.renderState(state(3, null));
+    assert.equal(p.get("sourceVideo").src, "", "removed source remains playable");
+  });
+  await test("operator reloads a same-room changed source and clears a removed source", async () => {
+    const p = page("upload.html"); p.eval('roomId="QA_ONLY"');
+    let current = state(1, "a".repeat(64)); p.context.api = async () => current;
+    p.context.startPolling(); await new Promise(r => setImmediate(r));
+    const first = p.get("sourceVideo").src;
+    current = state(2, "b".repeat(64)); await p.intervals[0]();
+    assert.notEqual(p.get("sourceVideo").src, first);
+    assert.equal(p.get("sourceVideo").src, "/api/live/rooms/QA_ONLY/video/source?sha=" + "b".repeat(64));
+    current = state(3, null); await p.intervals[0]();
+    assert.equal(p.get("sourceVideo").src, "");
+  });
+  await test("judge ignores lower-version state and source after a disable acknowledgement", async () => {
+    const p = page("judges.html"); p.eval('roomId="QA_ONLY"');
+    p.context.renderState(state(4, "b".repeat(64)));
+    let release; p.context.api = () => new Promise(r => { release = r; });
+    p.context.startPolling();
+    p.context.api = async () => ({ok: true, task_version: 5, task_enabled: false, task_paused: false});
+    await p.context.setState({enabled: false});
+    release(state(4, "a".repeat(64), { notifications: [{id: 1, title: "STALE", message: "old"}] }));
+    await new Promise(r => setImmediate(r));
+    assert.ok(/disabled/.test(p.get("activeTask").innerHTML));
+    assert.ok(!/STALE/.test(p.get("notifs").innerHTML));
+    assert.equal(p.get("sourceVideo").src, "/api/live/rooms/QA_ONLY/video/source?sha=" + "b".repeat(64));
+    p.context.renderState(state(4, "a".repeat(64)));
+    assert.ok(/disabled/.test(p.get("activeTask").innerHTML));
+  });
+  await test("operator rejects out-of-order lower-version source polling", async () => {
+    const p = page("upload.html"); p.eval('roomId="QA_ONLY"');
+    let replies = []; p.context.api = () => new Promise(r => replies.push(r));
+    p.context.startPolling(); const newer = p.intervals[0]();
+    replies[1](state(7, "b".repeat(64))); await newer;
+    replies[0](state(6, "a".repeat(64))); await new Promise(r => setImmediate(r));
+    assert.equal(p.get("sourceVideo").src, "/api/live/rooms/QA_ONLY/video/source?sha=" + "b".repeat(64));
+  });
+  await test("late polling cannot restore private sources after authentication revocation", async () => {
+    for (const file of ["judges.html", "upload.html"]) {
+      const p = page(file); p.eval('roomId="QA_ONLY"');
+      let release; p.context.api = () => new Promise(r => { release = r; });
+      p.context.startPolling(); p.context.requireLogin(); release(state(1, "a".repeat(64)));
+      await new Promise(r => setImmediate(r));
+      assert.equal(p.get("sourceVideo").src, "");
+      assert.equal(p.get("feed").src, "");
+      assert.ok(p.get("main").classList.contains("hidden"));
+    }
+  });
+
+  await test("activation acknowledgement prevents a late old task from replacing the approved task", async () => {
+    const p = page("judges.html"); p.eval('roomId="QA_ONLY"');
+    p.context.renderState(state(3, "a".repeat(64)));
+    let release; p.context.api = () => new Promise(r => { release = r; });
+    p.context.startPolling();
+    const replacement = {...task, name: "QA_ONLY replacement truck", object_class: "truck"};
+    p.context.showDraft({status: "ok", original_text: "monitor trucks", task: replacement,
+      draft_hash: "new-approved", expected_version: 3, provenance: {}});
+    p.context.api = async () => ({ok: true, task_version: 4, task: replacement});
+    await p.get("activateBtn").onclick();
+    release(state(3, "a".repeat(64))); await new Promise(r => setImmediate(r));
+    assert.ok(/replacement truck/.test(p.get("activeTask").innerHTML));
+    assert.ok(/version 4/.test(p.get("activeTask").innerHTML));
+  });
+  await test("upload acknowledgement invalidates old-source polling before the next tick", async () => {
+    const p = page("upload.html"); p.eval('roomId="QA_ONLY"');
+    let release; p.context.api = () => new Promise(r => { release = r; });
+    p.context.startPolling();
+    p.context.XMLHttpRequest = class {
+      constructor(){this.upload = {}; this.status = 200;}
+      open(){} setRequestHeader(){}
+      send(){this.responseText = JSON.stringify({sha256: "b".repeat(64),
+        meta:{w:320,h:240,fps:10,frame_count:32,duration_seconds:3.2}}); this.onload();}
+    };
+    p.get("file").files = [{name: "QA_ONLY.mp4"}];
+    await p.get("upload").onclick();
+    release(state(1, "a".repeat(64))); await new Promise(r => setImmediate(r));
+    assert.equal(p.get("sourceVideo").src, "/api/live/rooms/QA_ONLY/video/source?sha=" + "b".repeat(64));
+    assert.equal(p.get("feed").src, "", "old source frame returned after new upload acknowledgement");
+  });
+  await test("same-version out-of-order polling cannot replace a newer source snapshot", async () => {
+    for (const file of ["judges.html", "upload.html"]) {
+      const p = page(file); p.eval('roomId="QA_ONLY"');
+      let replies=[]; p.context.api = () => new Promise(r => replies.push(r));
+      p.context.startPolling(); const newer = p.intervals[0]();
+      replies[1](state(8, "b".repeat(64))); await newer;
+      replies[0](state(8, "a".repeat(64))); await new Promise(r => setImmediate(r));
+      assert.equal(p.get("sourceVideo").src, "/api/live/rooms/QA_ONLY/video/source?sha=" + "b".repeat(64));
+    }
   });
 
   const failed = results.filter((r) => r.status === "FAIL");

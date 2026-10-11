@@ -102,7 +102,8 @@ let roomId=null, feedTimer=null, pollTimer=null, currentDraft=null, planProvenan
 // a draft_hash/expected_version we received from plan/validate; a manual edit
 // clears them so a stale identity can never be approved (LIVE-VIDEO-005).
 let currentDraftHash=null, currentDraftVersion=null;
-let sourceVideoRoom=null;
+let sourceVideoRoom=null, renderedTaskVersion=-1, lastRenderedState=null;
+let pollGeneration=0, pollSequence=0, lastAppliedPoll=0;
 // Monotonic generation for plan requests: any edit/discard/new-plan invalidates
 // an earlier in-flight planning response so a late reply cannot install an
 // obsolete task or reveal Approve (LIVE-011).
@@ -117,9 +118,11 @@ function isAuthError(e){
 function requireLogin(msg){
   if (feedTimer) clearInterval(feedTimer); feedTimer=null;
   if (pollTimer) clearInterval(pollTimer); pollTimer=null;
+  pollGeneration++; renderedTaskVersion=-1; lastRenderedState=null;
   roomId=null; sourceVideoRoom=null;
   const f=document.getElementById("feed"); if(f) f.src="";
-  const sv=document.getElementById("sourceVideo"); if(sv) sv.src="";
+  const sv=document.getElementById("sourceVideo");
+  if(sv){ if(sv.pause) sv.pause(); sv.src=""; if(sv.removeAttribute) sv.removeAttribute("src"); if(sv.load) sv.load(); }
   const at=document.getElementById("activeTask"); if(at) at.textContent="No task yet.";
   const ctrls=document.getElementById("taskControls"); if(ctrls) ctrls.innerHTML="";
   const job=document.getElementById("jobInfo"); if(job) job.textContent="No processing yet.";
@@ -161,11 +164,17 @@ function openFeed() {
 }
 
 function startPolling() {
+  if (pollTimer) clearInterval(pollTimer);
   const tick = async () => {
+    if (!roomId) return;
+    const requestedRoom=roomId, generation=pollGeneration, sequence=++pollSequence;
     try {
-      const s = await api(`/api/live/rooms/${roomId}/state`);
+      const s = await api(`/api/live/rooms/${requestedRoom}/state`);
+      if (roomId!==requestedRoom || generation!==pollGeneration || sequence<lastAppliedPoll) return;
+      lastAppliedPoll=sequence;
       renderState(s);
     } catch(e){
+      if (roomId!==requestedRoom || generation!==pollGeneration || sequence<lastAppliedPoll) return;
       if (isAuthError(e)) requireLogin("Session expired — please sign in again.");
       /* else transient: keep last */
     }
@@ -174,6 +183,11 @@ function startPolling() {
 }
 
 function renderState(s) {
+  if (Number.isInteger(s.task_version)) {
+    if (s.task_version<renderedTaskVersion) return;
+    renderedTaskVersion=s.task_version;
+  }
+  lastRenderedState=s;
   const m = s.metrics;
   document.getElementById("mFps").textContent = m.observed_fps ? m.observed_fps.toFixed(1) : "—";
   document.getElementById("mInf").textContent = m.last_inference_ms ? m.last_inference_ms+" ms" : "—";
@@ -218,12 +232,16 @@ function renderState(s) {
       job.className = v.job_status === "error" ? "banner err" : "muted";
     } else { job.textContent = "No processing yet."; job.className = "muted"; }
   }
-  // Authenticated, same-room source playback/replay (owned FileResponse route;
-  // never a raw filesystem path). Bind once a job exists for this room.
+  // The same room can own a NEW upload. Cache identity follows the actual
+  // source digest, not just the room or its processing status.
   const sv = document.getElementById("sourceVideo");
-  if (sv && roomId && v.job_status && sourceVideoRoom !== roomId) {
-    sv.src = `/api/live/rooms/${roomId}/video/source`;
-    sourceVideoRoom = roomId;
+  const sourceKey = roomId && v.sha256 ? `${roomId}:${v.sha256}` : null;
+  if (sv && sourceKey!==sourceVideoRoom) {
+    if (sv.pause) sv.pause();
+    sv.src = sourceKey ? `/api/live/rooms/${roomId}/video/source?sha=${encodeURIComponent(v.sha256)}` : "";
+    sourceVideoRoom=sourceKey;
+    if (!sourceKey && sv.removeAttribute) sv.removeAttribute("src");
+    if (sv.load) sv.load();
   }
 
   const ev = document.getElementById("events");
@@ -302,7 +320,9 @@ document.getElementById("activateBtn").onclick = async () => {
     const body = { task: currentDraft };
     if (currentDraftHash != null) body.draft_hash = currentDraftHash;
     if (currentDraftVersion != null) body.expected_version = currentDraftVersion;
-    const r = await api(`/api/live/rooms/${roomId}/task/activate`, { method:"POST", body });
+    const requestedRoom=roomId;
+    const r = await api(`/api/live/rooms/${requestedRoom}/task/activate`, { method:"POST", body });
+    if (roomId!==requestedRoom || !applyControlResponse(r, {enabled:true, paused:false})) return;
     setBanner("banner","info",`Task activated (version ${r.task_version}).`);
     document.getElementById("draft").classList.add("hidden");
     currentDraft = null; currentDraftHash = null; currentDraftVersion = null;
@@ -350,9 +370,26 @@ document.getElementById("prompt").addEventListener("input", ()=>{
   if(note) note.innerHTML="<em>Prompt edited — re-plan to approve.</em>";
 });
 
+function applyControlResponse(r, patch){
+  if (!Number.isInteger(r.task_version) || r.task_version<renderedTaskVersion) return false;
+  // Control ACK is authoritative: discard every state request sent before it.
+  pollGeneration++;
+  const previous=lastRenderedState || {task:null, metrics:{}, video:{}};
+  renderState({...previous, task:r.task || previous.task, task_version:r.task_version,
+    task_enabled:r.task_enabled ?? patch.enabled ?? previous.task_enabled,
+    task_paused:r.task_paused ?? patch.paused ?? previous.task_paused,
+    events:[], notifications:[], video:{...previous.video, job_status:null, job_error:null}});
+  document.getElementById("feed").src="";
+  document.getElementById("jobInfo").textContent="Control accepted; awaiting current video status.";
+  return true;
+}
 async function setState(patch){
-  try { await api(`/api/live/rooms/${roomId}/task/state`, { method:"POST", body:patch }); }
-  catch(e){ if(isAuthError(e)) requireLogin(); else setBanner("banner","err",e.message); }
+  const requestedRoom=roomId;
+  try {
+    const r=await api(`/api/live/rooms/${requestedRoom}/task/state`, { method:"POST", body:patch });
+    if (roomId===requestedRoom) applyControlResponse(r, patch);
+  }
+  catch(e){ if(roomId!==requestedRoom) return; if(isAuthError(e)) requireLogin(); else setBanner("banner","err",e.message); }
 }
 function btn(label,cls,fn){ const b=document.createElement("button"); b.className=cls; b.textContent=label; b.onclick=fn; return b; }
 function escapeHtml(s){ return String(s==null?"":s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
