@@ -74,6 +74,25 @@ class ZoneSpec(BaseModel):
     type: Literal["full_frame", "polygon"] = "full_frame"
     polygon: list[tuple[float, float]] = Field(default_factory=list, max_length=50)
 
+    @field_validator("polygon", mode="before")
+    @classmethod
+    def _strict_coordinates(cls, value):
+        if not isinstance(value, (list, tuple)):
+            raise ValueError("polygon must be an array of numeric coordinate pairs")
+        for point in value:
+            if not isinstance(point, (list, tuple)) or len(point) != 2:
+                raise ValueError("polygon vertices must contain exactly two coordinates")
+            for coordinate in point:
+                if type(coordinate) not in (int, float):
+                    raise ValueError("coordinates must be JSON numbers, never booleans or strings")
+                try:
+                    finite = math.isfinite(coordinate)
+                except (TypeError, OverflowError):
+                    finite = False
+                if not finite or not 0 <= coordinate <= 1:
+                    raise ValueError("coordinates must be finite and normalized to 0..1")
+        return value
+
     @model_validator(mode="after")
     def _canonicalize(self) -> "ZoneSpec":
         if self.type == "full_frame":
@@ -216,6 +235,17 @@ def capabilities_doc() -> dict:
         "duration_seconds": "dwell duration in SOURCE-video seconds (>= 1), e.g. 1.25",
         "cooldown_seconds": "optional event debounce in SOURCE-video seconds (default 10)",
         "focus": "highlight / enlarge the tracked bounding box in the Judges UI (NO physical camera pan/tilt)",
+        "natural_language_commands": {
+            "scope": "Complete supported-command grammar; not arbitrary action understanding",
+            "examples": [
+                "Notify me locally when a car is visible in the full frame.",
+                "Raise a local notification when a car remains in the full frame for exactly 1.25 seconds; set the cooldown to 2.5 seconds.",
+                "Alert me locally when a car exits the full frame, with a cooldown of 3.5 seconds.",
+            ],
+            "limits": "One object class, whole-frame presence/exit/dwell, local notify only. "
+                      "Full-frame entry is not verified crossing; polygon entry requires reviewed JSON. "
+                      "Unknown qualifiers, negation, comparisons, composites and external actions reject before model calls.",
+        },
     }
     if config.CAMERA_INGEST_ENABLED:
         doc["visual_observation"] = (

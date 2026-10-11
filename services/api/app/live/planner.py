@@ -34,6 +34,7 @@ import threading
 import time
 from pathlib import Path
 from dataclasses import dataclass, field
+from decimal import Decimal
 
 from app.live import config, dsl
 from app import config as app_config
@@ -122,8 +123,11 @@ def _system_prompt() -> str:
         "Rules:\n"
         "1. Only use object_class values from the declared list. If the user's object is "
         "not detectable, set supported=false and explain in unsupported_reason.\n"
-        "2. Preserve the exact supported geometric trigger. 'watch'/'focus on'/'monitor' an object "
-        "usually maps to presence_in_zone with a full_frame zone and action=focus_notify. "
+        "2. The request has passed a complete supported-command grammar: one object, "
+        "whole-frame presence/exit/dwell, and an explicit LOCAL notification. Preserve "
+        "that entire request exactly, use action=notify, focus=false, and never add a "
+        "visual_observation. Full-frame entry is unsupported because appearance alone "
+        "cannot prove an outside-to-inside crossing. "
         "When the user names an area/zone (service bay, this area, the workspace) but gives "
         "NO explicit polygon coordinates or explicit whole-frame scope, ask for clarification "
         "with supported=false. Do not assume that an entire image represents a named region. "
@@ -202,6 +206,74 @@ def room_attempts_used(room_id: str) -> int:
 transport = None
 
 
+SUPPORTED_COMMAND_EXAMPLES = (
+    "Notify me locally when a car is visible in the full frame.",
+    "Raise a local notification when a car remains in the full frame for exactly 1.25 seconds; set the cooldown to 2.5 seconds.",
+    "Alert me locally when a car exits the full frame, with a cooldown of 3.5 seconds.",
+)
+
+# This is a whole-command grammar, not a keyword classifier. Nothing outside
+# these productions is sent to a paid planner, and no residual text is ignored.
+_NUMBER = r"\d+(?:\.\d+)?"
+_CLASS = "|".join(re.escape(x) for x in sorted(dsl.SUPPORTED_CLASSES, key=len, reverse=True))
+_COMMAND = re.compile(
+    r"(?:for this recording,\s*)?"
+    r"(?:notify(?: me locally)?|send me a local alert|send a local notification|"
+    r"raise a local notification|alert me locally)\s+"
+    r"(?:when|whenever|each time|as)\s+(?:a |an |the )?"
+    rf"(?P<object>{_CLASS})\s+"
+    r"(?P<operator>is visible in|is present in|remains in|stays in|"
+    r"enters|comes into|exits|leaves|departs from)\s+"
+    r"(?:the )?(?:full frame|whole image|entire image|image|frame)"
+    rf"(?:\s+for\s+(?:exactly |precisely |at least )?(?P<duration>{_NUMBER})\s+seconds?)?"
+    rf"(?P<cooldown>(?:[.,;]\s*|\s+)"
+    rf"(?:with (?:an exact |a )?cooldown of {_NUMBER} seconds?|"
+    rf"set the cooldown to {_NUMBER} seconds?|"
+    rf"keep exactly {_NUMBER} seconds? between notifications))?\.?",
+    re.IGNORECASE,
+)
+
+
+def parse_supported_command(text: str) -> dict | None:
+    """Parse the entire supported command into a typed semantic contract.
+
+    Local notifications, one declared object class, whole-frame presence/exit or
+    continuous dwell are supported. Polygon entry uses explicitly reviewed JSON;
+    appearing in a full frame cannot establish an observed outside-to-inside
+    transition. Unknown adjectives, comparisons, actions and compound clauses do
+    not match this grammar. Parsing NEVER produces an executable planner result.
+    """
+    normalized = " ".join(text.split())
+    matched = _COMMAND.fullmatch(normalized)
+    if matched is None:
+        return None
+    operator = matched["operator"].lower()
+    if operator in {"enters", "comes into"}:
+        return None
+    trigger = ({"is visible in": "presence_in_zone", "is present in": "presence_in_zone",
+                "remains in": "dwell_in_zone", "stays in": "dwell_in_zone",
+                "exits": "exited_zone", "leaves": "exited_zone",
+                "departs from": "exited_zone"})[operator]
+    duration = float(matched["duration"]) if matched["duration"] is not None else None
+    if (trigger == "dwell_in_zone") != (duration is not None):
+        return None
+    cooldown_match = re.search(_NUMBER, matched["cooldown"] or "")
+    cooldown = float(cooldown_match[0]) if cooldown_match else None
+    for literal, value in ((matched["duration"], duration),
+                           (cooldown_match[0] if cooldown_match else None, cooldown)):
+        if literal is not None and Decimal(literal) != Decimal(str(value)):
+            return None  # The float-backed DSL cannot preserve this decimal.
+    try:
+        task = dsl.LiveTask(name="Parsed command contract", object_class=matched["object"].lower(),
+                            trigger=trigger, duration_seconds=duration, cooldown_seconds=cooldown,
+                            action="notify", focus=False)
+    except (ValueError, OverflowError):
+        return None
+    return {key: task.model_dump()[key] for key in (
+        "object_class", "zone", "trigger", "duration_seconds", "threshold",
+        "cooldown_seconds", "action", "focus", "visual_observation")}
+
+
 def plan(text: str, room_id: str) -> PlannerResult:
     """Produce a validated task proposal for a judge's natural-language request."""
     text = (text or "").strip()
@@ -209,6 +281,15 @@ def plan(text: str, room_id: str) -> PlannerResult:
         return PlannerResult(status="unavailable", error="empty request")
     if len(text) > 1000:
         return PlannerResult(status="unavailable", error="request too long")
+
+    intent = parse_supported_command(text)
+    if intent is None:
+        return PlannerResult(status="unsupported", unsupported_reason=(
+            "Request is outside the complete supported command grammar in video mode. "
+            "Use one whole-frame presence, exit or dwell rule with a local notification. "
+            "Full-frame appearance is not verified entry; use an explicitly drawn polygon "
+            "and reviewed JSON for entry. No requested condition will be discarded."),
+            clarification="Examples: " + " ".join(SUPPORTED_COMMAND_EXAMPLES))
 
     ok, reason = _reserve_attempt(room_id)
     if not ok:
@@ -219,7 +300,7 @@ def plan(text: str, room_id: str) -> PlannerResult:
     if transport is not None:
         result = transport(text, room_id)
         result.attempt = attempt
-        return _guard_semantics(text, _finalize(result))
+        return _guard_semantics(text, _finalize(result), intent)
 
     if not config.PLANNER_ENABLED:
         return PlannerResult(status="unavailable", error="planner disabled", attempt=attempt)
@@ -232,49 +313,25 @@ def plan(text: str, room_id: str) -> PlannerResult:
     else:
         raw = PlannerResult(status="unavailable", error="unsupported planner provider")
     raw.attempt = attempt
-    return _guard_semantics(text, _finalize(raw))
+    return _guard_semantics(text, _finalize(raw), intent)
 
 
-def _guard_semantics(text: str, result: PlannerResult) -> PlannerResult:
-    """Reject evident semantic loss; never generate or repair a model's task.
+def _guard_semantics(text: str, result: PlannerResult, intent: dict | None = None) -> PlannerResult:
+    """Require every semantic field to equal the completely parsed intent.
 
-    This conservative check covers explicit transition verbs and numeric time
-    constraints. Language interpretation remains the real model's responsibility;
-    unfamiliar or ambiguous requests still require review/clarification. The
-    guard only withholds an inconsistent proposal from approval.
+    Genuine model planning remains required; this guard only rejects, and never
+    repairs a mismatching proposal or constructs a fallback executable workflow.
     """
     if result.status != "ok" or result.task is None:
         return result
-    normalized = text.lower()
-    transitions = {
-        "entered_zone": r"\b(?:enter(?:s|ed|ing)?|arriv(?:e|es|ed|ing)|com(?:e|es|ing)\s+(?:in|into)|cross(?:es|ed|ing)?\s+into)\b",
-        "exited_zone": r"\b(?:leav(?:e|es|ing)|exit(?:s|ed|ing)?|depart(?:s|ed|ing)?|go(?:es|ing)?\s+out)\b",
-        "dwell_in_zone": r"\b(?:remain(?:s|ed|ing)?|stay(?:s|ed|ing)?|linger(?:s|ed|ing)?|dwell(?:s|ed|ing)?)\b",
-    }
-    requested = {operator for operator, pattern in transitions.items() if re.search(pattern, normalized)}
-    reason = None
-    if re.search(r"\b(?:no|not|never|unless|except|without|each|every\s+person|don['’]t|doesn['’]t|isn['’]t)\b", normalized):
-        reason = "negated, exception or per-object composite conditions require clarification"
-    elif re.search(r"\b(?:email|sms|webhook|unlock|shutdown)\b|\bturn\s+(?:on|off)\b", normalized):
-        reason = "the requested external action is not implemented"
-    elif not config.CAMERA_INGEST_ENABLED and re.search(r"\b(?:open(?:s|ed|ing)?|damage(?:d)?|unattended)\b", normalized):
-        reason = "the requested semantic condition or external action is not implemented"
-    elif len(requested) > 1:
-        reason = "multiple temporal operators cannot be represented by this single rule"
-    elif requested and result.task.get("trigger") not in requested:
-        reason = "the proposed trigger does not preserve the requested transition"
-    duration = re.search(r"\bfor\s+(?:(?:more\s+than|at\s+least|exactly|precisely|over)\s+)?(\d+(?:\.\d+)?)\s*(?:seconds?|secs?|s)\b", normalized)
-    cooldown = (re.search(r"(\d+(?:\.\d+)?)\s*(?:seconds?|secs?|s)\s+between\b", normalized)
-                or re.search(r"\bcooldown\s*(?:of\s+)?(\d+(?:\.\d+)?)", normalized))
-    if duration and (result.task.get("trigger") != "dwell_in_zone"
-                     or result.task.get("duration_seconds") != float(duration.group(1))):
-        reason = "the proposed rule does not preserve the exact requested dwell duration"
-    if cooldown and result.task.get("cooldown_seconds") != float(cooldown.group(1)):
-        reason = "the proposed rule does not preserve the exact notification spacing"
-    if reason:
+    intent = intent if intent is not None else parse_supported_command(text)
+    mismatches = [] if intent is None else [key for key, value in intent.items()
+                                          if result.task.get(key) != value]
+    if intent is None or mismatches:
         result.status = "unsupported"
-        result.unsupported_reason = reason
-        result.clarification = "Please express one supported geometric rule with its exact conditions."
+        result.unsupported_reason = ("proposal does not preserve the complete supported command: "
+                                     + (", ".join(mismatches) if intent else "unsupported grammar"))
+        result.clarification = "Please use one supported command and review its exact JSON."
         result.task = None
     return result
 
@@ -308,6 +365,11 @@ def _finalize(result: PlannerResult) -> PlannerResult:
         result.unsupported_reason = "threshold/duration/cooldown must be numeric, not boolean"
         result.clarification = p.get("clarification_needed")
         return result
+    if any(p.get(key) is not None and type(p[key]) not in (int, float)
+           for key in ("threshold", "duration_seconds", "cooldown_seconds")):
+        result.status = "unsupported"
+        result.unsupported_reason = "threshold/duration/cooldown must be JSON numbers"
+        return result
     # Interpret the strict-mode sentinels (0 / "" / [] mean "not applicable").
     vo_in = p.get("visual_observation") or {}
     if (not isinstance(vo_in, dict) or set(vo_in) - {"question", "labels", "temporal"}
@@ -332,8 +394,10 @@ def _finalize(result: PlannerResult) -> PlannerResult:
         result.clarification = p.get("clarification_needed")
         return result
     zone_in = p.get("zone") or {"type": "full_frame"}
-    if not zone_in.get("type"):
-        zone_in = {"type": "full_frame"}
+    if not isinstance(zone_in, dict):
+        result.status = "unsupported"
+        result.unsupported_reason = "zone must be a typed JSON object"
+        return result
     try:
         # A malformed visual_observation (e.g. an over-length question) must surface
         # as an honest ``unsupported`` result, never a 500 — build it inside the
