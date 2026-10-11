@@ -1,0 +1,466 @@
+{
+  "sequential_version_snapshot": {
+    "train1": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "version": 1,
+        "version_id": 1,
+        "threshold": 0.5,
+        "counts": {
+          "train": 18,
+          "val": 6,
+          "test": 6
+        },
+        "metrics": {
+          "confusion_matrix": {
+            "tp": 3,
+            "fp": 0,
+            "fn": 0,
+            "tn": 3
+          },
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "accuracy": 1.0,
+          "support": 6,
+          "positives": 3,
+          "negatives": 3,
+          "latency": {
+            "count": 6,
+            "p50_ms": 24.121,
+            "p95_ms": 24.34
+          },
+          "threshold": 0.5,
+          "manifest_digest": "7bbade7990c3cbb1cb9308bf77c695cf05fcfb9be0f8cf445c74ba83139968a1",
+          "artifact_sha256": "3319f4fb173996395cec0096450b2667960d057038b13a6af89e96fbab0259d4"
+        },
+        "train_duration_ms": 100.93790899554733,
+        "dataset_hash": "9f7a1b3fa1443d6a17c211ba802e063f8d58056ce94bf30ee542105785cd8a06",
+        "split_hash": "500a58f77cc7fa0bf272b27380fa419e9681a1df24748cf661137f9afa89ab5b"
+      }
+    },
+    "train2": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "version": 2,
+        "version_id": 2,
+        "threshold": 0.5,
+        "counts": {
+          "train": 24,
+          "val": 6,
+          "test": 12
+        },
+        "metrics": {
+          "confusion_matrix": {
+            "tp": 6,
+            "fp": 0,
+            "fn": 0,
+            "tn": 6
+          },
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "accuracy": 1.0,
+          "support": 12,
+          "positives": 6,
+          "negatives": 6,
+          "latency": {
+            "count": 12,
+            "p50_ms": 24.215,
+            "p95_ms": 25.559
+          },
+          "threshold": 0.5,
+          "manifest_digest": "f7aa7c732dc35aa7b6630584bc199c788c0ecab81b8d5eac580e74b0eef4021a",
+          "artifact_sha256": "d01b448b7e0135653a2f5221c0121d68c3b21b21f728c2941c17386261d047db"
+        },
+        "train_duration_ms": 80.2659969922388,
+        "dataset_hash": "47f816c04a375d59569d923f04e82e22f0fbd35be2f6377fad54ada46a655e9f",
+        "split_hash": "7506323beaa709b0b13cdc8f66e23629c8e3ca6f87b4a1e4d1d8ee00a3502469"
+      }
+    },
+    "old_evaluation": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "version": 1,
+        "metrics": {
+          "confusion_matrix": {
+            "tp": 3,
+            "fp": 0,
+            "fn": 0,
+            "tn": 3
+          },
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "accuracy": 1.0,
+          "support": 6,
+          "positives": 3,
+          "negatives": 3,
+          "latency": {
+            "count": 6,
+            "p50_ms": 24.806,
+            "p95_ms": 25.916
+          },
+          "threshold": 0.5,
+          "manifest_digest": "7bbade7990c3cbb1cb9308bf77c695cf05fcfb9be0f8cf445c74ba83139968a1",
+          "artifact_sha256": "3319f4fb173996395cec0096450b2667960d057038b13a6af89e96fbab0259d4"
+        }
+      }
+    },
+    "old_manifest_unchanged": true,
+    "old_artifact_unchanged": true,
+    "old_test_ids": [
+      13,
+      14,
+      15,
+      16,
+      17,
+      18
+    ]
+  },
+  "declined_activation": {
+    "http": 200,
+    "body": {
+      "experimental": true,
+      "activated": false,
+      "reason": "human declined",
+      "gate": {
+        "passed": true,
+        "f1": 1.0,
+        "support": 6,
+        "min_f1": 0.75,
+        "test_count": 6,
+        "min_test": 4,
+        "reasons": []
+      }
+    }
+  },
+  "normal_gates_rollback": {
+    "activate1": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "activated": true,
+        "version": 1,
+        "gate": {
+          "passed": true,
+          "f1": 1.0,
+          "support": 6,
+          "min_f1": 0.75,
+          "test_count": 6,
+          "min_test": 4,
+          "reasons": []
+        }
+      }
+    },
+    "activate2": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "activated": true,
+        "version": 2,
+        "gate": {
+          "passed": true,
+          "f1": 1.0,
+          "support": 12,
+          "min_f1": 0.75,
+          "test_count": 12,
+          "min_test": 4,
+          "reasons": []
+        }
+      }
+    },
+    "rollback": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "rolled_back_to": 1
+      }
+    },
+    "classify": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "status": "student",
+        "label": "occupied",
+        "confidence": 1.0,
+        "version": 1,
+        "action": "none"
+      }
+    }
+  },
+  "lost_manifest_gate": {
+    "http": 200,
+    "body": {
+      "experimental": true,
+      "version": 2,
+      "gate": {
+        "passed": false,
+        "f1": 1.0,
+        "support": 12,
+        "min_f1": 0.75,
+        "test_count": 12,
+        "min_test": 4,
+        "reasons": [
+          "frozen manifest inconsistent: frozen test membership (11) != registry count (12); membership is inconsistent"
+        ]
+      }
+    }
+  },
+  "lost_manifest_activate": {
+    "http": 200,
+    "body": {
+      "experimental": true,
+      "activated": false,
+      "reason": "gate not passed",
+      "gate": {
+        "passed": false,
+        "f1": 1.0,
+        "support": 12,
+        "min_f1": 0.75,
+        "test_count": 12,
+        "min_test": 4,
+        "reasons": [
+          "frozen manifest inconsistent: frozen test membership (11) != registry count (12); membership is inconsistent"
+        ]
+      }
+    }
+  },
+  "lost_manifest_evaluate": {
+    "http": 200,
+    "body": {
+      "experimental": true,
+      "version": 2,
+      "metrics": {
+        "error": "frozen test membership (11) != registry count (12); membership is inconsistent",
+        "support": 0,
+        "f1": null
+      }
+    }
+  },
+  "lost_manifest_gate_after_evaluate": {
+    "http": 200,
+    "body": {
+      "experimental": true,
+      "version": 2,
+      "gate": {
+        "passed": false,
+        "f1": null,
+        "support": 0,
+        "min_f1": 0.75,
+        "test_count": 12,
+        "min_test": 4,
+        "reasons": [
+          "frozen manifest inconsistent: frozen test membership (11) != registry count (12); membership is inconsistent",
+          "stored metrics are not bound to an artifact hash; re-evaluate before activation (fail-closed)",
+          "no held-out metrics; run evaluate first",
+          "evaluated support 0 != frozen snapshot test count 12; membership is inconsistent",
+          "held-out set must contain both classes (positives=None, negatives=None)"
+        ]
+      }
+    }
+  },
+  "missing_artifact_rollback": {
+    "http": 422,
+    "body": {
+      "detail": "no previous version available to roll back to"
+    }
+  },
+  "missing_artifact_classify": {
+    "http": 200,
+    "body": {
+      "experimental": true,
+      "status": "unavailable",
+      "detail": "active Student artifact is missing",
+      "action": "none"
+    }
+  },
+  "nan_student_offline": {
+    "http": 200,
+    "body": {
+      "experimental": true,
+      "status": "unknown",
+      "detail": "student produced non-finite probabilities",
+      "action": "none"
+    }
+  },
+  "concurrent_train_collision": {
+    "responses": [
+      {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "version": 1,
+          "version_id": 3,
+          "threshold": 0.5,
+          "counts": {
+            "train": 18,
+            "val": 6,
+            "test": 6
+          },
+          "metrics": {
+            "confusion_matrix": {
+              "tp": 3,
+              "fp": 0,
+              "fn": 0,
+              "tn": 3
+            },
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "accuracy": 1.0,
+            "support": 6,
+            "positives": 3,
+            "negatives": 3,
+            "latency": {
+              "count": 6,
+              "p50_ms": 29.192,
+              "p95_ms": 30.693
+            },
+            "threshold": 0.5,
+            "manifest_digest": "0ba52bb5d7a4fbc896b3f13520afad07b38b01bae1410ff4537a0712277b1bae",
+            "artifact_sha256": "ae1afcf71b00a8f3aff4f9afcc016e6862f52db74c455b2d6786407475fddf28"
+          },
+          "train_duration_ms": 82.23136099695694,
+          "dataset_hash": "9f7a1b3fa1443d6a17c211ba802e063f8d58056ce94bf30ee542105785cd8a06",
+          "split_hash": "92cbd17ebec30ed8a9422868010b174a8a8fc3a6783835a9f44a603fc1820758"
+        }
+      },
+      {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "version": 2,
+          "version_id": 4,
+          "threshold": 0.5,
+          "counts": {
+            "train": 24,
+            "val": 6,
+            "test": 12
+          },
+          "metrics": {
+            "confusion_matrix": {
+              "tp": 6,
+              "fp": 0,
+              "fn": 0,
+              "tn": 6
+            },
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "accuracy": 1.0,
+            "support": 12,
+            "positives": 6,
+            "negatives": 6,
+            "latency": {
+              "count": 12,
+              "p50_ms": 26.99,
+              "p95_ms": 29.766
+            },
+            "threshold": 0.5,
+            "manifest_digest": "11a52ee83dd9a1455c1d3662af859e63b39e956fb363a1a095fc16c7d7299cc0",
+            "artifact_sha256": "d9b0816f27877e3d69288332e1fb5707e72c4a968f58d0f092cc1b6a5201906d"
+          },
+          "train_duration_ms": 81.42285299254581,
+          "dataset_hash": "47f816c04a375d59569d923f04e82e22f0fbd35be2f6377fad54ada46a655e9f",
+          "split_hash": "7c49257ab65c945dae4e81f979af799e7a342d5757a5f43a1c47f64cea64be5b"
+        }
+      }
+    ],
+    "save_paths": [
+      {
+        "thread": 140145124980416,
+        "path": "/tmp/visionflow-m3-emergency-review-0c877e2/data-version_probes-py/autolearn/models/task_2/.v1.dbk28x39.tmp",
+        "dataset_hash": "9f7a1b3fa1443d6a17c211ba802e063f8d58056ce94bf30ee542105785cd8a06",
+        "split_hash": "92cbd17ebec30ed8a9422868010b174a8a8fc3a6783835a9f44a603fc1820758"
+      },
+      {
+        "thread": 140145405437632,
+        "path": "/tmp/visionflow-m3-emergency-review-0c877e2/data-version_probes-py/autolearn/models/task_2/.v2.jnr6wmnr.tmp",
+        "dataset_hash": "47f816c04a375d59569d923f04e82e22f0fbd35be2f6377fad54ada46a655e9f",
+        "split_hash": "7c49257ab65c945dae4e81f979af799e7a342d5757a5f43a1c47f64cea64be5b"
+      }
+    ],
+    "registry": [
+      {
+        "id": 3,
+        "version": 1,
+        "artifact_path": "/tmp/visionflow-m3-emergency-review-0c877e2/data-version_probes-py/autolearn/models/task_2/v1.pt",
+        "dataset_hash": "9f7a1b3fa1443d6a17c211ba802e063f8d58056ce94bf30ee542105785cd8a06",
+        "split_hash": "92cbd17ebec30ed8a9422868010b174a8a8fc3a6783835a9f44a603fc1820758",
+        "status": "trained"
+      },
+      {
+        "id": 4,
+        "version": 2,
+        "artifact_path": "/tmp/visionflow-m3-emergency-review-0c877e2/data-version_probes-py/autolearn/models/task_2/v2.pt",
+        "dataset_hash": "47f816c04a375d59569d923f04e82e22f0fbd35be2f6377fad54ada46a655e9f",
+        "split_hash": "7c49257ab65c945dae4e81f979af799e7a342d5757a5f43a1c47f64cea64be5b",
+        "status": "trained"
+      }
+    ],
+    "actual_artifact_metadata": {
+      "threshold": 0.5,
+      "class_mapping": {
+        "empty": 0,
+        "occupied": 1
+      },
+      "encoder_name": "resnet18",
+      "encoder_weights_version": "resnet18-f37072fd.pth",
+      "preprocess_version": "resnet18-imagenet1k-v1-rgb-224-centercrop",
+      "dataset_hash": "9f7a1b3fa1443d6a17c211ba802e063f8d58056ce94bf30ee542105785cd8a06",
+      "split_hash": "92cbd17ebec30ed8a9422868010b174a8a8fc3a6783835a9f44a603fc1820758"
+    }
+  },
+  "post_save_training_failure": {
+    "response": {
+      "http": 500,
+      "body": "Internal Server Error"
+    },
+    "detail": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "task": {
+          "id": 3,
+          "name": "QA_ONLY failed training",
+          "visual_prompt": "is it occupied?",
+          "positive_label": "occupied",
+          "negative_label": "empty",
+          "teacher_model": null,
+          "status": "collecting",
+          "active_version_id": null,
+          "created_at": "2026-10-11T03:49:01.971865"
+        },
+        "counts": {
+          "samples": 30,
+          "verified": 30,
+          "pending_teacher": 30,
+          "sessions": 5
+        },
+        "versions": [
+          {
+            "id": 5,
+            "version": 1,
+            "status": "failed",
+            "threshold": 0.5,
+            "metrics": null,
+            "train_count": 18,
+            "val_count": 6,
+            "test_count": 6,
+            "train_duration_ms": 0.0,
+            "encoder": "resnet18",
+            "encoder_weights": "resnet18-f37072fd.pth",
+            "dataset_hash": "9f7a1b3fa1443d6a17c211ba802e063f8d58056ce94bf30ee542105785cd8a06",
+            "split_hash": "646de371795b88641fa62cb3f5d3ea91c65b221a661e472721ca223df6d835db",
+            "created_at": "2026-10-11T03:49:02.051996"
+          }
+        ]
+      }
+    },
+    "orphan_artifacts": []
+  }
+}

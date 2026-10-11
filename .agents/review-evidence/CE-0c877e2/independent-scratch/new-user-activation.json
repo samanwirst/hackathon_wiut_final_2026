@@ -1,0 +1,539 @@
+{
+  "positive_sorts_first": {
+    "create": {
+      "http": 201,
+      "body": {
+        "id": 1,
+        "name": "QA_ONLY positive_sorts_first",
+        "visual_prompt": "is the condition present?",
+        "positive_label": "damaged",
+        "negative_label": "undamaged",
+        "teacher_model": null,
+        "status": "collecting",
+        "active_version_id": null,
+        "created_at": "2026-10-11T03:53:09.621062Z"
+      }
+    },
+    "train": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "version": 1,
+        "version_id": 1,
+        "threshold": 0.5,
+        "counts": {
+          "train": 18,
+          "val": 6,
+          "test": 6
+        },
+        "metrics": {
+          "confusion_matrix": {
+            "tp": 3,
+            "fp": 0,
+            "fn": 0,
+            "tn": 3
+          },
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "accuracy": 1.0,
+          "support": 6,
+          "positives": 3,
+          "negatives": 3,
+          "latency": {
+            "count": 6,
+            "p50_ms": 24.962,
+            "p95_ms": 25.619
+          },
+          "threshold": 0.5,
+          "manifest_digest": "2c51db6f30387543031b0b2ccf3017fd996e1a57b2e2d78bbded326c18d731c7",
+          "artifact_sha256": "6786d96decd1b8c600bc976683ecea38450c2d555de93ba29917f66228db4d11"
+        },
+        "train_duration_ms": 98.49303199735004,
+        "dataset_hash": "6dd2d1a2e0dde0f162158bef0887429faa3dd3631c097e9d8b0923d366091ce7",
+        "split_hash": "b4b37378fd319289b967ae0d61346a164d1a9741bd9e60d42ef17e13e2229bd5"
+      }
+    },
+    "provenance": {
+      "registry_class_mapping": {
+        "damaged": 0,
+        "undamaged": 1
+      },
+      "actual_saved_classes": [
+        "undamaged",
+        "damaged"
+      ],
+      "extra": {
+        "threshold": 0.5,
+        "class_mapping": {
+          "damaged": 0,
+          "undamaged": 1
+        },
+        "encoder_name": "resnet18",
+        "encoder_weights_version": "resnet18-f37072fd.pth",
+        "preprocess_version": "resnet18-imagenet1k-v1-rgb-224-centercrop",
+        "dataset_hash": "6dd2d1a2e0dde0f162158bef0887429faa3dd3631c097e9d8b0923d366091ce7",
+        "split_hash": "b4b37378fd319289b967ae0d61346a164d1a9741bd9e60d42ef17e13e2229bd5"
+      }
+    },
+    "gate": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "version": 1,
+        "gate": {
+          "passed": true,
+          "f1": 1.0,
+          "support": 6,
+          "min_f1": 0.75,
+          "test_count": 6,
+          "min_test": 4,
+          "reasons": []
+        }
+      }
+    },
+    "activate_before_reevaluation": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "activated": false,
+        "reason": "artifact unusable: artifact provenance does not match its registry row: class_ordering",
+        "gate": {
+          "passed": true,
+          "f1": 1.0,
+          "support": 6,
+          "min_f1": 0.75,
+          "test_count": 6,
+          "min_test": 4,
+          "reasons": []
+        }
+      }
+    },
+    "shadow": {
+      "http": 422,
+      "body": {
+        "detail": "artifact provenance does not match its registry row: class_ordering"
+      }
+    },
+    "evaluate": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "version": 1,
+        "metrics": {
+          "error": "artifact provenance does not match its registry row: class_ordering",
+          "support": 0,
+          "f1": null
+        }
+      }
+    },
+    "activate": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "activated": false,
+        "reason": "gate not passed",
+        "gate": {
+          "passed": false,
+          "f1": null,
+          "support": 0,
+          "min_f1": 0.75,
+          "test_count": 6,
+          "min_test": 4,
+          "reasons": [
+            "stored metrics were not computed against the current frozen manifest; re-evaluate before activation (fail-closed)",
+            "stored metrics are not bound to an artifact hash; re-evaluate before activation (fail-closed)",
+            "no held-out metrics; run evaluate first",
+            "evaluated support 0 != frozen snapshot test count 6; membership is inconsistent",
+            "held-out set must contain both classes (positives=None, negatives=None)"
+          ]
+        }
+      }
+    }
+  },
+  "positive_sorts_last": {
+    "create": {
+      "http": 201,
+      "body": {
+        "id": 2,
+        "name": "QA_ONLY positive_sorts_last",
+        "visual_prompt": "is the condition present?",
+        "positive_label": "occupied",
+        "negative_label": "empty",
+        "teacher_model": null,
+        "status": "collecting",
+        "active_version_id": null,
+        "created_at": "2026-10-11T03:53:11.848293Z"
+      }
+    },
+    "train": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "version": 1,
+        "version_id": 2,
+        "threshold": 0.5,
+        "counts": {
+          "train": 18,
+          "val": 6,
+          "test": 6
+        },
+        "metrics": {
+          "confusion_matrix": {
+            "tp": 3,
+            "fp": 0,
+            "fn": 0,
+            "tn": 3
+          },
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "accuracy": 1.0,
+          "support": 6,
+          "positives": 3,
+          "negatives": 3,
+          "latency": {
+            "count": 6,
+            "p50_ms": 25.014,
+            "p95_ms": 27.252
+          },
+          "threshold": 0.5,
+          "manifest_digest": "ca8ac01dd5e494c98bfcd64c26adfe2a71dd857e1c97e84db447a42fc0b99619",
+          "artifact_sha256": "283d81ec9218ca2aab8a48dd7de7adaf23a6fa2ed965ebb3338a5867bb394704"
+        },
+        "train_duration_ms": 79.86162700399291,
+        "dataset_hash": "9f7a1b3fa1443d6a17c211ba802e063f8d58056ce94bf30ee542105785cd8a06",
+        "split_hash": "b548a7f3f3b9c0369c95ecb2708c496d3c253119db82b81a9e676031a9886261"
+      }
+    },
+    "provenance": {
+      "registry_class_mapping": {
+        "empty": 0,
+        "occupied": 1
+      },
+      "actual_saved_classes": [
+        "empty",
+        "occupied"
+      ],
+      "extra": {
+        "threshold": 0.5,
+        "class_mapping": {
+          "empty": 0,
+          "occupied": 1
+        },
+        "encoder_name": "resnet18",
+        "encoder_weights_version": "resnet18-f37072fd.pth",
+        "preprocess_version": "resnet18-imagenet1k-v1-rgb-224-centercrop",
+        "dataset_hash": "9f7a1b3fa1443d6a17c211ba802e063f8d58056ce94bf30ee542105785cd8a06",
+        "split_hash": "b548a7f3f3b9c0369c95ecb2708c496d3c253119db82b81a9e676031a9886261"
+      }
+    },
+    "gate": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "version": 1,
+        "gate": {
+          "passed": true,
+          "f1": 1.0,
+          "support": 6,
+          "min_f1": 0.75,
+          "test_count": 6,
+          "min_test": 4,
+          "reasons": []
+        }
+      }
+    },
+    "activate_before_reevaluation": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "activated": true,
+        "version": 1,
+        "gate": {
+          "passed": true,
+          "f1": 1.0,
+          "support": 6,
+          "min_f1": 0.75,
+          "test_count": 6,
+          "min_test": 4,
+          "reasons": []
+        }
+      }
+    },
+    "shadow": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "version": 1,
+        "compared": 6,
+        "disagreement": {
+          "compared": 0,
+          "disagreements": 0,
+          "rate": null
+        },
+        "items": [
+          {
+            "sample_id": 43,
+            "session_id": "qa-positive_sorts_last-session-02",
+            "student_label": "occupied",
+            "student_confidence": 1.0,
+            "teacher_label": null,
+            "teacher_status": "pending",
+            "verified_label": "occupied",
+            "action": "none"
+          },
+          {
+            "sample_id": 44,
+            "session_id": "qa-positive_sorts_last-session-02",
+            "student_label": "occupied",
+            "student_confidence": 1.0,
+            "teacher_label": null,
+            "teacher_status": "pending",
+            "verified_label": "occupied",
+            "action": "none"
+          },
+          {
+            "sample_id": 45,
+            "session_id": "qa-positive_sorts_last-session-02",
+            "student_label": "occupied",
+            "student_confidence": 1.0,
+            "teacher_label": null,
+            "teacher_status": "pending",
+            "verified_label": "occupied",
+            "action": "none"
+          },
+          {
+            "sample_id": 46,
+            "session_id": "qa-positive_sorts_last-session-02",
+            "student_label": "empty",
+            "student_confidence": 0.0,
+            "teacher_label": null,
+            "teacher_status": "pending",
+            "verified_label": "empty",
+            "action": "none"
+          },
+          {
+            "sample_id": 47,
+            "session_id": "qa-positive_sorts_last-session-02",
+            "student_label": "empty",
+            "student_confidence": 0.0,
+            "teacher_label": null,
+            "teacher_status": "pending",
+            "verified_label": "empty",
+            "action": "none"
+          },
+          {
+            "sample_id": 48,
+            "session_id": "qa-positive_sorts_last-session-02",
+            "student_label": "empty",
+            "student_confidence": 0.0,
+            "teacher_label": null,
+            "teacher_status": "pending",
+            "verified_label": "empty",
+            "action": "none"
+          }
+        ]
+      }
+    },
+    "evaluate": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "version": 1,
+        "metrics": {
+          "confusion_matrix": {
+            "tp": 3,
+            "fp": 0,
+            "fn": 0,
+            "tn": 3
+          },
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "accuracy": 1.0,
+          "support": 6,
+          "positives": 3,
+          "negatives": 3,
+          "latency": {
+            "count": 6,
+            "p50_ms": 24.679,
+            "p95_ms": 27.524
+          },
+          "threshold": 0.5,
+          "manifest_digest": "ca8ac01dd5e494c98bfcd64c26adfe2a71dd857e1c97e84db447a42fc0b99619",
+          "artifact_sha256": "283d81ec9218ca2aab8a48dd7de7adaf23a6fa2ed965ebb3338a5867bb394704"
+        }
+      }
+    },
+    "activate": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "activated": true,
+        "version": 1,
+        "gate": {
+          "passed": true,
+          "f1": 1.0,
+          "support": 6,
+          "min_f1": 0.75,
+          "test_count": 6,
+          "min_test": 4,
+          "reasons": []
+        }
+      }
+    }
+  },
+  "reversed_supported_labels": {
+    "create": {
+      "http": 201,
+      "body": {
+        "id": 3,
+        "name": "QA_ONLY reversed_supported_labels",
+        "visual_prompt": "is the condition present?",
+        "positive_label": "empty",
+        "negative_label": "occupied",
+        "teacher_model": null,
+        "status": "collecting",
+        "active_version_id": null,
+        "created_at": "2026-10-11T03:53:13.092980Z"
+      }
+    },
+    "train": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "version": 1,
+        "version_id": 3,
+        "threshold": 0.5,
+        "counts": {
+          "train": 18,
+          "val": 6,
+          "test": 6
+        },
+        "metrics": {
+          "confusion_matrix": {
+            "tp": 3,
+            "fp": 0,
+            "fn": 0,
+            "tn": 3
+          },
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "accuracy": 1.0,
+          "support": 6,
+          "positives": 3,
+          "negatives": 3,
+          "latency": {
+            "count": 6,
+            "p50_ms": 23.887,
+            "p95_ms": 25.332
+          },
+          "threshold": 0.5,
+          "manifest_digest": "f3e21d1498a8a90e4430976838f1ce6a276eaa6c851b7b2da90451a91732dd26",
+          "artifact_sha256": "133e599083f91c570c114647676b272457b6de3cb332bc9553ccfc651a1934f6"
+        },
+        "train_duration_ms": 80.37274199887179,
+        "dataset_hash": "3ae310a6203249450a4f27324c0a06b29cae93238089718a9a0404db9bb5a127",
+        "split_hash": "dc05358f4bceccd5816febd8edc6d249c3e81e02e9d8df4682d5ed9b9782d4b2"
+      }
+    },
+    "provenance": {
+      "registry_class_mapping": {
+        "empty": 0,
+        "occupied": 1
+      },
+      "actual_saved_classes": [
+        "occupied",
+        "empty"
+      ],
+      "extra": {
+        "threshold": 0.5,
+        "class_mapping": {
+          "empty": 0,
+          "occupied": 1
+        },
+        "encoder_name": "resnet18",
+        "encoder_weights_version": "resnet18-f37072fd.pth",
+        "preprocess_version": "resnet18-imagenet1k-v1-rgb-224-centercrop",
+        "dataset_hash": "3ae310a6203249450a4f27324c0a06b29cae93238089718a9a0404db9bb5a127",
+        "split_hash": "dc05358f4bceccd5816febd8edc6d249c3e81e02e9d8df4682d5ed9b9782d4b2"
+      }
+    },
+    "gate": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "version": 1,
+        "gate": {
+          "passed": true,
+          "f1": 1.0,
+          "support": 6,
+          "min_f1": 0.75,
+          "test_count": 6,
+          "min_test": 4,
+          "reasons": []
+        }
+      }
+    },
+    "activate_before_reevaluation": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "activated": false,
+        "reason": "artifact unusable: artifact provenance does not match its registry row: class_ordering",
+        "gate": {
+          "passed": true,
+          "f1": 1.0,
+          "support": 6,
+          "min_f1": 0.75,
+          "test_count": 6,
+          "min_test": 4,
+          "reasons": []
+        }
+      }
+    },
+    "shadow": {
+      "http": 422,
+      "body": {
+        "detail": "artifact provenance does not match its registry row: class_ordering"
+      }
+    },
+    "evaluate": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "version": 1,
+        "metrics": {
+          "error": "artifact provenance does not match its registry row: class_ordering",
+          "support": 0,
+          "f1": null
+        }
+      }
+    },
+    "activate": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "activated": false,
+        "reason": "gate not passed",
+        "gate": {
+          "passed": false,
+          "f1": null,
+          "support": 0,
+          "min_f1": 0.75,
+          "test_count": 6,
+          "min_test": 4,
+          "reasons": [
+            "stored metrics were not computed against the current frozen manifest; re-evaluate before activation (fail-closed)",
+            "stored metrics are not bound to an artifact hash; re-evaluate before activation (fail-closed)",
+            "no held-out metrics; run evaluate first",
+            "evaluated support 0 != frozen snapshot test count 6; membership is inconsistent",
+            "held-out set must contain both classes (positives=None, negatives=None)"
+          ]
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,90 @@
+{
+  "response": {
+    "http": 200,
+    "body": {
+      "status": "done",
+      "provider_configured": true,
+      "labeled": 3,
+      "cached": 0,
+      "deduped": 0,
+      "failed": 0,
+      "suppressed_budget": 0,
+      "attempts_made": 3,
+      "budget_remaining": 2
+    }
+  },
+  "seconds": 0.08449612799449824,
+  "actual_provider_posts": 3,
+  "samples": [
+    {
+      "id": 1,
+      "status": "labeled",
+      "label": "occupied"
+    },
+    {
+      "id": 2,
+      "status": "labeled",
+      "label": "occupied"
+    },
+    {
+      "id": 3,
+      "status": "labeled",
+      "label": "occupied"
+    }
+  ],
+  "ledger": [
+    {
+      "slot": 0,
+      "status": "sent"
+    },
+    {
+      "slot": 1,
+      "status": "sent"
+    },
+    {
+      "slot": 2,
+      "status": "sent"
+    }
+  ],
+  "audit": [
+    {
+      "id": 3,
+      "sample_id": 3,
+      "provider_host": "127.0.0.1",
+      "model": "QA_ONLY/alias",
+      "response_model": "QA_ONLY/actual-revision",
+      "method": "chat_json",
+      "image_hash": "2823eca6f146d4e019098f56a6134350cf1cc32191a7350b07e16e7edd7cf2ff",
+      "session_id": "QA_ONLY-3",
+      "status": "labeled",
+      "latency_ms": 18.387200994766317,
+      "created_at": "2026-10-11T03:48:43.852820"
+    },
+    {
+      "id": 2,
+      "sample_id": 2,
+      "provider_host": "127.0.0.1",
+      "model": "QA_ONLY/alias",
+      "response_model": "QA_ONLY/actual-revision",
+      "method": "chat_json",
+      "image_hash": "0904ba095f854dbd0de69b055383e4bc0ab3d32cb5765fae97ab9a41dd822074",
+      "session_id": "QA_ONLY-2",
+      "status": "labeled",
+      "latency_ms": 17.031284995027818,
+      "created_at": "2026-10-11T03:48:43.830298"
+    },
+    {
+      "id": 1,
+      "sample_id": 1,
+      "provider_host": "127.0.0.1",
+      "model": "QA_ONLY/alias",
+      "response_model": "QA_ONLY/actual-revision",
+      "method": "chat_json",
+      "image_hash": "3cc71be282c31ed38094a0fb18a7fd9f5427b1b516277a048a4157d8a0bc577f",
+      "session_id": "QA_ONLY-1",
+      "status": "labeled",
+      "latency_ms": 17.302598993410356,
+      "created_at": "2026-10-11T03:48:43.807562"
+    }
+  ]
+}

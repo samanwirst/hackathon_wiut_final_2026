@@ -1,0 +1,11 @@
+{
+  "command": [
+    "make",
+    "check"
+  ],
+  "target_sha": "0c877e227062af7d3def121490419be158cb16c4",
+  "exit": 0,
+  "seconds": 32.79051991699089,
+  "head_after": "0c877e227062af7d3def121490419be158cb16c4",
+  "tracked_status_after": ""
+}

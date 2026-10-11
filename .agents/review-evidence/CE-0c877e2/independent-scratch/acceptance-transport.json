@@ -1,0 +1,790 @@
+{
+  "preflight": {
+    "bad_port": {
+      "response": {
+        "http": 500,
+        "body": "Internal Server Error"
+      },
+      "actual_provider_posts": 0,
+      "ledger": [
+        {
+          "id": 1,
+          "slot": 0,
+          "status": "reserved"
+        }
+      ],
+      "audit": []
+    },
+    "out_of_range_port": {
+      "response": {
+        "http": 500,
+        "body": "Internal Server Error"
+      },
+      "actual_provider_posts": 0,
+      "ledger": [
+        {
+          "id": 2,
+          "slot": 0,
+          "status": "reserved"
+        }
+      ],
+      "audit": []
+    },
+    "control_character_url": {
+      "response": {
+        "http": 500,
+        "body": "Internal Server Error"
+      },
+      "actual_provider_posts": 0,
+      "ledger": [
+        {
+          "id": 3,
+          "slot": 0,
+          "status": "reserved"
+        }
+      ],
+      "audit": []
+    },
+    "missing_model": {
+      "response": {
+        "http": 200,
+        "body": {
+          "status": "unavailable",
+          "provider_configured": false,
+          "pending": 1,
+          "detail": "No VLM_BASE_URL/VLM_MODEL configured; labels remain pending for a real provider."
+        }
+      },
+      "actual_provider_posts": 0,
+      "ledger": [],
+      "audit": [
+        {
+          "id": 1,
+          "sample_id": 4,
+          "provider_host": null,
+          "model": null,
+          "response_model": null,
+          "method": null,
+          "image_hash": "3cc71be282c31ed38094a0fb18a7fd9f5427b1b516277a048a4157d8a0bc577f",
+          "session_id": "QA_ONLY-1",
+          "status": "unavailable",
+          "latency_ms": null,
+          "created_at": "2026-10-11T03:50:50.261243"
+        }
+      ]
+    },
+    "invalid_image_upload": {
+      "response": {
+        "http": 400,
+        "body": {
+          "detail": "file is not a readable image"
+        }
+      },
+      "actual_provider_posts": 0,
+      "ledger": []
+    },
+    "invalid_stored_image": {
+      "response": {
+        "http": 200,
+        "body": {
+          "status": "done",
+          "provider_configured": true,
+          "labeled": 1,
+          "cached": 0,
+          "deduped": 0,
+          "failed": 0,
+          "suppressed_budget": 0,
+          "attempts_made": 1,
+          "budget_remaining": 0
+        }
+      },
+      "actual_provider_posts": 1,
+      "ledger": [
+        {
+          "id": 4,
+          "slot": 0,
+          "status": "sent"
+        }
+      ],
+      "sample": {
+        "status": "labeled",
+        "label": "occupied",
+        "confidence": 0.8,
+        "raw": {
+          "method": "chat_json",
+          "configured_alias": "QA_ONLY/alias",
+          "response_model": "QA_ONLY/actual-revision",
+          "model_revision": null,
+          "candidate_scores": null,
+          "forward_passes": null,
+          "processed_tokens": null,
+          "output_is_generated_json": true,
+          "scoring_uncalibrated": null,
+          "confidence_calibrated": false,
+          "usage": {
+            "total_tokens": 8
+          },
+          "content_preview": "{\"label\": \"occupied\", \"confidence\": 0.8}"
+        }
+      }
+    }
+  },
+  "fallback_scoring_provenance": {
+    "first": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "status": "teacher_fallback",
+        "student_confidence": 0.5,
+        "margin": 0.0,
+        "teacher_status": "labeled",
+        "label": "occupied",
+        "action": "none"
+      }
+    },
+    "cache_hit": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "status": "teacher_fallback",
+        "student_confidence": 0.5,
+        "margin": 0.0,
+        "teacher_status": "cache_hit",
+        "label": "occupied",
+        "action": "none"
+      }
+    },
+    "cache_fields": {
+      "id": 1,
+      "task_id": 7,
+      "cache_key": "cb795f086eba6eb5aed271c493ca50cef3b1cdda6ef373264beb7277bc9c9b2b",
+      "image_hash": "0904ba095f854dbd0de69b055383e4bc0ab3d32cb5765fae97ab9a41dd822074",
+      "status": "labeled",
+      "label": "occupied",
+      "confidence": 0.8,
+      "model": "QA_ONLY/actual-model",
+      "created_at": "2026-10-11 03:50:50.402041"
+    },
+    "audit": [
+      {
+        "id": 3,
+        "sample_id": null,
+        "provider_host": "127.0.0.1",
+        "model": "QA_ONLY/alias",
+        "response_model": "QA_ONLY/actual-model",
+        "method": "candidate_sequence_softmax",
+        "image_hash": "0904ba095f854dbd0de69b055383e4bc0ab3d32cb5765fae97ab9a41dd822074",
+        "session_id": null,
+        "status": "labeled",
+        "latency_ms": 17.119548996561207,
+        "created_at": "2026-10-11T03:50:50.404323"
+      }
+    ],
+    "actual_provider_posts": 1
+  },
+  "cache_validation": {
+    "missing_confidence": {
+      "first": {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "status": "teacher_fallback",
+          "student_confidence": 0.5,
+          "margin": 0.0,
+          "teacher_status": "labeled",
+          "label": "occupied",
+          "action": "none"
+        }
+      },
+      "after": {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "status": "teacher_fallback",
+          "student_confidence": 0.5,
+          "margin": 0.0,
+          "teacher_status": "cache_hit",
+          "label": "occupied",
+          "action": "none"
+        }
+      },
+      "actual_provider_posts": 1
+    },
+    "wrong_model": {
+      "first": {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "status": "teacher_fallback",
+          "student_confidence": 0.5,
+          "margin": 0.0,
+          "teacher_status": "labeled",
+          "label": "occupied",
+          "action": "none"
+        }
+      },
+      "after": {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "status": "teacher_fallback",
+          "student_confidence": 0.5,
+          "margin": 0.0,
+          "teacher_status": "cache_hit",
+          "label": "occupied",
+          "action": "none"
+        }
+      },
+      "actual_provider_posts": 1
+    },
+    "wrong_image_hash": {
+      "first": {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "status": "teacher_fallback",
+          "student_confidence": 0.5,
+          "margin": 0.0,
+          "teacher_status": "labeled",
+          "label": "occupied",
+          "action": "none"
+        }
+      },
+      "after": {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "status": "teacher_fallback",
+          "student_confidence": 0.5,
+          "margin": 0.0,
+          "teacher_status": "cache_hit",
+          "label": "occupied",
+          "action": "none"
+        }
+      },
+      "actual_provider_posts": 1
+    }
+  },
+  "scoring_validation": {
+    "invalid_probabilities": {
+      "response": {
+        "http": 200,
+        "body": {
+          "status": "done",
+          "provider_configured": true,
+          "labeled": 1,
+          "cached": 0,
+          "deduped": 0,
+          "failed": 0,
+          "suppressed_budget": 0,
+          "attempts_made": 1,
+          "budget_remaining": 0
+        }
+      },
+      "actual_provider_posts": 1,
+      "sample": {
+        "status": "labeled",
+        "label": "occupied",
+        "confidence": 0.8,
+        "raw": {
+          "method": "candidate_sequence_softmax",
+          "configured_alias": "QA_ONLY/alias",
+          "response_model": "QA_ONLY/actual-model",
+          "model_revision": "QA_ONLY/actual-revision",
+          "candidate_scores": {
+            "occupied": 2.0,
+            "empty": -1.0
+          },
+          "forward_passes": 2,
+          "processed_tokens": 27,
+          "output_is_generated_json": false,
+          "scoring_uncalibrated": true,
+          "confidence_calibrated": false,
+          "usage": {
+            "prompt_tokens": 12,
+            "completion_tokens": 0,
+            "total_tokens": 12
+          },
+          "content_preview": "{\"label\": \"occupied\", \"confidence\": 0.8}"
+        }
+      },
+      "audit": [
+        {
+          "id": 7,
+          "sample_id": 6,
+          "provider_host": "127.0.0.1",
+          "model": "QA_ONLY/alias",
+          "response_model": "QA_ONLY/actual-model",
+          "method": "candidate_sequence_softmax",
+          "image_hash": "3b834f1f92119466b78ad6da7f62d68704a39a1e979975b213544ca2b1d9fb2d",
+          "session_id": "QA_ONLY-4",
+          "status": "labeled",
+          "latency_ms": 16.21005700144451,
+          "created_at": "2026-10-11T03:50:50.594982"
+        }
+      ],
+      "ledger": [
+        {
+          "id": 9,
+          "slot": 0,
+          "status": "sent"
+        }
+      ]
+    },
+    "wrong_candidate_labels": {
+      "response": {
+        "http": 200,
+        "body": {
+          "status": "done",
+          "provider_configured": true,
+          "labeled": 1,
+          "cached": 0,
+          "deduped": 0,
+          "failed": 0,
+          "suppressed_budget": 0,
+          "attempts_made": 1,
+          "budget_remaining": 0
+        }
+      },
+      "actual_provider_posts": 1,
+      "sample": {
+        "status": "labeled",
+        "label": "occupied",
+        "confidence": 0.8,
+        "raw": {
+          "method": "candidate_sequence_softmax",
+          "configured_alias": "QA_ONLY/alias",
+          "response_model": "QA_ONLY/actual-model",
+          "model_revision": "QA_ONLY/actual-revision",
+          "candidate_scores": {
+            "unrelated": 0.8,
+            "bogus": 0.2
+          },
+          "forward_passes": 2,
+          "processed_tokens": 27,
+          "output_is_generated_json": false,
+          "scoring_uncalibrated": true,
+          "confidence_calibrated": false,
+          "usage": {
+            "prompt_tokens": 12,
+            "completion_tokens": 0,
+            "total_tokens": 12
+          },
+          "content_preview": "{\"label\": \"occupied\", \"confidence\": 0.8}"
+        }
+      },
+      "audit": [
+        {
+          "id": 8,
+          "sample_id": 7,
+          "provider_host": "127.0.0.1",
+          "model": "QA_ONLY/alias",
+          "response_model": "QA_ONLY/actual-model",
+          "method": "candidate_sequence_softmax",
+          "image_hash": "3b834f1f92119466b78ad6da7f62d68704a39a1e979975b213544ca2b1d9fb2d",
+          "session_id": "QA_ONLY-4",
+          "status": "labeled",
+          "latency_ms": 16.095790997496806,
+          "created_at": "2026-10-11T03:50:50.638169"
+        }
+      ],
+      "ledger": [
+        {
+          "id": 10,
+          "slot": 0,
+          "status": "sent"
+        }
+      ]
+    },
+    "unequal_lengths": {
+      "response": {
+        "http": 200,
+        "body": {
+          "status": "done",
+          "provider_configured": true,
+          "labeled": 1,
+          "cached": 0,
+          "deduped": 0,
+          "failed": 0,
+          "suppressed_budget": 0,
+          "attempts_made": 1,
+          "budget_remaining": 0
+        }
+      },
+      "actual_provider_posts": 1,
+      "sample": {
+        "status": "labeled",
+        "label": "occupied",
+        "confidence": 0.8,
+        "raw": {
+          "method": "candidate_sequence_softmax",
+          "configured_alias": "QA_ONLY/alias",
+          "response_model": "QA_ONLY/actual-model",
+          "model_revision": "QA_ONLY/actual-revision",
+          "candidate_scores": {
+            "occupied": 0.8
+          },
+          "forward_passes": 2,
+          "processed_tokens": 27,
+          "output_is_generated_json": false,
+          "scoring_uncalibrated": true,
+          "confidence_calibrated": false,
+          "usage": {
+            "prompt_tokens": 12,
+            "completion_tokens": 0,
+            "total_tokens": 12
+          },
+          "content_preview": "{\"label\": \"occupied\", \"confidence\": 0.8}"
+        }
+      },
+      "audit": [
+        {
+          "id": 9,
+          "sample_id": 8,
+          "provider_host": "127.0.0.1",
+          "model": "QA_ONLY/alias",
+          "response_model": "QA_ONLY/actual-model",
+          "method": "candidate_sequence_softmax",
+          "image_hash": "3b834f1f92119466b78ad6da7f62d68704a39a1e979975b213544ca2b1d9fb2d",
+          "session_id": "QA_ONLY-4",
+          "status": "labeled",
+          "latency_ms": 16.21555699966848,
+          "created_at": "2026-10-11T03:50:50.682171"
+        }
+      ],
+      "ledger": [
+        {
+          "id": 11,
+          "slot": 0,
+          "status": "sent"
+        }
+      ]
+    },
+    "missing_tokens_logs": {
+      "response": {
+        "http": 200,
+        "body": {
+          "status": "done",
+          "provider_configured": true,
+          "labeled": 1,
+          "cached": 0,
+          "deduped": 0,
+          "failed": 0,
+          "suppressed_budget": 0,
+          "attempts_made": 1,
+          "budget_remaining": 0
+        }
+      },
+      "actual_provider_posts": 1,
+      "sample": {
+        "status": "labeled",
+        "label": "occupied",
+        "confidence": 0.8,
+        "raw": {
+          "method": "candidate_sequence_softmax",
+          "configured_alias": "QA_ONLY/alias",
+          "response_model": "QA_ONLY/actual-model",
+          "model_revision": "QA_ONLY/actual-revision",
+          "candidate_scores": {
+            "occupied": 0.8,
+            "empty": 0.2
+          },
+          "forward_passes": 2,
+          "processed_tokens": 27,
+          "output_is_generated_json": false,
+          "scoring_uncalibrated": true,
+          "confidence_calibrated": false,
+          "usage": {
+            "prompt_tokens": 12,
+            "completion_tokens": 0,
+            "total_tokens": 12
+          },
+          "content_preview": "{\"label\": \"occupied\", \"confidence\": 0.8}"
+        }
+      },
+      "audit": [
+        {
+          "id": 10,
+          "sample_id": 9,
+          "provider_host": "127.0.0.1",
+          "model": "QA_ONLY/alias",
+          "response_model": "QA_ONLY/actual-model",
+          "method": "candidate_sequence_softmax",
+          "image_hash": "3b834f1f92119466b78ad6da7f62d68704a39a1e979975b213544ca2b1d9fb2d",
+          "session_id": "QA_ONLY-4",
+          "status": "labeled",
+          "latency_ms": 16.287147998809814,
+          "created_at": "2026-10-11T03:50:50.737517"
+        }
+      ],
+      "ledger": [
+        {
+          "id": 12,
+          "slot": 0,
+          "status": "sent"
+        }
+      ]
+    },
+    "overflow_optional": {
+      "response": {
+        "http": 200,
+        "body": {
+          "status": "done",
+          "provider_configured": true,
+          "labeled": 1,
+          "cached": 0,
+          "deduped": 0,
+          "failed": 0,
+          "suppressed_budget": 0,
+          "attempts_made": 1,
+          "budget_remaining": 0
+        }
+      },
+      "actual_provider_posts": 1,
+      "sample": {
+        "status": "labeled",
+        "label": "occupied",
+        "confidence": 0.8,
+        "raw": {
+          "method": "candidate_sequence_softmax",
+          "configured_alias": "QA_ONLY/alias",
+          "response_model": "QA_ONLY/actual-model",
+          "model_revision": "QA_ONLY/actual-revision",
+          "candidate_scores": null,
+          "forward_passes": null,
+          "processed_tokens": null,
+          "output_is_generated_json": false,
+          "scoring_uncalibrated": true,
+          "confidence_calibrated": false,
+          "usage": {
+            "prompt_tokens": 12,
+            "completion_tokens": 0,
+            "total_tokens": 12
+          },
+          "content_preview": "{\"label\": \"occupied\", \"confidence\": 0.8}"
+        }
+      },
+      "audit": [
+        {
+          "id": 11,
+          "sample_id": 10,
+          "provider_host": "127.0.0.1",
+          "model": "QA_ONLY/alias",
+          "response_model": "QA_ONLY/actual-model",
+          "method": "candidate_sequence_softmax",
+          "image_hash": "3b834f1f92119466b78ad6da7f62d68704a39a1e979975b213544ca2b1d9fb2d",
+          "session_id": "QA_ONLY-4",
+          "status": "labeled",
+          "latency_ms": 15.799412998603657,
+          "created_at": "2026-10-11T03:50:50.780093"
+        }
+      ],
+      "ledger": [
+        {
+          "id": 13,
+          "slot": 0,
+          "status": "sent"
+        }
+      ]
+    },
+    "oversize_optional": {
+      "response": {
+        "http": 200,
+        "body": {
+          "status": "done",
+          "provider_configured": true,
+          "labeled": 1,
+          "cached": 0,
+          "deduped": 0,
+          "failed": 0,
+          "suppressed_budget": 0,
+          "attempts_made": 1,
+          "budget_remaining": 0
+        }
+      },
+      "actual_provider_posts": 1,
+      "sample": {
+        "status": "labeled",
+        "label": "occupied",
+        "confidence": 0.8,
+        "raw": {
+          "method": "candidate_sequence_softmax",
+          "configured_alias": "QA_ONLY/alias",
+          "response_model": "QA_ONLY/actual-model",
+          "model_revision": "QA_ONLY/actual-revision",
+          "candidate_scores": {
+            "occupied": 0.5
+          },
+          "forward_passes": 2,
+          "processed_tokens": 27,
+          "output_is_generated_json": false,
+          "scoring_uncalibrated": true,
+          "confidence_calibrated": false,
+          "usage": {
+            "prompt_tokens": 12,
+            "completion_tokens": 0,
+            "total_tokens": 12
+          },
+          "content_preview": "{\"label\": \"occupied\", \"confidence\": 0.8}"
+        }
+      },
+      "audit": [
+        {
+          "id": 12,
+          "sample_id": 11,
+          "provider_host": "127.0.0.1",
+          "model": "QA_ONLY/alias",
+          "response_model": "QA_ONLY/actual-model",
+          "method": "candidate_sequence_softmax",
+          "image_hash": "3b834f1f92119466b78ad6da7f62d68704a39a1e979975b213544ca2b1d9fb2d",
+          "session_id": "QA_ONLY-4",
+          "status": "labeled",
+          "latency_ms": 16.475330005050637,
+          "created_at": "2026-10-11T03:50:50.833526"
+        }
+      ],
+      "ledger": [
+        {
+          "id": 14,
+          "slot": 0,
+          "status": "sent"
+        }
+      ]
+    }
+  },
+  "partial_batch": {
+    "response": {
+      "http": 200,
+      "body": {
+        "status": "done",
+        "provider_configured": true,
+        "labeled": 2,
+        "cached": 0,
+        "deduped": 0,
+        "failed": 1,
+        "suppressed_budget": 0,
+        "attempts_made": 3,
+        "budget_remaining": 2
+      }
+    },
+    "actual_provider_posts": 3,
+    "audit": [
+      {
+        "id": 15,
+        "sample_id": 14,
+        "provider_host": "127.0.0.1",
+        "model": "QA_ONLY/alias",
+        "response_model": "QA_ONLY/actual-model",
+        "method": "candidate_sequence_softmax",
+        "image_hash": "2823eca6f146d4e019098f56a6134350cf1cc32191a7350b07e16e7edd7cf2ff",
+        "session_id": "QA_ONLY-3",
+        "status": "labeled",
+        "latency_ms": 15.913954004645348,
+        "created_at": "2026-10-11T03:50:50.929441"
+      },
+      {
+        "id": 14,
+        "sample_id": 13,
+        "provider_host": "127.0.0.1",
+        "model": "QA_ONLY/alias",
+        "response_model": null,
+        "method": null,
+        "image_hash": "0904ba095f854dbd0de69b055383e4bc0ab3d32cb5765fae97ab9a41dd822074",
+        "session_id": "QA_ONLY-2",
+        "status": "invalid_response",
+        "latency_ms": 16.390889009926468,
+        "created_at": "2026-10-11T03:50:50.909876"
+      },
+      {
+        "id": 13,
+        "sample_id": 12,
+        "provider_host": "127.0.0.1",
+        "model": "QA_ONLY/alias",
+        "response_model": "QA_ONLY/actual-model",
+        "method": "candidate_sequence_softmax",
+        "image_hash": "3cc71be282c31ed38094a0fb18a7fd9f5427b1b516277a048a4157d8a0bc577f",
+        "session_id": "QA_ONLY-1",
+        "status": "labeled",
+        "latency_ms": 16.301201001624577,
+        "created_at": "2026-10-11T03:50:50.889385"
+      }
+    ],
+    "ledger": [
+      {
+        "id": 15,
+        "slot": 0,
+        "status": "sent"
+      },
+      {
+        "id": 16,
+        "slot": 1,
+        "status": "sent"
+      },
+      {
+        "id": 17,
+        "slot": 2,
+        "status": "sent"
+      }
+    ],
+    "samples": [
+      {
+        "id": 12,
+        "label": "occupied",
+        "status": "labeled",
+        "raw": {
+          "method": "candidate_sequence_softmax",
+          "configured_alias": "QA_ONLY/alias",
+          "response_model": "QA_ONLY/actual-model",
+          "model_revision": "QA_ONLY/actual-revision",
+          "candidate_scores": {
+            "occupied": 0.8,
+            "empty": 0.2
+          },
+          "forward_passes": 2,
+          "processed_tokens": 27,
+          "output_is_generated_json": false,
+          "scoring_uncalibrated": true,
+          "confidence_calibrated": false,
+          "usage": {
+            "prompt_tokens": 12,
+            "completion_tokens": 0,
+            "total_tokens": 12
+          },
+          "content_preview": "{\"label\": \"occupied\", \"confidence\": 0.8}"
+        }
+      },
+      {
+        "id": 13,
+        "label": null,
+        "status": "invalid_response",
+        "raw": null
+      },
+      {
+        "id": 14,
+        "label": "occupied",
+        "status": "labeled",
+        "raw": {
+          "method": "candidate_sequence_softmax",
+          "configured_alias": "QA_ONLY/alias",
+          "response_model": "QA_ONLY/actual-model",
+          "model_revision": "QA_ONLY/actual-revision",
+          "candidate_scores": {
+            "occupied": 0.8,
+            "empty": 0.2
+          },
+          "forward_passes": 2,
+          "processed_tokens": 27,
+          "output_is_generated_json": false,
+          "scoring_uncalibrated": true,
+          "confidence_calibrated": false,
+          "usage": {
+            "prompt_tokens": 12,
+            "completion_tokens": 0,
+            "total_tokens": 12
+          },
+          "content_preview": "{\"label\": \"occupied\", \"confidence\": 0.8}"
+        }
+      }
+    ]
+  }
+}

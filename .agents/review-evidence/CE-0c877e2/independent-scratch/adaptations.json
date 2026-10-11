@@ -1,0 +1,100 @@
+[
+  {
+    "file": "boundary_probes.py",
+    "original_sha256": "bfe0d99167afa308ba7ddf914e868fa121efcf65437bdeb60502d97768974468",
+    "adaptation": "owned scratch path only",
+    "original_still_matches": true,
+    "owned_copy_sha256": "63a75f3ba0369e7cd4d8e7746998eb69095b2e559c6fce8a1942ccce50751a66"
+  },
+  {
+    "file": "multiworker_race.py",
+    "original_sha256": "d5d57ee8aa3163821eda533e80d633d8b66b81d6f745dfed4f26a02a5bce4a2f",
+    "adaptation": "owned scratch path only",
+    "original_still_matches": true,
+    "owned_copy_sha256": "55c19b8e47522ea369193949de8538b62b4323ee746087a1400ab141d1798af0"
+  },
+  {
+    "file": "qa_race_worker.py",
+    "original_sha256": "b48ab5ef959534023326b437eaac2eccaacbb779c97cab5857cfe31a82102b9f",
+    "adaptation": "owned scratch path only",
+    "original_still_matches": true,
+    "owned_copy_sha256": "097bfcfe76b6d18a129699056e255657339fa32e30bbc1ecb45e263b41f1ac6a"
+  },
+  {
+    "file": "batch_label_probe.py",
+    "original_sha256": "3935488b0d73138d674eb3920dc02681fb5bd36e200d8a7b7fba702edc664e7b",
+    "adaptation": "owned scratch path only",
+    "original_still_matches": true,
+    "owned_copy_sha256": "b290aa5d9500ded0e0273037b0310f0f6d02ec81c92960b7b34524b679254d17"
+  },
+  {
+    "file": "artifact_probes.py",
+    "original_sha256": "a7af5e324a79c962e532ce17d34b3c0ead57e001efbffdfea5bfa4ae6569f9c1",
+    "adaptation": "owned scratch path only",
+    "original_still_matches": true,
+    "owned_copy_sha256": "05aeee3ddf692253cc387d1724e4d982ce338fb6ad190d156b001da19608bd9a"
+  },
+  {
+    "file": "ui_create.cjs",
+    "original_sha256": "45bbb8c3a93833711553a7b1d26f6abff1ace12b41d42486153726485f7c0df1",
+    "adaptation": "owned scratch path only",
+    "original_still_matches": true,
+    "owned_copy_sha256": "9644687ee55c1e78b78a4e7573c04967da523050c65ded7d79db3b2c26cfe6a2"
+  },
+  {
+    "file": "ui_all_actions.cjs",
+    "original_sha256": "bda058bc27f9f2b73aa88b8c38e4cc2af7d128cae7c91951fb5d4dfccd629672",
+    "adaptation": "owned scratch path only",
+    "original_still_matches": true,
+    "owned_copy_sha256": "d508bbb68490ac17225c118dd05a28e326c15600b90253bb449556757eb21e16"
+  },
+  {
+    "file": "api_probes.py",
+    "original_sha256": "ffa58ce97c6974816847a82d2ad5148ff53f34eb17d2e5730541d36ba7c1aefa",
+    "adaptation": "owned scratch path only",
+    "original_still_matches": true,
+    "owned_copy_sha256": "dd73804ee2128eb20eaabb234d1420a3d6462ed0a52b86c1c07462d917d78467"
+  },
+  {
+    "file": "version_probes.py",
+    "original_sha256": "e68575a52bb88662c6b15f5e50c1f3d33de0c943015fca5533c793d1adae3ce0",
+    "adaptation": "owned scratch path only",
+    "original_still_matches": true,
+    "owned_copy_sha256": "d1b05c674136525c7e8a161aca0ec9fdb052d07ed3d7925e6dee36da7291a631"
+  },
+  {
+    "file": "cleanup_probe.py",
+    "original_sha256": "ae1ae4cdb7fdc172415bf0a0b04db2c19f277e757a244d1cddf03b30de4c7966",
+    "adaptation": "owned scratch path only",
+    "original_still_matches": true,
+    "owned_copy_sha256": "f0d3cc8ffba32c9eefac867437e6bb9d3c8a9ab69c3080c78a0a5c57ab29ef91"
+  },
+  {
+    "file": "optional_overflow.py",
+    "original_sha256": "74a1d1f07e5263925b247015e3fd878f9c0ba629eaeedaa3570bbe95a2e030fd",
+    "adaptation": "owned scratch path only",
+    "original_still_matches": true,
+    "owned_copy_sha256": "def7d85ee113d0c763724f23712ec7dccc4dcc608720c294956f219a4f2f724e"
+  },
+  {
+    "file": "physical_provenance_probe.py",
+    "original_sha256": "9b14a30f943ef7e18f0e4765b812928b18516afde8d94fabbe6812c0397a574d",
+    "adaptation": "owned scratch path only",
+    "original_still_matches": true,
+    "owned_copy_sha256": "2a3dcf7ea877008d159cc22746ce84607ac15668a6950d8f3ac48e7b5da1a662"
+  },
+  {
+    "file": "extra_probes.py",
+    "original_sha256": "653714dc78929645c3c5296adef9688cd79f955dbb8fdff357d046c4b25554fc",
+    "adaptation": "owned scratch path only",
+    "original_still_matches": true,
+    "owned_copy_sha256": "fd1fdb5082a5ae41a9e2eefc7b7c96c683dfe920de0e3502ceec8da6500651d7"
+  },
+  {
+    "file": "ui_detail_mismatch.cjs",
+    "original_sha256": "0912576ccf3af7aa19c2cac99e169206011d6c15a41dbf1a640ab96257646da6",
+    "adaptation": "owned scratch path only",
+    "original_still_matches": true,
+    "owned_copy_sha256": "79a70713fd63468b4b114f29f691905b9b3994b9bdbaf3287bd51bb1fa5f1363"
+  }
+]

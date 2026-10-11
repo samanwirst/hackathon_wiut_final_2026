@@ -1,0 +1,102 @@
+[
+  {
+    "script": "acceptance_artifacts.py",
+    "command": [
+      "/home/samanwirst/Desktop/hackathon_wiut_final_2026/.agents/runtime/ten-hour/worktrees/review-m3-emergency-review/services/api/.venv/bin/python",
+      "/tmp/visionflow-m3-emergency-review-0c877e2/acceptance_artifacts.py"
+    ],
+    "exit": 0,
+    "seconds": 6.677,
+    "QA_ONLY": true
+  },
+  {
+    "script": "api_probes.py",
+    "command": [
+      "/home/samanwirst/Desktop/hackathon_wiut_final_2026/.agents/runtime/ten-hour/worktrees/review-m3-emergency-review/services/api/.venv/bin/python",
+      "/tmp/visionflow-m3-emergency-review-0c877e2/api_probes.py"
+    ],
+    "exit": 0,
+    "seconds": 5.826,
+    "QA_ONLY": true
+  },
+  {
+    "script": "acceptance_transport.py",
+    "command": [
+      "/home/samanwirst/Desktop/hackathon_wiut_final_2026/.agents/runtime/ten-hour/worktrees/review-m3-emergency-review/services/api/.venv/bin/python",
+      "/tmp/visionflow-m3-emergency-review-0c877e2/acceptance_transport.py"
+    ],
+    "exit": 0,
+    "seconds": 3.321,
+    "QA_ONLY": true
+  },
+  {
+    "script": "new_user_labels.py",
+    "command": [
+      "/home/samanwirst/Desktop/hackathon_wiut_final_2026/.agents/runtime/ten-hour/worktrees/review-m3-emergency-review/services/api/.venv/bin/python",
+      "/tmp/visionflow-m3-emergency-review-0c877e2/new_user_labels.py"
+    ],
+    "exit": 0,
+    "seconds": 6.427,
+    "QA_ONLY": true
+  },
+  {
+    "script": "ui_delayed_create.cjs",
+    "command": [
+      "node",
+      "/tmp/visionflow-m3-emergency-review-0c877e2/ui_delayed_create.cjs"
+    ],
+    "exit": 0,
+    "seconds": 0.465,
+    "QA_ONLY": true
+  },
+  {
+    "script": "ui_expanded_actions.cjs",
+    "command": [
+      "node",
+      "/tmp/visionflow-m3-emergency-review-0c877e2/ui_expanded_actions.cjs"
+    ],
+    "exit": 0,
+    "seconds": 0.314,
+    "QA_ONLY": true
+  },
+  {
+    "script": "preflight_retry.py",
+    "command": [
+      "/home/samanwirst/Desktop/hackathon_wiut_final_2026/.agents/runtime/ten-hour/worktrees/review-m3-emergency-review/services/api/.venv/bin/python",
+      "/tmp/visionflow-m3-emergency-review-0c877e2/preflight_retry.py"
+    ],
+    "exit": 0,
+    "seconds": 2.619,
+    "QA_ONLY": true
+  },
+  {
+    "script": "new_user_activation.py",
+    "command": [
+      "/home/samanwirst/Desktop/hackathon_wiut_final_2026/.agents/runtime/ten-hour/worktrees/review-m3-emergency-review/services/api/.venv/bin/python",
+      "/tmp/visionflow-m3-emergency-review-0c877e2/new_user_activation.py"
+    ],
+    "exit": 0,
+    "seconds": 6.326,
+    "QA_ONLY": true
+  },
+  {
+    "script": "supported_controls.py",
+    "command": [
+      "/home/samanwirst/Desktop/hackathon_wiut_final_2026/.agents/runtime/ten-hour/worktrees/review-m3-emergency-review/services/api/.venv/bin/python",
+      "/tmp/visionflow-m3-emergency-review-0c877e2/supported_controls.py"
+    ],
+    "exit": 0,
+    "seconds": 5.625,
+    "QA_ONLY": true
+  },
+  {
+    "script": "supported_controls_trace.py",
+    "command": [
+      "/home/samanwirst/Desktop/hackathon_wiut_final_2026/.agents/runtime/ten-hour/worktrees/review-m3-emergency-review/services/api/.venv/bin/python",
+      "/tmp/visionflow-m3-emergency-review-0c877e2/supported_controls_trace.py"
+    ],
+    "exit": 0,
+    "seconds": 4.522,
+    "QA_ONLY": true
+  }
+]

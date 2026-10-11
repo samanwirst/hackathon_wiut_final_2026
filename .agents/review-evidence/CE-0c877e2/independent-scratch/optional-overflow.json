@@ -1,0 +1,38 @@
+{
+  "response": {
+    "http": 200,
+    "body": {
+      "status": "done",
+      "provider_configured": true,
+      "labeled": 1,
+      "cached": 0,
+      "deduped": 0,
+      "failed": 0,
+      "suppressed_budget": 0,
+      "attempts_made": 1,
+      "budget_remaining": 0
+    }
+  },
+  "actual_provider_posts": 1,
+  "audit": [
+    {
+      "id": 1,
+      "sample_id": 1,
+      "provider_host": "127.0.0.1",
+      "model": "QA_ONLY/alias",
+      "response_model": "QA_ONLY/model",
+      "method": "chat_json",
+      "image_hash": "3cc71be282c31ed38094a0fb18a7fd9f5427b1b516277a048a4157d8a0bc577f",
+      "session_id": "QA_ONLY-1",
+      "status": "labeled",
+      "latency_ms": 19.459190996713005,
+      "created_at": "2026-10-11T03:49:12.274068"
+    }
+  ],
+  "ledger": [
+    {
+      "slot": 0,
+      "status": "sent"
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "refused": true,
+  "decoded_frames": 12,
+  "source_id": 1,
+  "error_type": "DatasetError",
+  "detail": "insufficient independent groups: have 1, need at least 4 (train>=2, val>=1, test>=1)"
+}

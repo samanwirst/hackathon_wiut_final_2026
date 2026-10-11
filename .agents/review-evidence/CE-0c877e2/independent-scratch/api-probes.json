@@ -1,0 +1,341 @@
+{
+  "label_budget1_two_API_workers": {
+    "responses": [
+      {
+        "http": 200,
+        "body": {
+          "status": "done",
+          "provider_configured": true,
+          "labeled": 1,
+          "cached": 0,
+          "deduped": 0,
+          "failed": 0,
+          "suppressed_budget": 0,
+          "attempts_made": 1,
+          "budget_remaining": 0
+        }
+      },
+      {
+        "http": 200,
+        "body": {
+          "status": "done",
+          "provider_configured": true,
+          "labeled": 0,
+          "cached": 0,
+          "deduped": 1,
+          "failed": 0,
+          "suppressed_budget": 0,
+          "attempts_made": 0,
+          "budget_remaining": 0
+        }
+      }
+    ],
+    "actual_provider_posts": 1,
+    "provider_peak": 1,
+    "audit": [
+      {
+        "id": 2,
+        "sample_id": 1,
+        "provider_host": "127.0.0.1",
+        "model": "QA_ONLY/alias",
+        "response_model": "QA_ONLY/actual-revision",
+        "method": "chat_json",
+        "image_hash": "3cc71be282c31ed38094a0fb18a7fd9f5427b1b516277a048a4157d8a0bc577f",
+        "session_id": "QA_ONLY-1",
+        "status": "labeled",
+        "latency_ms": 409.09039799589664,
+        "created_at": "2026-10-11T03:50:16.358451"
+      },
+      {
+        "id": 1,
+        "sample_id": 1,
+        "provider_host": null,
+        "model": "QA_ONLY/alias",
+        "response_model": null,
+        "method": null,
+        "image_hash": "3cc71be282c31ed38094a0fb18a7fd9f5427b1b516277a048a4157d8a0bc577f",
+        "session_id": "QA_ONLY-1",
+        "status": "deduped",
+        "latency_ms": null,
+        "created_at": "2026-10-11T03:50:15.957776"
+      }
+    ]
+  },
+  "fallback_budget1_two_API_workers": {
+    "responses": [
+      {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "status": "teacher_fallback",
+          "student_confidence": 0.5,
+          "margin": 0.0,
+          "teacher_status": "labeled",
+          "label": "occupied",
+          "action": "none"
+        }
+      },
+      {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "status": "unknown",
+          "detail": "student below margin; identical Teacher fallback already in flight",
+          "student_confidence": 0.5,
+          "margin": 0.0,
+          "action": "none"
+        }
+      }
+    ],
+    "actual_provider_posts": 1,
+    "provider_peak": 1,
+    "audit": [
+      {
+        "id": 3,
+        "sample_id": null,
+        "provider_host": "127.0.0.1",
+        "model": "QA_ONLY/alias",
+        "response_model": "QA_ONLY/actual-revision",
+        "method": "chat_json",
+        "image_hash": "2823eca6f146d4e019098f56a6134350cf1cc32191a7350b07e16e7edd7cf2ff",
+        "session_id": null,
+        "status": "labeled",
+        "latency_ms": 408.8949790020706,
+        "created_at": "2026-10-11T03:50:16.840641"
+      }
+    ]
+  },
+  "repeated_identical_fallback": {
+    "responses": [
+      {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "status": "teacher_fallback",
+          "student_confidence": 0.5,
+          "margin": 0.0,
+          "teacher_status": "labeled",
+          "label": "occupied",
+          "action": "none"
+        }
+      },
+      {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "status": "teacher_fallback",
+          "student_confidence": 0.5,
+          "margin": 0.0,
+          "teacher_status": "cache_hit",
+          "label": "occupied",
+          "action": "none"
+        }
+      },
+      {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "status": "teacher_fallback",
+          "student_confidence": 0.5,
+          "margin": 0.0,
+          "teacher_status": "cache_hit",
+          "label": "occupied",
+          "action": "none"
+        }
+      }
+    ],
+    "actual_provider_posts": 1
+  },
+  "admission_timeout_accounting": {
+    "responses": [
+      {
+        "http": 200,
+        "body": {
+          "status": "done",
+          "provider_configured": true,
+          "labeled": 1,
+          "cached": 0,
+          "deduped": 0,
+          "failed": 0,
+          "suppressed_budget": 0,
+          "attempts_made": 1,
+          "budget_remaining": 4
+        }
+      },
+      {
+        "http": 200,
+        "body": {
+          "status": "done",
+          "provider_configured": true,
+          "labeled": 0,
+          "cached": 0,
+          "deduped": 0,
+          "failed": 1,
+          "suppressed_budget": 0,
+          "attempts_made": 0,
+          "budget_remaining": 5
+        }
+      }
+    ],
+    "actual_provider_posts": 1,
+    "audits": [
+      [
+        {
+          "id": 6,
+          "sample_id": 2,
+          "provider_host": "127.0.0.1",
+          "model": "QA_ONLY/alias",
+          "response_model": "QA_ONLY/actual-revision",
+          "method": "chat_json",
+          "image_hash": "6a4a40ad3e354994cb4c5a6830f11883dce6f1b73f4fddaa3b16979ed825fcea",
+          "session_id": "QA_ONLY-5",
+          "status": "labeled",
+          "latency_ms": 606.0851540096337,
+          "created_at": "2026-10-11T03:50:17.567143"
+        }
+      ],
+      [
+        {
+          "id": 5,
+          "sample_id": 3,
+          "provider_host": "127.0.0.1",
+          "model": "QA_ONLY/alias",
+          "response_model": null,
+          "method": null,
+          "image_hash": "80c80dda2129acdcdae2cbd097943ba2681fa4bdd29783f8ad9cbda37546e0e5",
+          "session_id": "QA_ONLY-6",
+          "status": "timeout",
+          "latency_ms": null,
+          "created_at": "2026-10-11T03:50:17.075168"
+        }
+      ]
+    ]
+  },
+  "local_preflight_accounting": {
+    "response": {
+      "http": 200,
+      "body": {
+        "status": "done",
+        "provider_configured": true,
+        "labeled": 0,
+        "cached": 0,
+        "deduped": 0,
+        "failed": 1,
+        "suppressed_budget": 0,
+        "attempts_made": 0,
+        "budget_remaining": 5
+      }
+    },
+    "actual_provider_posts": 0,
+    "budget_spent": 0
+  },
+  "two_async_event_loops": {
+    "statuses": [
+      "labeled",
+      "labeled"
+    ],
+    "actual_provider_posts": 2,
+    "provider_peak": 2
+  },
+  "trickle_deadline": {
+    "status": "timeout",
+    "seconds": 0.2030794220045209
+  },
+  "post_cancellation_reuse": "labeled",
+  "scoring_provenance": {
+    "status": "labeled",
+    "label": "occupied",
+    "confidence": 0.8,
+    "model": "QA_ONLY/scoring-alias",
+    "latency_ms": 15.855944002396427,
+    "provider_host": "127.0.0.1",
+    "detail": null,
+    "method": "chat_json",
+    "model_revision": null,
+    "candidate_scores": null,
+    "forward_passes": null,
+    "processed_tokens": null,
+    "output_is_generated_json": true,
+    "confidence_calibrated": false,
+    "attempted": true,
+    "raw": {
+      "method": "chat_json",
+      "configured_alias": "QA_ONLY/alias",
+      "response_model": "QA_ONLY/scoring-alias",
+      "model_revision": null,
+      "candidate_scores": null,
+      "forward_passes": null,
+      "processed_tokens": null,
+      "output_is_generated_json": true,
+      "scoring_uncalibrated": null,
+      "confidence_calibrated": false,
+      "usage": {
+        "total_tokens": 8
+      },
+      "content_preview": "{\"label\": \"occupied\", \"confidence\": 0.8}"
+    }
+  },
+  "malformed_content_confidence": [
+    "invalid_response",
+    "invalid_response",
+    "invalid_response",
+    "invalid_response",
+    "invalid_response",
+    "invalid_response"
+  ],
+  "malformed_model": {
+    "status": "invalid_response",
+    "label": null,
+    "confidence": null,
+    "model": null,
+    "latency_ms": 15.624713007127866,
+    "provider_host": "127.0.0.1",
+    "detail": "envelope model is not a string (got dict)",
+    "method": null,
+    "model_revision": null,
+    "candidate_scores": null,
+    "forward_passes": null,
+    "processed_tokens": null,
+    "output_is_generated_json": null,
+    "confidence_calibrated": false,
+    "attempted": true,
+    "raw": null
+  },
+  "malformed_model_API": {
+    "response": {
+      "http": 200,
+      "body": {
+        "status": "done",
+        "provider_configured": true,
+        "labeled": 0,
+        "cached": 0,
+        "deduped": 0,
+        "failed": 1,
+        "suppressed_budget": 0,
+        "attempts_made": 1,
+        "budget_remaining": 4
+      }
+    },
+    "actual_provider_posts": 1,
+    "audit": [
+      {
+        "id": 8,
+        "sample_id": 5,
+        "provider_host": "127.0.0.1",
+        "model": "QA_ONLY/alias",
+        "response_model": null,
+        "method": null,
+        "image_hash": "b6e8ac24a888a45f5b2539e4560e50ea6354d27c1b2380e38cfb7f005a2161a1",
+        "session_id": "QA_ONLY-11",
+        "status": "invalid_response",
+        "latency_ms": 15.765791002195328,
+        "created_at": "2026-10-11T03:50:19.363497"
+      }
+    ]
+  },
+  "one_video_arbitrary_sessions": {
+    "refused": true,
+    "error_type": "DatasetError",
+    "detail": "insufficient independent groups: have 1, need at least 4 (train>=2, val>=1, test>=1)"
+  }
+}

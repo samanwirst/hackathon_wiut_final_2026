@@ -1,0 +1,30 @@
+{
+  "target_sha": "0c877e227062af7d3def121490419be158cb16c4",
+  "started_epoch": 1791690376.2396877,
+  "commands": [
+    {
+      "command": [
+        "make",
+        "check"
+      ],
+      "target_sha": "0c877e227062af7d3def121490419be158cb16c4",
+      "exit": 0,
+      "seconds": 32.79051991699089,
+      "head_after": "0c877e227062af7d3def121490419be158cb16c4",
+      "tracked_status_after": ""
+    },
+    {
+      "command": [
+        "make",
+        "smoke"
+      ],
+      "target_sha": "0c877e227062af7d3def121490419be158cb16c4",
+      "exit": 0,
+      "seconds": 5.525894047998008,
+      "head_after": "0c877e227062af7d3def121490419be158cb16c4",
+      "tracked_status_after": ""
+    }
+  ],
+  "passed": true,
+  "finished_epoch": 1791690414.5779138
+}

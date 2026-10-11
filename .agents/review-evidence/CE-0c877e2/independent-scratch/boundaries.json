@@ -1,0 +1,354 @@
+{
+  "budget_count_before_other_insert": {
+    "responses": [
+      {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "status": "unknown",
+          "detail": "student below margin; Teacher budget exhausted for this task",
+          "student_confidence": 0.5,
+          "margin": 0.0,
+          "action": "none"
+        }
+      },
+      {
+        "http": 200,
+        "body": {
+          "status": "done",
+          "provider_configured": true,
+          "labeled": 1,
+          "cached": 0,
+          "deduped": 0,
+          "failed": 0,
+          "suppressed_budget": 0,
+          "attempts_made": 1,
+          "budget_remaining": 0
+        }
+      }
+    ],
+    "actual_provider_posts": 1,
+    "provider_peak": 1,
+    "ledger": [
+      {
+        "slot": 0,
+        "status": "sent",
+        "key": "75f85007fe342409e1429d95af2d20dcec772987e7c4c75d071fcd46364b4a3d"
+      },
+      {
+        "slot": 1,
+        "status": "released",
+        "key": "cb795f086eba6eb5aed271c493ca50cef3b1cdda6ef373264beb7277bc9c9b2b"
+      }
+    ],
+    "audit": [
+      {
+        "id": 1,
+        "sample_id": 1,
+        "provider_host": "127.0.0.1",
+        "model": "QA_ONLY/alias",
+        "response_model": "QA_ONLY/actual-revision",
+        "method": "chat_json",
+        "image_hash": "3cc71be282c31ed38094a0fb18a7fd9f5427b1b516277a048a4157d8a0bc577f",
+        "session_id": "QA_ONLY-1",
+        "status": "labeled",
+        "latency_ms": 257.1423320041504,
+        "created_at": "2026-10-11T03:48:32.888999"
+      }
+    ]
+  },
+  "inflight_same_key_count_slot_gap": {
+    "responses": [
+      {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "status": "unknown",
+          "detail": "student below margin; identical Teacher fallback already in flight",
+          "student_confidence": 0.5,
+          "margin": 0.0,
+          "action": "none"
+        }
+      },
+      {
+        "http": 200,
+        "body": {
+          "status": "done",
+          "provider_configured": true,
+          "labeled": 1,
+          "cached": 0,
+          "deduped": 0,
+          "failed": 0,
+          "suppressed_budget": 0,
+          "attempts_made": 1,
+          "budget_remaining": 4
+        }
+      }
+    ],
+    "actual_provider_posts": 1,
+    "provider_peak": 1,
+    "ledger": [
+      {
+        "slot": 0,
+        "status": "sent",
+        "key": "75f85007fe342409e1429d95af2d20dcec772987e7c4c75d071fcd46364b4a3d"
+      },
+      {
+        "slot": 1,
+        "status": "released",
+        "key": "75f85007fe342409e1429d95af2d20dcec772987e7c4c75d071fcd46364b4a3d"
+      }
+    ],
+    "audit": [
+      {
+        "id": 2,
+        "sample_id": 2,
+        "provider_host": "127.0.0.1",
+        "model": "QA_ONLY/alias",
+        "response_model": "QA_ONLY/actual-revision",
+        "method": "chat_json",
+        "image_hash": "3cc71be282c31ed38094a0fb18a7fd9f5427b1b516277a048a4157d8a0bc577f",
+        "session_id": "QA_ONLY-1",
+        "status": "labeled",
+        "latency_ms": 258.4562809934141,
+        "created_at": "2026-10-11T03:48:33.193559"
+      }
+    ]
+  },
+  "actual_local_scoring": {
+    "label": {
+      "http": 200,
+      "body": {
+        "status": "done",
+        "provider_configured": true,
+        "labeled": 1,
+        "cached": 0,
+        "deduped": 0,
+        "failed": 0,
+        "suppressed_budget": 0,
+        "attempts_made": 1,
+        "budget_remaining": 4
+      }
+    },
+    "audit": [
+      {
+        "id": 3,
+        "sample_id": 3,
+        "provider_host": "127.0.0.1",
+        "model": "QA_ONLY/alias",
+        "response_model": "QA_ONLY/verified-actual-model",
+        "method": "candidate_sequence_softmax",
+        "image_hash": "2823eca6f146d4e019098f56a6134350cf1cc32191a7350b07e16e7edd7cf2ff",
+        "session_id": "QA_ONLY-3",
+        "status": "labeled",
+        "latency_ms": 16.23619900783524,
+        "created_at": "2026-10-11T03:48:33.249442"
+      }
+    ],
+    "teacher_raw": {
+      "method": "candidate_sequence_softmax",
+      "configured_alias": "QA_ONLY/alias",
+      "response_model": "QA_ONLY/verified-actual-model",
+      "model_revision": "QA_ONLY/pinned-revision",
+      "candidate_scores": {
+        "occupied": 0.8,
+        "empty": 0.2
+      },
+      "forward_passes": 2,
+      "processed_tokens": 27,
+      "output_is_generated_json": false,
+      "scoring_uncalibrated": true,
+      "confidence_calibrated": false,
+      "usage": {
+        "prompt_tokens": 12,
+        "completion_tokens": 0,
+        "total_tokens": 12
+      },
+      "content_preview": "{\"label\": \"occupied\", \"confidence\": 0.8}"
+    },
+    "candidate": {
+      "status": "labeled",
+      "label": "occupied",
+      "confidence": 0.8,
+      "model": "QA_ONLY/verified-actual-model",
+      "latency_ms": 16.376576997572556,
+      "provider_host": "127.0.0.1",
+      "detail": null,
+      "method": "candidate_sequence_softmax",
+      "model_revision": "QA_ONLY/pinned-revision",
+      "candidate_scores": {
+        "occupied": 0.8,
+        "empty": 0.2
+      },
+      "forward_passes": 2,
+      "processed_tokens": 27,
+      "output_is_generated_json": false,
+      "confidence_calibrated": false,
+      "attempted": true,
+      "raw": {
+        "method": "candidate_sequence_softmax",
+        "configured_alias": "QA_ONLY/alias",
+        "response_model": "QA_ONLY/verified-actual-model",
+        "model_revision": "QA_ONLY/pinned-revision",
+        "candidate_scores": {
+          "occupied": 0.8,
+          "empty": 0.2
+        },
+        "forward_passes": 2,
+        "processed_tokens": 27,
+        "output_is_generated_json": false,
+        "scoring_uncalibrated": true,
+        "confidence_calibrated": false,
+        "usage": {
+          "prompt_tokens": 12,
+          "completion_tokens": 0,
+          "total_tokens": 12
+        },
+        "content_preview": "{\"label\": \"occupied\", \"confidence\": 0.8}"
+      }
+    }
+  },
+  "sent_timeout_not_released": {
+    "response": {
+      "http": 200,
+      "body": {
+        "status": "done",
+        "provider_configured": true,
+        "labeled": 0,
+        "cached": 0,
+        "deduped": 0,
+        "failed": 1,
+        "suppressed_budget": 0,
+        "attempts_made": 1,
+        "budget_remaining": 0
+      }
+    },
+    "actual_provider_posts": 1,
+    "ledger": [
+      {
+        "slot": 0,
+        "status": "sent",
+        "key": "41499cccabbffe866ffc7f8db9bc0a823c58792f1231213df2f0b9c481566273"
+      }
+    ],
+    "retry": {
+      "http": 200,
+      "body": {
+        "status": "done",
+        "provider_configured": true,
+        "labeled": 0,
+        "cached": 0,
+        "deduped": 0,
+        "failed": 0,
+        "suppressed_budget": 0,
+        "attempts_made": 0,
+        "budget_remaining": 0
+      }
+    }
+  },
+  "invalid_local_config": {
+    "response": {
+      "http": 200,
+      "body": {
+        "status": "done",
+        "provider_configured": true,
+        "labeled": 0,
+        "cached": 0,
+        "deduped": 0,
+        "failed": 1,
+        "suppressed_budget": 0,
+        "attempts_made": 0,
+        "budget_remaining": 1
+      }
+    },
+    "actual_provider_posts": 0,
+    "ledger": [
+      {
+        "slot": 0,
+        "status": "released",
+        "key": "787126f0a4c7a11b4cbe71f164af39a439fd4230b4710c056bd631b6cdd49f45"
+      }
+    ]
+  },
+  "DB_fault_spend_survives": {
+    "response": {
+      "http": 500,
+      "body": "Internal Server Error"
+    },
+    "actual_provider_posts": 1,
+    "ledger": [
+      {
+        "slot": 0,
+        "status": "sent",
+        "key": "b7d8ec4464552549600e76813a3c275d44617fea2c8ed78ae0a85a8826021ff3"
+      }
+    ],
+    "audit": []
+  },
+  "optional_envelope_types": {
+    "usage_wrong_types": {
+      "status": "labeled",
+      "model": "QA_ONLY/actual",
+      "raw_bytes": 376,
+      "usage": null,
+      "score_count": 0
+    },
+    "oversize_model": {
+      "status": "labeled",
+      "model": null,
+      "raw_bytes": 364,
+      "usage": null,
+      "score_count": 0
+    },
+    "oversize_scoring": {
+      "status": "labeled",
+      "model": "QA_ONLY/actual",
+      "raw_bytes": 376,
+      "usage": null,
+      "score_count": 0
+    }
+  },
+  "cache_provenance_validation": {
+    "first": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "status": "teacher_fallback",
+        "student_confidence": 0.5,
+        "margin": 0.0,
+        "teacher_status": "labeled",
+        "label": "occupied",
+        "action": "none"
+      }
+    },
+    "second": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "status": "teacher_fallback",
+        "student_confidence": 0.5,
+        "margin": 0.0,
+        "teacher_status": "cache_hit",
+        "label": "occupied",
+        "action": "none"
+      }
+    },
+    "stored": {
+      "model": "QA_ONLY/actual",
+      "confidence": 0.8,
+      "has_method": false
+    },
+    "after_invalid_cache": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "status": "unknown",
+        "detail": "student below margin; identical Teacher fallback already in flight",
+        "student_confidence": 0.5,
+        "margin": 0.0,
+        "action": "none"
+      }
+    },
+    "actual_provider_posts": 1
+  }
+}

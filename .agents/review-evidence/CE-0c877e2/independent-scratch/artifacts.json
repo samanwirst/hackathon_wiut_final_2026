@@ -1,0 +1,1272 @@
+{
+  "baseline": {
+    "train1": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "version": 1,
+        "version_id": 1,
+        "threshold": 0.5,
+        "counts": {
+          "train": 18,
+          "val": 6,
+          "test": 6
+        },
+        "metrics": {
+          "confusion_matrix": {
+            "tp": 3,
+            "fp": 0,
+            "fn": 0,
+            "tn": 3
+          },
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "accuracy": 1.0,
+          "support": 6,
+          "positives": 3,
+          "negatives": 3,
+          "latency": {
+            "count": 6,
+            "p50_ms": 26.335,
+            "p95_ms": 28.298
+          },
+          "threshold": 0.5,
+          "manifest_digest": "7bbade7990c3cbb1cb9308bf77c695cf05fcfb9be0f8cf445c74ba83139968a1",
+          "artifact_sha256": "6f81f16647c09f565897b331c67e84d9fe9a43c57ee63e54f69f7fe3a7da3c80"
+        },
+        "train_duration_ms": 104.399440009729,
+        "dataset_hash": "9f7a1b3fa1443d6a17c211ba802e063f8d58056ce94bf30ee542105785cd8a06",
+        "split_hash": "500a58f77cc7fa0bf272b27380fa419e9681a1df24748cf661137f9afa89ab5b"
+      }
+    },
+    "train2": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "version": 2,
+        "version_id": 2,
+        "threshold": 0.5,
+        "counts": {
+          "train": 24,
+          "val": 6,
+          "test": 12
+        },
+        "metrics": {
+          "confusion_matrix": {
+            "tp": 6,
+            "fp": 0,
+            "fn": 0,
+            "tn": 6
+          },
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "accuracy": 1.0,
+          "support": 12,
+          "positives": 6,
+          "negatives": 6,
+          "latency": {
+            "count": 12,
+            "p50_ms": 24.314,
+            "p95_ms": 25.329
+          },
+          "threshold": 0.5,
+          "manifest_digest": "f7aa7c732dc35aa7b6630584bc199c788c0ecab81b8d5eac580e74b0eef4021a",
+          "artifact_sha256": "ce0a0ce380823fa08f6668dfd838dfab7db8a9a89f965a0ca26d5195a30e6cb0"
+        },
+        "train_duration_ms": 85.3485559928231,
+        "dataset_hash": "47f816c04a375d59569d923f04e82e22f0fbd35be2f6377fad54ada46a655e9f",
+        "split_hash": "7506323beaa709b0b13cdc8f66e23629c8e3ca6f87b4a1e4d1d8ee00a3502469"
+      }
+    },
+    "genuine_reload_evaluation": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "version": 1,
+        "metrics": {
+          "confusion_matrix": {
+            "tp": 3,
+            "fp": 0,
+            "fn": 0,
+            "tn": 3
+          },
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "accuracy": 1.0,
+          "support": 6,
+          "positives": 3,
+          "negatives": 3,
+          "latency": {
+            "count": 6,
+            "p50_ms": 25.488,
+            "p95_ms": 27.093
+          },
+          "threshold": 0.5,
+          "manifest_digest": "7bbade7990c3cbb1cb9308bf77c695cf05fcfb9be0f8cf445c74ba83139968a1",
+          "artifact_sha256": "6f81f16647c09f565897b331c67e84d9fe9a43c57ee63e54f69f7fe3a7da3c80"
+        }
+      }
+    },
+    "activate1": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "activated": true,
+        "version": 1,
+        "gate": {
+          "passed": true,
+          "f1": 1.0,
+          "support": 6,
+          "min_f1": 0.75,
+          "test_count": 6,
+          "min_test": 4,
+          "reasons": []
+        }
+      }
+    },
+    "activate2": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "activated": true,
+        "version": 2,
+        "gate": {
+          "passed": true,
+          "f1": 1.0,
+          "support": 12,
+          "min_f1": 0.75,
+          "test_count": 12,
+          "min_test": 4,
+          "reasons": []
+        }
+      }
+    }
+  },
+  "rollback_missing": {
+    "before": 2,
+    "gate": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "version": 1,
+        "gate": {
+          "passed": false,
+          "f1": 1.0,
+          "support": 6,
+          "min_f1": 0.75,
+          "test_count": 6,
+          "min_test": 4,
+          "reasons": [
+            "artifact file is missing or unreadable"
+          ]
+        }
+      }
+    },
+    "rollback": {
+      "http": 422,
+      "body": {
+        "detail": "cannot roll back to version 1: artifact unusable ([Errno 2] No such file or directory: '/tmp/visionflow-m3-emergency-review-0c877e2/data-artifact_probes-py/autolearn/models/task_1/v1.pt'); current active version is unchanged"
+      }
+    },
+    "after": 2,
+    "current_classify": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "status": "student",
+        "label": "empty",
+        "confidence": 0.0,
+        "version": 2,
+        "action": "none"
+      }
+    }
+  },
+  "rollback_corrupt": {
+    "before": 2,
+    "gate": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "version": 1,
+        "gate": {
+          "passed": false,
+          "f1": 1.0,
+          "support": 6,
+          "min_f1": 0.75,
+          "test_count": 6,
+          "min_test": 4,
+          "reasons": [
+            "artifact bytes changed since evaluation; re-evaluate before activation (fail-closed)"
+          ]
+        }
+      }
+    },
+    "rollback": {
+      "http": 422,
+      "body": {
+        "detail": "cannot roll back to version 1: artifact unusable (artifact could not be loaded (UnpicklingError)); current active version is unchanged"
+      }
+    },
+    "after": 2,
+    "current_classify": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "status": "student",
+        "label": "empty",
+        "confidence": 0.0,
+        "version": 2,
+        "action": "none"
+      }
+    }
+  },
+  "rollback_mismatched": {
+    "before": 2,
+    "gate": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "version": 1,
+        "gate": {
+          "passed": false,
+          "f1": 1.0,
+          "support": 6,
+          "min_f1": 0.75,
+          "test_count": 6,
+          "min_test": 4,
+          "reasons": [
+            "artifact bytes changed since evaluation; re-evaluate before activation (fail-closed)"
+          ]
+        }
+      }
+    },
+    "rollback": {
+      "http": 422,
+      "body": {
+        "detail": "cannot roll back to version 1: artifact unusable (artifact provenance does not match its registry row: dataset_hash); current active version is unchanged"
+      }
+    },
+    "after": 2,
+    "current_classify": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "status": "student",
+        "label": "empty",
+        "confidence": 0.0,
+        "version": 2,
+        "action": "none"
+      }
+    }
+  },
+  "rollback_good": {
+    "response": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "rolled_back_to": 1
+      }
+    },
+    "after": 1,
+    "classify": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "status": "student",
+        "label": "empty",
+        "confidence": 0.0,
+        "version": 1,
+        "action": "none"
+      }
+    }
+  },
+  "metadata_extra_empty": {
+    "gate": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "version": 1,
+        "gate": {
+          "passed": false,
+          "f1": 1.0,
+          "support": 6,
+          "min_f1": 0.75,
+          "test_count": 6,
+          "min_test": 4,
+          "reasons": [
+            "artifact bytes changed since evaluation; re-evaluate before activation (fail-closed)"
+          ]
+        }
+      }
+    },
+    "activate": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "activated": false,
+        "reason": "gate not passed",
+        "gate": {
+          "passed": false,
+          "f1": 1.0,
+          "support": 6,
+          "min_f1": 0.75,
+          "test_count": 6,
+          "min_test": 4,
+          "reasons": [
+            "artifact bytes changed since evaluation; re-evaluate before activation (fail-closed)"
+          ]
+        }
+      }
+    },
+    "rollback_target_after_reactivate2": {
+      "http": 422,
+      "body": {
+        "detail": "cannot roll back to version 1: artifact unusable (artifact is missing required provenance: class_mapping, encoder_name, encoder_weights_version, preprocess_version, dataset_hash, split_hash); current active version is unchanged"
+      }
+    }
+  },
+  "metadata_extra_missing_dataset": {
+    "gate": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "version": 1,
+        "gate": {
+          "passed": false,
+          "f1": 1.0,
+          "support": 6,
+          "min_f1": 0.75,
+          "test_count": 6,
+          "min_test": 4,
+          "reasons": [
+            "artifact bytes changed since evaluation; re-evaluate before activation (fail-closed)"
+          ]
+        }
+      }
+    },
+    "activate": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "activated": false,
+        "reason": "gate not passed",
+        "gate": {
+          "passed": false,
+          "f1": 1.0,
+          "support": 6,
+          "min_f1": 0.75,
+          "test_count": 6,
+          "min_test": 4,
+          "reasons": [
+            "artifact bytes changed since evaluation; re-evaluate before activation (fail-closed)"
+          ]
+        }
+      }
+    },
+    "rollback_target_after_reactivate2": {
+      "http": 422,
+      "body": {
+        "detail": "cannot roll back to version 1: artifact unusable (artifact is missing required provenance: dataset_hash); current active version is unchanged"
+      }
+    }
+  },
+  "metadata_class_names_reversed": {
+    "gate": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "version": 1,
+        "gate": {
+          "passed": false,
+          "f1": 1.0,
+          "support": 6,
+          "min_f1": 0.75,
+          "test_count": 6,
+          "min_test": 4,
+          "reasons": [
+            "artifact bytes changed since evaluation; re-evaluate before activation (fail-closed)"
+          ]
+        }
+      }
+    },
+    "activate": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "activated": false,
+        "reason": "gate not passed",
+        "gate": {
+          "passed": false,
+          "f1": 1.0,
+          "support": 6,
+          "min_f1": 0.75,
+          "test_count": 6,
+          "min_test": 4,
+          "reasons": [
+            "artifact bytes changed since evaluation; re-evaluate before activation (fail-closed)"
+          ]
+        }
+      }
+    },
+    "rollback_target_after_reactivate2": {
+      "http": 422,
+      "body": {
+        "detail": "cannot roll back to version 1: artifact unusable (artifact provenance does not match its registry row: class_ordering); current active version is unchanged"
+      }
+    }
+  },
+  "stale_metrics_changed_artifact": {
+    "cached_gate": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "version": 1,
+        "gate": {
+          "passed": false,
+          "f1": 1.0,
+          "support": 6,
+          "min_f1": 0.75,
+          "test_count": 6,
+          "min_test": 4,
+          "reasons": [
+            "artifact bytes changed since evaluation; re-evaluate before activation (fail-closed)"
+          ]
+        }
+      }
+    },
+    "activate": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "activated": false,
+        "reason": "gate not passed",
+        "gate": {
+          "passed": false,
+          "f1": 1.0,
+          "support": 6,
+          "min_f1": 0.75,
+          "test_count": 6,
+          "min_test": 4,
+          "reasons": [
+            "artifact bytes changed since evaluation; re-evaluate before activation (fail-closed)"
+          ]
+        }
+      }
+    },
+    "actual_reload_evaluation": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "version": 1,
+        "metrics": {
+          "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 3,
+            "tn": 3
+          },
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "accuracy": 0.5,
+          "support": 6,
+          "positives": 3,
+          "negatives": 3,
+          "latency": {
+            "count": 6,
+            "p50_ms": 44.28,
+            "p95_ms": 83.27
+          },
+          "threshold": 0.5,
+          "manifest_digest": "7bbade7990c3cbb1cb9308bf77c695cf05fcfb9be0f8cf445c74ba83139968a1",
+          "artifact_sha256": "af4e3248083d633511d28f53bf79bf08e9083f88e3948131efffd94f41f2ca56"
+        }
+      }
+    },
+    "gate_after": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "version": 1,
+        "gate": {
+          "passed": false,
+          "f1": 0.0,
+          "support": 6,
+          "min_f1": 0.75,
+          "test_count": 6,
+          "min_test": 4,
+          "reasons": [
+            "held-out F1 0.0 < gate 0.75"
+          ]
+        }
+      }
+    }
+  },
+  "offline_wrong_artifact": {
+    "classify": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "status": "unavailable",
+        "detail": "active Student artifact unusable: artifact provenance does not match its registry row: dataset_hash, split_hash",
+        "action": "none"
+      }
+    },
+    "evaluate": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "version": 1,
+        "metrics": {
+          "error": "artifact provenance does not match its registry row: dataset_hash, split_hash",
+          "support": 0,
+          "f1": null
+        }
+      }
+    },
+    "gate_after": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "version": 1,
+        "gate": {
+          "passed": false,
+          "f1": null,
+          "support": 0,
+          "min_f1": 0.75,
+          "test_count": 6,
+          "min_test": 4,
+          "reasons": [
+            "stored metrics were not computed against the current frozen manifest; re-evaluate before activation (fail-closed)",
+            "stored metrics are not bound to an artifact hash; re-evaluate before activation (fail-closed)",
+            "no held-out metrics; run evaluate first",
+            "evaluated support 0 != frozen snapshot test count 6; membership is inconsistent",
+            "held-out set must contain both classes (positives=None, negatives=None)"
+          ]
+        }
+      }
+    }
+  },
+  "changed_image_bytes": {
+    "expected": "20bbff1561a4d0767fea8e6655ed46e72bda111e2e9ed620466678dc3bb889b8",
+    "actual": "42d778cc828500c399dd4d76f15c9255e1ca87fb3efc52b99e2aa758eb5794ad",
+    "gate": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "version": 1,
+        "gate": {
+          "passed": false,
+          "f1": 1.0,
+          "support": 6,
+          "min_f1": 0.75,
+          "test_count": 6,
+          "min_test": 4,
+          "reasons": [
+            "frozen manifest inconsistent: manifest sample 4 image bytes changed on disk"
+          ]
+        }
+      }
+    },
+    "activate": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "activated": false,
+        "reason": "gate not passed",
+        "gate": {
+          "passed": false,
+          "f1": 1.0,
+          "support": 6,
+          "min_f1": 0.75,
+          "test_count": 6,
+          "min_test": 4,
+          "reasons": [
+            "frozen manifest inconsistent: manifest sample 4 image bytes changed on disk"
+          ]
+        }
+      }
+    },
+    "evaluation": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "version": 1,
+        "metrics": {
+          "error": "manifest sample 4 image bytes changed on disk",
+          "support": 0,
+          "f1": null
+        }
+      }
+    }
+  },
+  "changed_manifest_same_counts": {
+    "gate": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "version": 1,
+        "gate": {
+          "passed": false,
+          "f1": 1.0,
+          "support": 6,
+          "min_f1": 0.75,
+          "test_count": 6,
+          "min_test": 4,
+          "reasons": [
+            "stored metrics were not computed against the current frozen manifest; re-evaluate before activation (fail-closed)"
+          ]
+        }
+      }
+    },
+    "activate": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "activated": false,
+        "reason": "gate not passed",
+        "gate": {
+          "passed": false,
+          "f1": 1.0,
+          "support": 6,
+          "min_f1": 0.75,
+          "test_count": 6,
+          "min_test": 4,
+          "reasons": [
+            "stored metrics were not computed against the current frozen manifest; re-evaluate before activation (fail-closed)"
+          ]
+        }
+      }
+    }
+  },
+  "old_metric_provenance": {
+    "gate_before": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "version": 1,
+        "gate": {
+          "passed": false,
+          "f1": 1.0,
+          "support": 6,
+          "min_f1": 0.75,
+          "test_count": 6,
+          "min_test": 4,
+          "reasons": [
+            "stored metrics were not computed against the current frozen manifest; re-evaluate before activation (fail-closed)"
+          ]
+        }
+      }
+    },
+    "genuine_evaluation": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "version": 1,
+        "metrics": {
+          "confusion_matrix": {
+            "tp": 3,
+            "fp": 0,
+            "fn": 0,
+            "tn": 3
+          },
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "accuracy": 1.0,
+          "support": 6,
+          "positives": 3,
+          "negatives": 3,
+          "latency": {
+            "count": 6,
+            "p50_ms": 26.915,
+            "p95_ms": 27.882
+          },
+          "threshold": 0.5,
+          "manifest_digest": "7bbade7990c3cbb1cb9308bf77c695cf05fcfb9be0f8cf445c74ba83139968a1",
+          "artifact_sha256": "6f81f16647c09f565897b331c67e84d9fe9a43c57ee63e54f69f7fe3a7da3c80"
+        }
+      }
+    },
+    "gate_after": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "version": 1,
+        "gate": {
+          "passed": true,
+          "f1": 1.0,
+          "support": 6,
+          "min_f1": 0.75,
+          "test_count": 6,
+          "min_test": 4,
+          "reasons": []
+        }
+      }
+    }
+  },
+  "prediction_boundary": {
+    "bool": {
+      "evaluate": {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "version": 1,
+          "metrics": {
+            "error": "student produced boolean outputs, not probabilities",
+            "support": 0,
+            "f1": null
+          }
+        }
+      },
+      "gate": {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "version": 1,
+          "gate": {
+            "passed": false,
+            "f1": null,
+            "support": 0,
+            "min_f1": 0.75,
+            "test_count": 6,
+            "min_test": 4,
+            "reasons": [
+              "stored metrics were not computed against the current frozen manifest; re-evaluate before activation (fail-closed)",
+              "stored metrics are not bound to an artifact hash; re-evaluate before activation (fail-closed)",
+              "no held-out metrics; run evaluate first",
+              "evaluated support 0 != frozen snapshot test count 6; membership is inconsistent",
+              "held-out set must contain both classes (positives=None, negatives=None)"
+            ]
+          }
+        }
+      },
+      "classify": {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "status": "unknown",
+          "detail": "student produced boolean outputs, not probabilities",
+          "action": "none"
+        }
+      }
+    },
+    "column": {
+      "evaluate": {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "version": 1,
+          "metrics": {
+            "error": "student probabilities must be 1-D (got shape (6, 1))",
+            "support": 0,
+            "f1": null
+          }
+        }
+      },
+      "gate": {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "version": 1,
+          "gate": {
+            "passed": false,
+            "f1": null,
+            "support": 0,
+            "min_f1": 0.75,
+            "test_count": 6,
+            "min_test": 4,
+            "reasons": [
+              "stored metrics were not computed against the current frozen manifest; re-evaluate before activation (fail-closed)",
+              "stored metrics are not bound to an artifact hash; re-evaluate before activation (fail-closed)",
+              "no held-out metrics; run evaluate first",
+              "evaluated support 0 != frozen snapshot test count 6; membership is inconsistent",
+              "held-out set must contain both classes (positives=None, negatives=None)"
+            ]
+          }
+        }
+      },
+      "classify": {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "status": "unknown",
+          "detail": "student probabilities must be 1-D (got shape (1, 1))",
+          "action": "none"
+        }
+      }
+    },
+    "row": {
+      "evaluate": {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "version": 1,
+          "metrics": {
+            "error": "student probabilities must be 1-D (got shape (1, 6))",
+            "support": 0,
+            "f1": null
+          }
+        }
+      },
+      "gate": {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "version": 1,
+          "gate": {
+            "passed": false,
+            "f1": null,
+            "support": 0,
+            "min_f1": 0.75,
+            "test_count": 6,
+            "min_test": 4,
+            "reasons": [
+              "stored metrics were not computed against the current frozen manifest; re-evaluate before activation (fail-closed)",
+              "stored metrics are not bound to an artifact hash; re-evaluate before activation (fail-closed)",
+              "no held-out metrics; run evaluate first",
+              "evaluated support 0 != frozen snapshot test count 6; membership is inconsistent",
+              "held-out set must contain both classes (positives=None, negatives=None)"
+            ]
+          }
+        }
+      },
+      "classify": {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "status": "unknown",
+          "detail": "student probabilities must be 1-D (got shape (1, 1))",
+          "action": "none"
+        }
+      }
+    },
+    "strings": {
+      "evaluate": {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "version": 1,
+          "metrics": {
+            "error": "student produced non-numeric outputs (dtype <U13), not probabilities",
+            "support": 0,
+            "f1": null
+          }
+        }
+      },
+      "gate": {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "version": 1,
+          "gate": {
+            "passed": false,
+            "f1": null,
+            "support": 0,
+            "min_f1": 0.75,
+            "test_count": 6,
+            "min_test": 4,
+            "reasons": [
+              "stored metrics were not computed against the current frozen manifest; re-evaluate before activation (fail-closed)",
+              "stored metrics are not bound to an artifact hash; re-evaluate before activation (fail-closed)",
+              "no held-out metrics; run evaluate first",
+              "evaluated support 0 != frozen snapshot test count 6; membership is inconsistent",
+              "held-out set must contain both classes (positives=None, negatives=None)"
+            ]
+          }
+        }
+      },
+      "classify": {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "status": "unknown",
+          "detail": "student produced non-numeric outputs (dtype <U13), not probabilities",
+          "action": "none"
+        }
+      }
+    },
+    "bad_string": {
+      "evaluate": {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "version": 1,
+          "metrics": {
+            "error": "student produced non-numeric outputs (dtype <U27), not probabilities",
+            "support": 0,
+            "f1": null
+          }
+        }
+      },
+      "gate": {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "version": 1,
+          "gate": {
+            "passed": false,
+            "f1": null,
+            "support": 0,
+            "min_f1": 0.75,
+            "test_count": 6,
+            "min_test": 4,
+            "reasons": [
+              "stored metrics were not computed against the current frozen manifest; re-evaluate before activation (fail-closed)",
+              "stored metrics are not bound to an artifact hash; re-evaluate before activation (fail-closed)",
+              "no held-out metrics; run evaluate first",
+              "evaluated support 0 != frozen snapshot test count 6; membership is inconsistent",
+              "held-out set must contain both classes (positives=None, negatives=None)"
+            ]
+          }
+        }
+      },
+      "classify": {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "status": "unknown",
+          "detail": "student produced non-numeric outputs (dtype <U27), not probabilities",
+          "action": "none"
+        }
+      }
+    },
+    "nan": {
+      "evaluate": {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "version": 1,
+          "metrics": {
+            "error": "student produced non-finite probabilities",
+            "support": 0,
+            "f1": null
+          }
+        }
+      },
+      "gate": {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "version": 1,
+          "gate": {
+            "passed": false,
+            "f1": null,
+            "support": 0,
+            "min_f1": 0.75,
+            "test_count": 6,
+            "min_test": 4,
+            "reasons": [
+              "stored metrics were not computed against the current frozen manifest; re-evaluate before activation (fail-closed)",
+              "stored metrics are not bound to an artifact hash; re-evaluate before activation (fail-closed)",
+              "no held-out metrics; run evaluate first",
+              "evaluated support 0 != frozen snapshot test count 6; membership is inconsistent",
+              "held-out set must contain both classes (positives=None, negatives=None)"
+            ]
+          }
+        }
+      },
+      "classify": {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "status": "unknown",
+          "detail": "student produced non-finite probabilities",
+          "action": "none"
+        }
+      }
+    },
+    "inf": {
+      "evaluate": {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "version": 1,
+          "metrics": {
+            "error": "student produced non-finite probabilities",
+            "support": 0,
+            "f1": null
+          }
+        }
+      },
+      "gate": {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "version": 1,
+          "gate": {
+            "passed": false,
+            "f1": null,
+            "support": 0,
+            "min_f1": 0.75,
+            "test_count": 6,
+            "min_test": 4,
+            "reasons": [
+              "stored metrics were not computed against the current frozen manifest; re-evaluate before activation (fail-closed)",
+              "stored metrics are not bound to an artifact hash; re-evaluate before activation (fail-closed)",
+              "no held-out metrics; run evaluate first",
+              "evaluated support 0 != frozen snapshot test count 6; membership is inconsistent",
+              "held-out set must contain both classes (positives=None, negatives=None)"
+            ]
+          }
+        }
+      },
+      "classify": {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "status": "unknown",
+          "detail": "student produced non-finite probabilities",
+          "action": "none"
+        }
+      }
+    },
+    "out_of_range": {
+      "evaluate": {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "version": 1,
+          "metrics": {
+            "error": "student produced probabilities outside [0, 1]",
+            "support": 0,
+            "f1": null
+          }
+        }
+      },
+      "gate": {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "version": 1,
+          "gate": {
+            "passed": false,
+            "f1": null,
+            "support": 0,
+            "min_f1": 0.75,
+            "test_count": 6,
+            "min_test": 4,
+            "reasons": [
+              "stored metrics were not computed against the current frozen manifest; re-evaluate before activation (fail-closed)",
+              "stored metrics are not bound to an artifact hash; re-evaluate before activation (fail-closed)",
+              "no held-out metrics; run evaluate first",
+              "evaluated support 0 != frozen snapshot test count 6; membership is inconsistent",
+              "held-out set must contain both classes (positives=None, negatives=None)"
+            ]
+          }
+        }
+      },
+      "classify": {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "status": "unknown",
+          "detail": "student produced probabilities outside [0, 1]",
+          "action": "none"
+        }
+      }
+    },
+    "wrong_count": {
+      "evaluate": {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "version": 1,
+          "metrics": {
+            "error": "student produced 7 probabilities for 6 inputs (wrong shape)",
+            "support": 0,
+            "f1": null
+          }
+        }
+      },
+      "gate": {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "version": 1,
+          "gate": {
+            "passed": false,
+            "f1": null,
+            "support": 0,
+            "min_f1": 0.75,
+            "test_count": 6,
+            "min_test": 4,
+            "reasons": [
+              "stored metrics were not computed against the current frozen manifest; re-evaluate before activation (fail-closed)",
+              "stored metrics are not bound to an artifact hash; re-evaluate before activation (fail-closed)",
+              "no held-out metrics; run evaluate first",
+              "evaluated support 0 != frozen snapshot test count 6; membership is inconsistent",
+              "held-out set must contain both classes (positives=None, negatives=None)"
+            ]
+          }
+        }
+      },
+      "classify": {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "status": "unknown",
+          "detail": "student produced 2 probabilities for 1 inputs (wrong shape)",
+          "action": "none"
+        }
+      }
+    }
+  },
+  "malformed_metric_gate": {
+    "True": {
+      "gate": {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "version": 1,
+          "gate": {
+            "passed": true,
+            "f1": 1.0,
+            "support": 6,
+            "min_f1": 0.75,
+            "test_count": 6,
+            "min_test": 4,
+            "reasons": []
+          }
+        }
+      },
+      "activate": {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "activated": true,
+          "version": 1,
+          "gate": {
+            "passed": true,
+            "f1": 1.0,
+            "support": 6,
+            "min_f1": 0.75,
+            "test_count": 6,
+            "min_test": 4,
+            "reasons": []
+          }
+        }
+      }
+    },
+    "2.0": {
+      "gate": {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "version": 1,
+          "gate": {
+            "passed": false,
+            "f1": null,
+            "support": 6,
+            "min_f1": 0.75,
+            "test_count": 6,
+            "min_test": 4,
+            "reasons": [
+              "held-out F1 is not a finite number in [0, 1] (2.0)"
+            ]
+          }
+        }
+      },
+      "activate": {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "activated": false,
+          "reason": "gate not passed",
+          "gate": {
+            "passed": false,
+            "f1": null,
+            "support": 6,
+            "min_f1": 0.75,
+            "test_count": 6,
+            "min_test": 4,
+            "reasons": [
+              "held-out F1 is not a finite number in [0, 1] (2.0)"
+            ]
+          }
+        }
+      }
+    },
+    "nan": {
+      "gate": {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "version": 1,
+          "gate": {
+            "passed": false,
+            "f1": null,
+            "support": 6,
+            "min_f1": 0.75,
+            "test_count": 6,
+            "min_test": 4,
+            "reasons": [
+              "held-out F1 is not a finite number in [0, 1] (nan)"
+            ]
+          }
+        }
+      },
+      "activate": {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "activated": false,
+          "reason": "gate not passed",
+          "gate": {
+            "passed": false,
+            "f1": null,
+            "support": 6,
+            "min_f1": 0.75,
+            "test_count": 6,
+            "min_test": 4,
+            "reasons": [
+              "held-out F1 is not a finite number in [0, 1] (nan)"
+            ]
+          }
+        }
+      }
+    },
+    "inf": {
+      "gate": {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "version": 1,
+          "gate": {
+            "passed": false,
+            "f1": null,
+            "support": 6,
+            "min_f1": 0.75,
+            "test_count": 6,
+            "min_test": 4,
+            "reasons": [
+              "held-out F1 is not a finite number in [0, 1] (inf)"
+            ]
+          }
+        }
+      },
+      "activate": {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "activated": false,
+          "reason": "gate not passed",
+          "gate": {
+            "passed": false,
+            "f1": null,
+            "support": 6,
+            "min_f1": 0.75,
+            "test_count": 6,
+            "min_test": 4,
+            "reasons": [
+              "held-out F1 is not a finite number in [0, 1] (inf)"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

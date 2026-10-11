@@ -1,0 +1,23 @@
+{
+  "disclosure": "QA_ONLY deterministic actual-component harness; owned fetch fixtures only",
+  "create": {
+    "selected": 3,
+    "detailTask": 3,
+    "busy": null,
+    "disabledControls": [],
+    "posts": [
+      {
+        "path": "/api/autolearn/tasks",
+        "body": "{\"name\":\"QA_ONLY newly created\",\"visual_prompt\":\"QA_ONLY is bay occupied?\",\"positive_label\":\"occupied\",\"negative_label\":\"empty\"}"
+      }
+    ],
+    "getCalls": [
+      "/api/autolearn/tasks",
+      "/api/autolearn/status",
+      "/api/autolearn/tasks",
+      "/api/autolearn/status",
+      "/api/autolearn/tasks/3",
+      "/api/autolearn/tasks/3/samples"
+    ]
+  }
+}

@@ -1,0 +1,1098 @@
+{
+  "baseline": {
+    "train1": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "version": 1,
+        "version_id": 1,
+        "threshold": 0.5,
+        "counts": {
+          "train": 18,
+          "val": 6,
+          "test": 6
+        },
+        "metrics": {
+          "confusion_matrix": {
+            "tp": 3,
+            "fp": 0,
+            "fn": 0,
+            "tn": 3
+          },
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "accuracy": 1.0,
+          "support": 6,
+          "positives": 3,
+          "negatives": 3,
+          "latency": {
+            "count": 6,
+            "p50_ms": 23.89,
+            "p95_ms": 25.117
+          },
+          "threshold": 0.5,
+          "manifest_digest": "7bbade7990c3cbb1cb9308bf77c695cf05fcfb9be0f8cf445c74ba83139968a1",
+          "artifact_sha256": "e9443feaa3ac10ada4c9c916b10085c92ae46d89fa149fa0422897b8bf0cffcd"
+        },
+        "train_duration_ms": 92.44413000124041,
+        "dataset_hash": "9f7a1b3fa1443d6a17c211ba802e063f8d58056ce94bf30ee542105785cd8a06",
+        "split_hash": "500a58f77cc7fa0bf272b27380fa419e9681a1df24748cf661137f9afa89ab5b"
+      }
+    },
+    "train2": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "version": 2,
+        "version_id": 2,
+        "threshold": 0.5,
+        "counts": {
+          "train": 18,
+          "val": 6,
+          "test": 6
+        },
+        "metrics": {
+          "confusion_matrix": {
+            "tp": 3,
+            "fp": 0,
+            "fn": 0,
+            "tn": 3
+          },
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "accuracy": 1.0,
+          "support": 6,
+          "positives": 3,
+          "negatives": 3,
+          "latency": {
+            "count": 6,
+            "p50_ms": 23.768,
+            "p95_ms": 23.937
+          },
+          "threshold": 0.5,
+          "manifest_digest": "7bbade7990c3cbb1cb9308bf77c695cf05fcfb9be0f8cf445c74ba83139968a1",
+          "artifact_sha256": "dc8724603e2c313b40fb7cb1ad8fadf6f93541542823004e342fb5112b5725cc"
+        },
+        "train_duration_ms": 80.69243900536094,
+        "dataset_hash": "9f7a1b3fa1443d6a17c211ba802e063f8d58056ce94bf30ee542105785cd8a06",
+        "split_hash": "500a58f77cc7fa0bf272b27380fa419e9681a1df24748cf661137f9afa89ab5b"
+      }
+    },
+    "encoder_frozen": true,
+    "artifact_sha256": "e9443feaa3ac10ada4c9c916b10085c92ae46d89fa149fa0422897b8bf0cffcd",
+    "reevaluation": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "version": 1,
+        "metrics": {
+          "confusion_matrix": {
+            "tp": 3,
+            "fp": 0,
+            "fn": 0,
+            "tn": 3
+          },
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "accuracy": 1.0,
+          "support": 6,
+          "positives": 3,
+          "negatives": 3,
+          "latency": {
+            "count": 6,
+            "p50_ms": 24.503,
+            "p95_ms": 25.141
+          },
+          "threshold": 0.5,
+          "manifest_digest": "7bbade7990c3cbb1cb9308bf77c695cf05fcfb9be0f8cf445c74ba83139968a1",
+          "artifact_sha256": "e9443feaa3ac10ada4c9c916b10085c92ae46d89fa149fa0422897b8bf0cffcd"
+        }
+      }
+    }
+  },
+  "normal_activation": {
+    "http": 200,
+    "body": {
+      "experimental": true,
+      "activated": true,
+      "version": 1,
+      "gate": {
+        "passed": true,
+        "f1": 1.0,
+        "support": 6,
+        "min_f1": 0.75,
+        "test_count": 6,
+        "min_test": 4,
+        "reasons": []
+      }
+    }
+  },
+  "threshold_binding": {
+    "stored_threshold": 0.5,
+    "new_threshold": 0.0,
+    "gate": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "version": 1,
+        "gate": {
+          "passed": true,
+          "f1": 1.0,
+          "support": 6,
+          "min_f1": 0.75,
+          "test_count": 6,
+          "min_test": 4,
+          "reasons": []
+        }
+      }
+    },
+    "activate": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "activated": true,
+        "version": 1,
+        "gate": {
+          "passed": true,
+          "f1": 1.0,
+          "support": 6,
+          "min_f1": 0.75,
+          "test_count": 6,
+          "min_test": 4,
+          "reasons": []
+        }
+      }
+    },
+    "actual_reevaluation": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "version": 1,
+        "metrics": {
+          "confusion_matrix": {
+            "tp": 3,
+            "fp": 3,
+            "fn": 0,
+            "tn": 0
+          },
+          "precision": 0.5,
+          "recall": 1.0,
+          "f1": 0.6667,
+          "accuracy": 0.5,
+          "support": 6,
+          "positives": 3,
+          "negatives": 3,
+          "latency": {
+            "count": 6,
+            "p50_ms": 24.944,
+            "p95_ms": 26.648
+          },
+          "threshold": 0.0,
+          "manifest_digest": "7bbade7990c3cbb1cb9308bf77c695cf05fcfb9be0f8cf445c74ba83139968a1",
+          "artifact_sha256": "e9443feaa3ac10ada4c9c916b10085c92ae46d89fa149fa0422897b8bf0cffcd"
+        }
+      }
+    }
+  },
+  "missing_input_bytes": {
+    "gate": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "version": 1,
+        "gate": {
+          "passed": true,
+          "f1": 1.0,
+          "support": 6,
+          "min_f1": 0.75,
+          "test_count": 6,
+          "min_test": 4,
+          "reasons": []
+        }
+      }
+    },
+    "activate": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "activated": true,
+        "version": 1,
+        "gate": {
+          "passed": true,
+          "f1": 1.0,
+          "support": 6,
+          "min_f1": 0.75,
+          "test_count": 6,
+          "min_test": 4,
+          "reasons": []
+        }
+      }
+    },
+    "evaluate": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "version": 1,
+        "metrics": {
+          "error": "[Errno 2] No such file or directory: '/tmp/visionflow-m3-emergency-review-0c877e2/data-acceptance_artifacts-py/autolearn/images/task_1/e754a93ce7d7b2afaf32adbb0235144be88faf4dbabdb29720ed1605422e645b.jpg'",
+          "support": 0,
+          "f1": null
+        }
+      }
+    }
+  },
+  "active_metadata_empty": {
+    "classify": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "status": "student",
+        "label": "empty",
+        "confidence": 0.0,
+        "version": 1,
+        "action": "none"
+      }
+    },
+    "gate": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "version": 1,
+        "gate": {
+          "passed": false,
+          "f1": 1.0,
+          "support": 6,
+          "min_f1": 0.75,
+          "test_count": 6,
+          "min_test": 4,
+          "reasons": [
+            "artifact bytes changed since evaluation; re-evaluate before activation (fail-closed)"
+          ]
+        }
+      }
+    },
+    "evaluate": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "version": 1,
+        "metrics": {
+          "error": "artifact is missing required provenance: class_mapping, encoder_name, encoder_weights_version, preprocess_version, dataset_hash, split_hash",
+          "support": 0,
+          "f1": null
+        }
+      }
+    }
+  },
+  "active_metadata_missing_dataset": {
+    "classify": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "status": "student",
+        "label": "empty",
+        "confidence": 0.0,
+        "version": 1,
+        "action": "none"
+      }
+    },
+    "gate": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "version": 1,
+        "gate": {
+          "passed": false,
+          "f1": 1.0,
+          "support": 6,
+          "min_f1": 0.75,
+          "test_count": 6,
+          "min_test": 4,
+          "reasons": [
+            "artifact bytes changed since evaluation; re-evaluate before activation (fail-closed)"
+          ]
+        }
+      }
+    },
+    "evaluate": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "version": 1,
+        "metrics": {
+          "error": "artifact is missing required provenance: dataset_hash",
+          "support": 0,
+          "f1": null
+        }
+      }
+    }
+  },
+  "active_metadata_missing_encoder": {
+    "classify": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "status": "student",
+        "label": "empty",
+        "confidence": 0.0,
+        "version": 1,
+        "action": "none"
+      }
+    },
+    "gate": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "version": 1,
+        "gate": {
+          "passed": false,
+          "f1": 1.0,
+          "support": 6,
+          "min_f1": 0.75,
+          "test_count": 6,
+          "min_test": 4,
+          "reasons": [
+            "artifact bytes changed since evaluation; re-evaluate before activation (fail-closed)"
+          ]
+        }
+      }
+    },
+    "evaluate": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "version": 1,
+        "metrics": {
+          "error": "artifact is missing required provenance: encoder_weights_version",
+          "support": 0,
+          "f1": null
+        }
+      }
+    }
+  },
+  "active_metadata_missing_threshold": {
+    "classify": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "status": "student",
+        "label": "empty",
+        "confidence": 0.0,
+        "version": 1,
+        "action": "none"
+      }
+    },
+    "gate": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "version": 1,
+        "gate": {
+          "passed": false,
+          "f1": 1.0,
+          "support": 6,
+          "min_f1": 0.75,
+          "test_count": 6,
+          "min_test": 4,
+          "reasons": [
+            "artifact bytes changed since evaluation; re-evaluate before activation (fail-closed)"
+          ]
+        }
+      }
+    },
+    "evaluate": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "version": 1,
+        "metrics": {
+          "confusion_matrix": {
+            "tp": 3,
+            "fp": 0,
+            "fn": 0,
+            "tn": 3
+          },
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "accuracy": 1.0,
+          "support": 6,
+          "positives": 3,
+          "negatives": 3,
+          "latency": {
+            "count": 6,
+            "p50_ms": 23.959,
+            "p95_ms": 24.875
+          },
+          "threshold": 0.5,
+          "manifest_digest": "7bbade7990c3cbb1cb9308bf77c695cf05fcfb9be0f8cf445c74ba83139968a1",
+          "artifact_sha256": "6bf56ac2c9dcd430728c21d83f454bffdcc79dd1624419d53b0cc74a52555cb2"
+        }
+      }
+    }
+  },
+  "active_weights_tampered": {
+    "gate": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "version": 1,
+        "gate": {
+          "passed": false,
+          "f1": 1.0,
+          "support": 6,
+          "min_f1": 0.75,
+          "test_count": 6,
+          "min_test": 4,
+          "reasons": [
+            "artifact bytes changed since evaluation; re-evaluate before activation (fail-closed)"
+          ]
+        }
+      }
+    },
+    "classify": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "status": "student",
+        "label": "occupied",
+        "confidence": 1.0,
+        "version": 1,
+        "action": "none"
+      }
+    }
+  },
+  "active_same_dataset_v2_archive": {
+    "v1_archive_sha256": "e9443feaa3ac10ada4c9c916b10085c92ae46d89fa149fa0422897b8bf0cffcd",
+    "v2_archive_sha256": "dc8724603e2c313b40fb7cb1ad8fadf6f93541542823004e342fb5112b5725cc",
+    "gate": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "version": 1,
+        "gate": {
+          "passed": false,
+          "f1": 1.0,
+          "support": 6,
+          "min_f1": 0.75,
+          "test_count": 6,
+          "min_test": 4,
+          "reasons": [
+            "artifact bytes changed since evaluation; re-evaluate before activation (fail-closed)"
+          ]
+        }
+      }
+    },
+    "classify": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "status": "student",
+        "label": "empty",
+        "confidence": 0.0,
+        "version": 1,
+        "action": "none"
+      }
+    }
+  },
+  "actual_persisted_metric_types": {
+    "True": {
+      "stored_type": "bool",
+      "gate": {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "version": 1,
+          "gate": {
+            "passed": false,
+            "f1": null,
+            "support": 6,
+            "min_f1": 0.75,
+            "test_count": 6,
+            "min_test": 4,
+            "reasons": [
+              "held-out F1 is not a finite number in [0, 1] (True)"
+            ]
+          }
+        }
+      },
+      "activate": {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "activated": false,
+          "reason": "gate not passed",
+          "gate": {
+            "passed": false,
+            "f1": null,
+            "support": 6,
+            "min_f1": 0.75,
+            "test_count": 6,
+            "min_test": 4,
+            "reasons": [
+              "held-out F1 is not a finite number in [0, 1] (True)"
+            ]
+          }
+        }
+      }
+    },
+    "1.0": {
+      "stored_type": "str",
+      "gate": {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "version": 1,
+          "gate": {
+            "passed": false,
+            "f1": null,
+            "support": 6,
+            "min_f1": 0.75,
+            "test_count": 6,
+            "min_test": 4,
+            "reasons": [
+              "held-out F1 is not a finite number in [0, 1] ('1.0')"
+            ]
+          }
+        }
+      },
+      "activate": {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "activated": false,
+          "reason": "gate not passed",
+          "gate": {
+            "passed": false,
+            "f1": null,
+            "support": 6,
+            "min_f1": 0.75,
+            "test_count": 6,
+            "min_test": 4,
+            "reasons": [
+              "held-out F1 is not a finite number in [0, 1] ('1.0')"
+            ]
+          }
+        }
+      }
+    },
+    "bad": {
+      "stored_type": "str",
+      "gate": {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "version": 1,
+          "gate": {
+            "passed": false,
+            "f1": null,
+            "support": 6,
+            "min_f1": 0.75,
+            "test_count": 6,
+            "min_test": 4,
+            "reasons": [
+              "held-out F1 is not a finite number in [0, 1] ('bad')"
+            ]
+          }
+        }
+      },
+      "activate": {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "activated": false,
+          "reason": "gate not passed",
+          "gate": {
+            "passed": false,
+            "f1": null,
+            "support": 6,
+            "min_f1": 0.75,
+            "test_count": 6,
+            "min_test": 4,
+            "reasons": [
+              "held-out F1 is not a finite number in [0, 1] ('bad')"
+            ]
+          }
+        }
+      }
+    },
+    "2.0": {
+      "stored_type": "float",
+      "gate": {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "version": 1,
+          "gate": {
+            "passed": false,
+            "f1": null,
+            "support": 6,
+            "min_f1": 0.75,
+            "test_count": 6,
+            "min_test": 4,
+            "reasons": [
+              "held-out F1 is not a finite number in [0, 1] (2.0)"
+            ]
+          }
+        }
+      },
+      "activate": {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "activated": false,
+          "reason": "gate not passed",
+          "gate": {
+            "passed": false,
+            "f1": null,
+            "support": 6,
+            "min_f1": 0.75,
+            "test_count": 6,
+            "min_test": 4,
+            "reasons": [
+              "held-out F1 is not a finite number in [0, 1] (2.0)"
+            ]
+          }
+        }
+      }
+    },
+    "nan": {
+      "stored_type": "float",
+      "gate": {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "version": 1,
+          "gate": {
+            "passed": false,
+            "f1": null,
+            "support": 6,
+            "min_f1": 0.75,
+            "test_count": 6,
+            "min_test": 4,
+            "reasons": [
+              "held-out F1 is not a finite number in [0, 1] (nan)"
+            ]
+          }
+        }
+      },
+      "activate": {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "activated": false,
+          "reason": "gate not passed",
+          "gate": {
+            "passed": false,
+            "f1": null,
+            "support": 6,
+            "min_f1": 0.75,
+            "test_count": 6,
+            "min_test": 4,
+            "reasons": [
+              "held-out F1 is not a finite number in [0, 1] (nan)"
+            ]
+          }
+        }
+      }
+    },
+    "inf": {
+      "stored_type": "float",
+      "gate": {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "version": 1,
+          "gate": {
+            "passed": false,
+            "f1": null,
+            "support": 6,
+            "min_f1": 0.75,
+            "test_count": 6,
+            "min_test": 4,
+            "reasons": [
+              "held-out F1 is not a finite number in [0, 1] (inf)"
+            ]
+          }
+        }
+      },
+      "activate": {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "activated": false,
+          "reason": "gate not passed",
+          "gate": {
+            "passed": false,
+            "f1": null,
+            "support": 6,
+            "min_f1": 0.75,
+            "test_count": 6,
+            "min_test": 4,
+            "reasons": [
+              "held-out F1 is not a finite number in [0, 1] (inf)"
+            ]
+          }
+        }
+      }
+    },
+    "10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000": {
+      "stored_type": "int",
+      "gate": {
+        "http": 500,
+        "body": "Internal Server Error"
+      },
+      "activate": {
+        "http": 500,
+        "body": "Internal Server Error"
+      }
+    }
+  },
+  "extended_raw_outputs": {
+    "mixed_bool_numeric": {
+      "evaluate": {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "version": 1,
+          "metrics": {
+            "confusion_matrix": {
+              "tp": 3,
+              "fp": 0,
+              "fn": 0,
+              "tn": 3
+            },
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "accuracy": 1.0,
+            "support": 6,
+            "positives": 3,
+            "negatives": 3,
+            "latency": {
+              "count": 6,
+              "p50_ms": 24.794,
+              "p95_ms": 25.825
+            },
+            "threshold": 0.5,
+            "manifest_digest": "7bbade7990c3cbb1cb9308bf77c695cf05fcfb9be0f8cf445c74ba83139968a1",
+            "artifact_sha256": "e9443feaa3ac10ada4c9c916b10085c92ae46d89fa149fa0422897b8bf0cffcd"
+          }
+        }
+      },
+      "gate": {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "version": 1,
+          "gate": {
+            "passed": true,
+            "f1": 1.0,
+            "support": 6,
+            "min_f1": 0.75,
+            "test_count": 6,
+            "min_test": 4,
+            "reasons": []
+          }
+        }
+      },
+      "classify": {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "status": "unknown",
+          "detail": "student produced boolean outputs, not probabilities",
+          "action": "none"
+        }
+      }
+    },
+    "ragged": {
+      "evaluate": {
+        "http": 500,
+        "body": "Internal Server Error"
+      },
+      "gate": {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "version": 1,
+          "gate": {
+            "passed": true,
+            "f1": 1.0,
+            "support": 6,
+            "min_f1": 0.75,
+            "test_count": 6,
+            "min_test": 4,
+            "reasons": []
+          }
+        }
+      },
+      "classify": {
+        "http": 500,
+        "body": "Internal Server Error"
+      }
+    },
+    "raises_valueerror": {
+      "evaluate": {
+        "http": 500,
+        "body": "Internal Server Error"
+      },
+      "gate": {
+        "http": 200,
+        "body": {
+          "experimental": true,
+          "version": 1,
+          "gate": {
+            "passed": true,
+            "f1": 1.0,
+            "support": 6,
+            "min_f1": 0.75,
+            "test_count": 6,
+            "min_test": 4,
+            "reasons": []
+          }
+        }
+      },
+      "classify": {
+        "http": 500,
+        "body": "Internal Server Error"
+      }
+    }
+  },
+  "shadow_no_actions": {
+    "http": 200,
+    "body": {
+      "experimental": true,
+      "version": 2,
+      "compared": 6,
+      "disagreement": {
+        "compared": 0,
+        "disagreements": 0,
+        "rate": null
+      },
+      "items": [
+        {
+          "sample_id": 13,
+          "session_id": "qa-t1-session-02",
+          "student_label": "occupied",
+          "student_confidence": 1.0,
+          "teacher_label": null,
+          "teacher_status": "pending",
+          "verified_label": "occupied",
+          "action": "none"
+        },
+        {
+          "sample_id": 14,
+          "session_id": "qa-t1-session-02",
+          "student_label": "occupied",
+          "student_confidence": 1.0,
+          "teacher_label": null,
+          "teacher_status": "pending",
+          "verified_label": "occupied",
+          "action": "none"
+        },
+        {
+          "sample_id": 15,
+          "session_id": "qa-t1-session-02",
+          "student_label": "occupied",
+          "student_confidence": 1.0,
+          "teacher_label": null,
+          "teacher_status": "pending",
+          "verified_label": "occupied",
+          "action": "none"
+        },
+        {
+          "sample_id": 16,
+          "session_id": "qa-t1-session-02",
+          "student_label": "empty",
+          "student_confidence": 0.0,
+          "teacher_label": null,
+          "teacher_status": "pending",
+          "verified_label": "empty",
+          "action": "none"
+        },
+        {
+          "sample_id": 17,
+          "session_id": "qa-t1-session-02",
+          "student_label": "empty",
+          "student_confidence": 0.0,
+          "teacher_label": null,
+          "teacher_status": "pending",
+          "verified_label": "empty",
+          "action": "none"
+        },
+        {
+          "sample_id": 18,
+          "session_id": "qa-t1-session-02",
+          "student_label": "empty",
+          "student_confidence": 0.0,
+          "teacher_label": null,
+          "teacher_status": "pending",
+          "verified_label": "empty",
+          "action": "none"
+        }
+      ]
+    }
+  },
+  "restart_history": {
+    "http": 200,
+    "body": [
+      {
+        "id": 17,
+        "action": "reject",
+        "model_version_id": 1,
+        "decided_by": "QA_ONLY simulated",
+        "reason": "held-out F1 is not a finite number in [0, 1] (inf)",
+        "gate_passed": false,
+        "created_at": "2026-10-11T03:50:13.061125"
+      },
+      {
+        "id": 16,
+        "action": "reject",
+        "model_version_id": 1,
+        "decided_by": "QA_ONLY simulated",
+        "reason": "held-out F1 is not a finite number in [0, 1] (nan)",
+        "gate_passed": false,
+        "created_at": "2026-10-11T03:50:13.046931"
+      },
+      {
+        "id": 15,
+        "action": "reject",
+        "model_version_id": 1,
+        "decided_by": "QA_ONLY simulated",
+        "reason": "held-out F1 is not a finite number in [0, 1] (2.0)",
+        "gate_passed": false,
+        "created_at": "2026-10-11T03:50:13.032628"
+      },
+      {
+        "id": 14,
+        "action": "reject",
+        "model_version_id": 1,
+        "decided_by": "QA_ONLY simulated",
+        "reason": "held-out F1 is not a finite number in [0, 1] ('bad')",
+        "gate_passed": false,
+        "created_at": "2026-10-11T03:50:13.018223"
+      },
+      {
+        "id": 13,
+        "action": "reject",
+        "model_version_id": 1,
+        "decided_by": "QA_ONLY simulated",
+        "reason": "held-out F1 is not a finite number in [0, 1] ('1.0')",
+        "gate_passed": false,
+        "created_at": "2026-10-11T03:50:13.003822"
+      },
+      {
+        "id": 12,
+        "action": "reject",
+        "model_version_id": 1,
+        "decided_by": "QA_ONLY simulated",
+        "reason": "held-out F1 is not a finite number in [0, 1] (True)",
+        "gate_passed": false,
+        "created_at": "2026-10-11T03:50:12.988262"
+      },
+      {
+        "id": 11,
+        "action": "activate",
+        "model_version_id": 1,
+        "decided_by": "QA_ONLY simulated",
+        "reason": "gate passed + approved",
+        "gate_passed": true,
+        "created_at": "2026-10-11T03:50:12.974028"
+      },
+      {
+        "id": 10,
+        "action": "activate",
+        "model_version_id": 1,
+        "decided_by": "QA_ONLY simulated",
+        "reason": "gate passed + approved",
+        "gate_passed": true,
+        "created_at": "2026-10-11T03:50:12.930356"
+      },
+      {
+        "id": 9,
+        "action": "activate",
+        "model_version_id": 1,
+        "decided_by": "QA_ONLY simulated",
+        "reason": "gate passed + approved",
+        "gate_passed": true,
+        "created_at": "2026-10-11T03:50:12.887040"
+      },
+      {
+        "id": 8,
+        "action": "activate",
+        "model_version_id": 1,
+        "decided_by": "QA_ONLY simulated",
+        "reason": "gate passed + approved",
+        "gate_passed": true,
+        "created_at": "2026-10-11T03:50:12.689115"
+      },
+      {
+        "id": 7,
+        "action": "activate",
+        "model_version_id": 1,
+        "decided_by": "QA_ONLY simulated",
+        "reason": "gate passed + approved",
+        "gate_passed": true,
+        "created_at": "2026-10-11T03:50:12.638769"
+      },
+      {
+        "id": 6,
+        "action": "activate",
+        "model_version_id": 1,
+        "decided_by": "QA_ONLY simulated",
+        "reason": "gate passed + approved",
+        "gate_passed": true,
+        "created_at": "2026-10-11T03:50:12.588615"
+      },
+      {
+        "id": 5,
+        "action": "activate",
+        "model_version_id": 1,
+        "decided_by": "QA_ONLY simulated",
+        "reason": "gate passed + approved",
+        "gate_passed": true,
+        "created_at": "2026-10-11T03:50:12.530305"
+      },
+      {
+        "id": 4,
+        "action": "activate",
+        "model_version_id": 1,
+        "decided_by": "QA_ONLY simulated",
+        "reason": "gate passed + approved",
+        "gate_passed": true,
+        "created_at": "2026-10-11T03:50:12.515658"
+      },
+      {
+        "id": 3,
+        "action": "activate",
+        "model_version_id": 1,
+        "decided_by": "QA_ONLY simulated",
+        "reason": "gate passed + approved",
+        "gate_passed": true,
+        "created_at": "2026-10-11T03:50:12.499357"
+      },
+      {
+        "id": 2,
+        "action": "activate",
+        "model_version_id": 1,
+        "decided_by": "QA_ONLY simulated",
+        "reason": "gate passed + approved",
+        "gate_passed": true,
+        "created_at": "2026-10-11T03:50:12.331345"
+      },
+      {
+        "id": 1,
+        "action": "activate",
+        "model_version_id": 1,
+        "decided_by": "QA_ONLY simulated",
+        "reason": "gate passed + approved",
+        "gate_passed": true,
+        "created_at": "2026-10-11T03:50:12.316101"
+      }
+    ]
+  }
+}

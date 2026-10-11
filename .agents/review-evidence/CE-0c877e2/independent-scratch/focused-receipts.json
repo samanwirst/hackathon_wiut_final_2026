@@ -1,0 +1,152 @@
+[
+  {
+    "name": "focused",
+    "command": [
+      "/home/samanwirst/Desktop/hackathon_wiut_final_2026/.agents/runtime/ten-hour/worktrees/review-m3-emergency-review/services/api/.venv/bin/python",
+      "-m",
+      "pytest",
+      "tests/unit/test_autolearn_core.py",
+      "tests/unit/test_autolearn_labeling_transport.py",
+      "tests/unit/test_autolearn_c_service.py",
+      "tests/unit/test_autolearn_c_transport.py",
+      "tests/unit/test_autolearn_c2_regressions.py",
+      "tests/unit/test_autolearn_emergency_regressions.py",
+      "tests/integration/test_autolearn_api.py",
+      "-q",
+      "-p",
+      "no:cacheprovider",
+      "--basetemp=/tmp/visionflow-m3-emergency-review-0c877e2/pytest-temp"
+    ],
+    "exit": 0,
+    "seconds": 13.045,
+    "QA_ONLY": true
+  },
+  {
+    "name": "safety",
+    "command": [
+      "/home/samanwirst/Desktop/hackathon_wiut_final_2026/.agents/runtime/ten-hour/worktrees/review-m3-emergency-review/services/api/.venv/bin/python",
+      "-m",
+      "pytest",
+      "tests/unit/test_config_demo_safe.py",
+      "tests/integration/test_demo_safe.py",
+      "tests/integration/test_m2_visual.py::test_geometric_workflow_makes_zero_vlm_calls",
+      "-q",
+      "-p",
+      "no:cacheprovider",
+      "--basetemp=/tmp/visionflow-m3-emergency-review-0c877e2/pytest-safety"
+    ],
+    "exit": 0,
+    "seconds": 4.174,
+    "QA_ONLY": true
+  },
+  {
+    "name": "boundary_probes.py",
+    "command": [
+      "/home/samanwirst/Desktop/hackathon_wiut_final_2026/.agents/runtime/ten-hour/worktrees/review-m3-emergency-review/services/api/.venv/bin/python",
+      "/tmp/visionflow-m3-emergency-review-0c877e2/boundary_probes.py"
+    ],
+    "exit": 0,
+    "seconds": 4.277,
+    "QA_ONLY": true
+  },
+  {
+    "name": "multiworker_race.py",
+    "command": [
+      "/home/samanwirst/Desktop/hackathon_wiut_final_2026/.agents/runtime/ten-hour/worktrees/review-m3-emergency-review/services/api/.venv/bin/python",
+      "/tmp/visionflow-m3-emergency-review-0c877e2/multiworker_race.py"
+    ],
+    "exit": 0,
+    "seconds": 6.834,
+    "QA_ONLY": true
+  },
+  {
+    "name": "batch_label_probe.py",
+    "command": [
+      "/home/samanwirst/Desktop/hackathon_wiut_final_2026/.agents/runtime/ten-hour/worktrees/review-m3-emergency-review/services/api/.venv/bin/python",
+      "/tmp/visionflow-m3-emergency-review-0c877e2/batch_label_probe.py"
+    ],
+    "exit": 0,
+    "seconds": 2.82,
+    "QA_ONLY": true
+  },
+  {
+    "name": "artifact_probes.py",
+    "command": [
+      "/home/samanwirst/Desktop/hackathon_wiut_final_2026/.agents/runtime/ten-hour/worktrees/review-m3-emergency-review/services/api/.venv/bin/python",
+      "/tmp/visionflow-m3-emergency-review-0c877e2/artifact_probes.py"
+    ],
+    "exit": 0,
+    "seconds": 9.736,
+    "QA_ONLY": true
+  },
+  {
+    "name": "version_probes.py",
+    "command": [
+      "/home/samanwirst/Desktop/hackathon_wiut_final_2026/.agents/runtime/ten-hour/worktrees/review-m3-emergency-review/services/api/.venv/bin/python",
+      "/tmp/visionflow-m3-emergency-review-0c877e2/version_probes.py"
+    ],
+    "exit": 0,
+    "seconds": 8.783,
+    "QA_ONLY": true
+  },
+  {
+    "name": "cleanup_probe.py",
+    "command": [
+      "/home/samanwirst/Desktop/hackathon_wiut_final_2026/.agents/runtime/ten-hour/worktrees/review-m3-emergency-review/services/api/.venv/bin/python",
+      "/tmp/visionflow-m3-emergency-review-0c877e2/cleanup_probe.py"
+    ],
+    "exit": 0,
+    "seconds": 5.425,
+    "QA_ONLY": true
+  },
+  {
+    "name": "physical_provenance_probe.py",
+    "command": [
+      "/home/samanwirst/Desktop/hackathon_wiut_final_2026/.agents/runtime/ten-hour/worktrees/review-m3-emergency-review/services/api/.venv/bin/python",
+      "/tmp/visionflow-m3-emergency-review-0c877e2/physical_provenance_probe.py"
+    ],
+    "exit": 0,
+    "seconds": 1.968,
+    "QA_ONLY": true
+  },
+  {
+    "name": "optional_overflow.py",
+    "command": [
+      "/home/samanwirst/Desktop/hackathon_wiut_final_2026/.agents/runtime/ten-hour/worktrees/review-m3-emergency-review/services/api/.venv/bin/python",
+      "/tmp/visionflow-m3-emergency-review-0c877e2/optional_overflow.py"
+    ],
+    "exit": 0,
+    "seconds": 2.369,
+    "QA_ONLY": true
+  },
+  {
+    "name": "ui_create.cjs",
+    "command": [
+      "node",
+      "/tmp/visionflow-m3-emergency-review-0c877e2/ui_create.cjs"
+    ],
+    "exit": 0,
+    "seconds": 0.416,
+    "QA_ONLY": true
+  },
+  {
+    "name": "ui_all_actions.cjs",
+    "command": [
+      "node",
+      "/tmp/visionflow-m3-emergency-review-0c877e2/ui_all_actions.cjs"
+    ],
+    "exit": 0,
+    "seconds": 0.314,
+    "QA_ONLY": true
+  },
+  {
+    "name": "ui_detail_mismatch.cjs",
+    "command": [
+      "node",
+      "/tmp/visionflow-m3-emergency-review-0c877e2/ui_detail_mismatch.cjs"
+    ],
+    "exit": 0,
+    "seconds": 0.314,
+    "QA_ONLY": true
+  }
+]

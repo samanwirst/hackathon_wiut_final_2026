@@ -1,0 +1,307 @@
+{
+  "near_duplicate": {
+    "refused": true,
+    "detail": "near-duplicate image content appears across groups 'a' and 'b' (decoded-pixel MAD 1.333 <= 5.0); refusing to split to prevent leakage",
+    "fixed_mad": 5.0
+  },
+  "heldout_training": {
+    "train": {
+      "http": 200,
+      "body": {
+        "experimental": true,
+        "version": 1,
+        "version_id": 1,
+        "threshold": 0.5,
+        "counts": {
+          "train": 18,
+          "val": 6,
+          "test": 6
+        },
+        "metrics": {
+          "confusion_matrix": {
+            "tp": 3,
+            "fp": 0,
+            "fn": 0,
+            "tn": 3
+          },
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "accuracy": 1.0,
+          "support": 6,
+          "positives": 3,
+          "negatives": 3,
+          "latency": {
+            "count": 6,
+            "p50_ms": 26.272,
+            "p95_ms": 29.081
+          },
+          "threshold": 0.5,
+          "manifest_digest": "7bbade7990c3cbb1cb9308bf77c695cf05fcfb9be0f8cf445c74ba83139968a1",
+          "artifact_sha256": "51b2f315c3bb6d08fa000a6ffa5b23abe9ed187b01e74ef72b81f7d1bb320700"
+        },
+        "train_duration_ms": 117.61281800863799,
+        "dataset_hash": "9f7a1b3fa1443d6a17c211ba802e063f8d58056ce94bf30ee542105785cd8a06",
+        "split_hash": "500a58f77cc7fa0bf272b27380fa419e9681a1df24748cf661137f9afa89ab5b"
+      }
+    },
+    "record": {
+      "fit_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30
+      ],
+      "threshold_input_count": 6
+    },
+    "split_ids": {
+      "train": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30
+      ],
+      "val": [
+        19,
+        20,
+        21,
+        22,
+        23,
+        24
+      ],
+      "test": [
+        13,
+        14,
+        15,
+        16,
+        17,
+        18
+      ]
+    },
+    "canonical_groups": {
+      "train": [
+        "src:none|ses:qa-t1-session-00",
+        "src:none|ses:qa-t1-session-01",
+        "src:none|ses:qa-t1-session-04"
+      ],
+      "val": [
+        "src:none|ses:qa-t1-session-03"
+      ],
+      "test": [
+        "src:none|ses:qa-t1-session-02"
+      ]
+    },
+    "fit_exactly_train": true,
+    "threshold_count_matches_validation": true,
+    "test_probabilities": [
+      1.0,
+      1.0,
+      1.0,
+      8.058950716352211e-17,
+      1.5500864105584178e-26,
+      2.781229696704472e-20
+    ],
+    "test_ground_truth": [
+      1,
+      1,
+      1,
+      0,
+      0,
+      0
+    ],
+    "independent_confusion": {
+      "tp": 3,
+      "fp": 0,
+      "fn": 0,
+      "tn": 3
+    },
+    "independent_f1": 1.0,
+    "encoder_frozen_after": true
+  },
+  "decision_control": {
+    "http": 200,
+    "body": {
+      "experimental": true,
+      "activated": false,
+      "reason": "human declined",
+      "gate": {
+        "passed": true,
+        "f1": 1.0,
+        "support": 6,
+        "min_f1": 0.75,
+        "test_count": 6,
+        "min_test": 4,
+        "reasons": []
+      }
+    }
+  },
+  "approved_control": {
+    "http": 200,
+    "body": {
+      "experimental": true,
+      "activated": true,
+      "version": 1,
+      "gate": {
+        "passed": true,
+        "f1": 1.0,
+        "support": 6,
+        "min_f1": 0.75,
+        "test_count": 6,
+        "min_test": 4,
+        "reasons": []
+      }
+    }
+  },
+  "db_reopen_history": {
+    "unchanged": true,
+    "before": {
+      "http": 200,
+      "body": [
+        {
+          "id": 2,
+          "action": "activate",
+          "model_version_id": 1,
+          "decided_by": "QA_ONLY simulated approval",
+          "reason": "gate passed + approved",
+          "gate_passed": true,
+          "created_at": "2026-10-11T03:54:14.294462"
+        },
+        {
+          "id": 1,
+          "action": "reject",
+          "model_version_id": 1,
+          "decided_by": "QA_ONLY simulated decline",
+          "reason": "human declined",
+          "gate_passed": true,
+          "created_at": "2026-10-11T03:54:14.285469"
+        }
+      ]
+    },
+    "after": {
+      "http": 200,
+      "body": [
+        {
+          "id": 2,
+          "action": "activate",
+          "model_version_id": 1,
+          "decided_by": "QA_ONLY simulated approval",
+          "reason": "gate passed + approved",
+          "gate_passed": true,
+          "created_at": "2026-10-11T03:54:14.294462"
+        },
+        {
+          "id": 1,
+          "action": "reject",
+          "model_version_id": 1,
+          "decided_by": "QA_ONLY simulated decline",
+          "reason": "human declined",
+          "gate_passed": true,
+          "created_at": "2026-10-11T03:54:14.285469"
+        }
+      ]
+    }
+  },
+  "shadow": {
+    "http": 200,
+    "body": {
+      "experimental": true,
+      "version": 1,
+      "compared": 6,
+      "disagreement": {
+        "compared": 0,
+        "disagreements": 0,
+        "rate": null
+      },
+      "items": [
+        {
+          "sample_id": 13,
+          "session_id": "qa-t1-session-02",
+          "student_label": "occupied",
+          "student_confidence": 1.0,
+          "teacher_label": null,
+          "teacher_status": "pending",
+          "verified_label": "occupied",
+          "action": "none"
+        },
+        {
+          "sample_id": 14,
+          "session_id": "qa-t1-session-02",
+          "student_label": "occupied",
+          "student_confidence": 1.0,
+          "teacher_label": null,
+          "teacher_status": "pending",
+          "verified_label": "occupied",
+          "action": "none"
+        },
+        {
+          "sample_id": 15,
+          "session_id": "qa-t1-session-02",
+          "student_label": "occupied",
+          "student_confidence": 1.0,
+          "teacher_label": null,
+          "teacher_status": "pending",
+          "verified_label": "occupied",
+          "action": "none"
+        },
+        {
+          "sample_id": 16,
+          "session_id": "qa-t1-session-02",
+          "student_label": "empty",
+          "student_confidence": 0.0,
+          "teacher_label": null,
+          "teacher_status": "pending",
+          "verified_label": "empty",
+          "action": "none"
+        },
+        {
+          "sample_id": 17,
+          "session_id": "qa-t1-session-02",
+          "student_label": "empty",
+          "student_confidence": 0.0,
+          "teacher_label": null,
+          "teacher_status": "pending",
+          "verified_label": "empty",
+          "action": "none"
+        },
+        {
+          "sample_id": 18,
+          "session_id": "qa-t1-session-02",
+          "student_label": "empty",
+          "student_confidence": 0.0,
+          "teacher_label": null,
+          "teacher_status": "pending",
+          "verified_label": "empty",
+          "action": "none"
+        }
+      ]
+    }
+  }
+}
