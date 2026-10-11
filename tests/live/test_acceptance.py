@@ -145,9 +145,15 @@ def test_exact_source_imports_and_no_legacy_provider(h):
     assert Path(worker.__file__).resolve().is_relative_to(REPO)
     assert Path(planner.__file__).resolve().is_relative_to(REPO)
     import sys
-    assert 'app.nl_compiler' not in sys.modules
-    assert 'app.teacher' not in sys.modules
-    assert 'app.main' not in sys.modules
+    # Other legacy suites are collected in this process. Check standalone import
+    # isolation in a clean interpreter, where their sys.modules cannot contaminate it.
+    code = ("import sys; import app.live.app; "
+            "assert 'app.nl_compiler' not in sys.modules; "
+            "assert 'app.teacher' not in sys.modules; "
+            "assert 'app.main' not in sys.modules")
+    checked = subprocess.run([sys.executable, '-c', code], capture_output=True,
+                             text=True, timeout=10)
+    assert checked.returncode == 0, checked.stderr
 
 
 def test_unauthorized_endpoint_inventory(h):
@@ -480,6 +486,8 @@ class _FakeStream:
 
 
 def test_model_branch_novel_wording_and_invocation_contract(h, monkeypatch):
+    # CLI is now an explicit private-only experiment; API is the public default.
+    monkeypatch.setenv('VISIONFLOW_LIVE_PLANNER_PROVIDER', 'claude_cli')
     # Updated to the Popen process-group contract (LIVE-VIDEO-008) and to verify the
     # throwaway cwd is OUTSIDE the repo (the old fixed-ROOT path assumption was a
     # harness defect). All real security assertions are preserved.
