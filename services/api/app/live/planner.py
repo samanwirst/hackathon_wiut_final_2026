@@ -255,7 +255,9 @@ def _guard_semantics(text: str, result: PlannerResult) -> PlannerResult:
     reason = None
     if re.search(r"\b(?:no|not|never|unless|except|without|each|every\s+person|don['’]t|doesn['’]t|isn['’]t)\b", normalized):
         reason = "negated, exception or per-object composite conditions require clarification"
-    elif re.search(r"\b(?:email|sms|webhook|unlock|shutdown|open(?:s|ed|ing)?|damage(?:d)?|unattended)\b|\bturn\s+(?:on|off)\b", normalized):
+    elif re.search(r"\b(?:email|sms|webhook|unlock|shutdown)\b|\bturn\s+(?:on|off)\b", normalized):
+        reason = "the requested external action is not implemented"
+    elif not config.CAMERA_INGEST_ENABLED and re.search(r"\b(?:open(?:s|ed|ing)?|damage(?:d)?|unattended)\b", normalized):
         reason = "the requested semantic condition or external action is not implemented"
     elif len(requested) > 1:
         reason = "multiple temporal operators cannot be represented by this single rule"
