@@ -1,5 +1,72 @@
 # VisionFlow AI — WIUT Hackathon Final 2026
 
+## Current VIDEO engineering candidate
+
+The current workstream serves prerecorded video through the standalone
+`app.live` application: `/upload` is the operator page and `/judges` is the
+review-and-approval page. It reuses the accepted detector/tracker and geometric
+analytics. Its final recovery, independent review and public end-to-end tests
+are **pending**; this README does not certify a PASS. M2 and M3 remain BLOCKED.
+Student activation stays OFF. Teacher temporal understanding, bottle opening,
+foveation improvements and savings are UNVERIFIED. The accepted fallback at
+`723a4a73acf33e31843c59d86f942cd5247273c0` remains the private safety net.
+
+For private local QA from this checkout, install the backend from its own
+working directory (Python 3.11+; requirements are lower bounds, not a complete
+lock). Use the tested dependency versions recorded with the final handoff;
+a fresh installation is not claimed to reproduce them automatically.
+
+```bash
+cd services/api
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements.txt
+export DETECTOR_MODEL='/absolute/path/to/verified/yolo11n.pt'
+export VISIONFLOW_DATA_DIR='/absolute/path/to/private-writable-runtime'
+export VISIONFLOW_DEMO_PIN='<set privately; never commit or log>'
+export VISIONFLOW_LIVE_ALLOWED_ORIGINS='http://127.0.0.1:19102'
+export VISIONFLOW_LIVE_ALLOWED_HOSTS='127.0.0.1:19102'
+export VISIONFLOW_LIVE_TRUSTED_PROXY_HOPS='0'
+export VISIONFLOW_LIVE_INSECURE_COOKIE='true'
+export VLM_BASE_URL=''
+export LIVE_TEACHER_BASE_URL=''
+.venv/bin/python -m app.live --host 127.0.0.1 --port 19102
+```
+
+This command starts loopback HTTP QA only. The `INSECURE_COOKIE` opt-out must
+never be used publicly. Use separate browser profiles for operator and judge
+roles. The natural-language planner requires the real, authenticated local
+Claude CLI; credentials stay outside the release. Missing planner availability
+must remain an explicit error. The VIDEO pages are served by this backend;
+the Next.js build is a separate regression check. Stop the foreground process
+with Ctrl-C. Uploaded media, evidence and credentials are private runtime data.
+
+Public deployment is gated: serve only the reviewed standalone app through
+HTTPS, use secure cookies and exact host/origin/trusted-proxy settings, and
+verify room isolation, approval/version guards and bounded upload processing.
+Do not expose the legacy `app.main` API or publish a URL before those checks
+and the corresponding-source release succeed. Existing container startup in
+[deploy/README.md](deploy/README.md) describes the accepted private fallback,
+not a verified public VIDEO deployment. See [docs/LICENSES.md](docs/LICENSES.md).
+
+## License and corresponding source
+
+Original team-authored software in the current hackathon release is licensed
+under **AGPL-3.0-only**. See [LICENSE](LICENSE), [NOTICE](NOTICE), and the recorded
+[owner consent attestation](.agents/CONTRIBUTOR_LICENSE_CONSENT.md). Third-party
+software, weights, data and footage retain their separate upstream licenses.
+
+The corresponding-source download for the final deployed version is:
+
+[https://github.com/samanwirst/visionflow-hackathon-2026-source/releases/download/hackathon-2026/visionflow-source.tar.gz](https://github.com/samanwirst/visionflow-hackathon-2026-source/releases/download/hackathon-2026/visionflow-source.tar.gz)
+
+This new public source repository/release is **not yet created**. Before public
+service launch the controller must publish and verify the exact accepted
+snapshot at that URL, including build/run source, notices and dependency
+information, with a manifest identifying its frozen commit. The private origin
+and Git history remain private. No secrets, user uploads or private experiments
+belong in the release. A source link is not a claim of technical acceptance or
+complete third-party licensing verification.
+
 Visual AI automation for automotive operations: upload a recorded video, draw a
 zone, configure a supported geometric condition, review its JSON and approve
 real events, evidence and local notifications. Track: Computer Vision.
