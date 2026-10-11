@@ -1,0 +1,21 @@
+{
+  "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+  "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+  "license": "Apache-2.0",
+  "device": "NVIDIA GeForce RTX 3050 Laptop GPU",
+  "torch": "2.7.1+cu118",
+  "cuda_runtime": "11.8",
+  "load_seconds": 4.765589182003168,
+  "gpu_allocated_bytes": 1014973440,
+  "gpu_reserved_bytes": 1061158912,
+  "max_images": 2,
+  "max_concurrency": 1,
+  "input_longest_edge": 512,
+  "experimental": true,
+  "teacher_actions_enabled": false,
+  "output_mode": "candidate_sequence_scoring",
+  "scoring_labels": [
+    "occupied",
+    "empty"
+  ]
+}

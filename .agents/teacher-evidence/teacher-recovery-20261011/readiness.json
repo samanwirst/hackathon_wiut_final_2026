@@ -1,0 +1,14 @@
+{
+  "checked_utc": "2026-10-11T03:38:53.086971+00:00",
+  "GET_models_ready": true,
+  "model": {
+    "id": "HuggingFaceTB/SmolVLM-500M-Instruct",
+    "object": "model",
+    "owned_by": "local-experiment",
+    "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47"
+  },
+  "state": "ActiveState=active\nSubState=running\nMainPID=989679\nResult=success\nNRestarts=0\nExecMainStatus=0\n",
+  "gpu": "NVIDIA GeForce RTX 3050 Laptop GPU, 4096, 1102, 615.71.09",
+  "POST_count": 0,
+  "natural_inference_not_repeated": true
+}

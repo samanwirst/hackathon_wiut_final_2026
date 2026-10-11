@@ -1,0 +1,27 @@
+{
+  "old_pid": 677309,
+  "old_pid_absent": true,
+  "original_port_free_before_recovery": true,
+  "old_server_log_no_recorded_shutdown_or_error": true,
+  "old_exec_session38765_unavailable": true,
+  "kernel_journal_matching_entries": "No entries accessible",
+  "dmesg_read": "Denied: Operation not permitted",
+  "exit_cause": "UNKNOWN; OOM and session lifecycle cannot be distinguished",
+  "old_log_sha256": "4b5143e9e66ae2f2c31029511017cf94aad527805bb1132f82fc2675f16743e1",
+  "new_owned_pid": 989679,
+  "new_process_memory_snapshot": {
+    "State": "S (sleeping)",
+    "Pid": "989679",
+    "PPid": "2979",
+    "VmRSS": "167516 kB",
+    "VmSwap": "367112 kB",
+    "Threads": "8"
+  },
+  "available_RAM_before_MiB": 1230,
+  "swap_free_before_MiB": 5267,
+  "gpu_used_before_MiB": 15,
+  "model_network_fetch_disabled": true,
+  "original_natural_image_POST_repeated": false,
+  "recovery_POST_count": 0,
+  "inference_after_recovery": "UNVERIFIED; only GETmodels readiness checked"
+}

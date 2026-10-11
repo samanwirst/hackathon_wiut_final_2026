@@ -1,0 +1,19 @@
+{
+  "unit": "visionflow-local-teacher-emergency-20261011.service",
+  "started_utc": "2026-10-11T03:38:42.405379+00:00",
+  "harness_sha256": "930be3d3b307993ed6bb712622ae75c6ed2b2e2477e95460642137b43f340d95",
+  "harness_unchanged_from_base": "9170b7bd53cc198deebe0d9d903f0b3f28c2d391",
+  "host": "127.0.0.1",
+  "port": 18081,
+  "scoring_labels": [
+    "occupied",
+    "empty"
+  ],
+  "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+  "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+  "credential_read": false,
+  "network_model_fetch_disabled": true,
+  "restart_policy": "on-failure; 10s; max2 starts/300s",
+  "original_evidence_modified": false,
+  "POST_count": 0
+}
