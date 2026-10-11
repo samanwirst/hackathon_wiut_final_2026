@@ -1,4 +1,4 @@
-# VisionFlow AI — WIUT Hackathon Final 2026
+# Argus — WIUT Hackathon Final 2026
 
 ## Current VIDEO engineering candidate
 
