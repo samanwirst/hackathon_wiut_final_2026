@@ -60,6 +60,15 @@ def test_bootstrap_room_capacity_cleanup(client, monkeypatch):
     assert auth.active_session_count() == 1
 
 
+def test_unified_mode_disables_legacy_public_surfaces(client, monkeypatch):
+    monkeypatch.setenv("VISIONFLOW_DEMO_BOOTSTRAP_ENABLED", "true")
+    for path in ("/camera", "/static/camera.html", "/static/judges.html", "/static/upload.html",
+                 "/static/landing.html", "/static/common.js"):
+        assert client.get(path).status_code == 404
+    for path in ("/api/live/login", "/api/live/rooms", "/api/live/rooms/join"):
+        assert client.post(path, json={}).status_code == 404
+
+
 def test_judge_owner_can_upload_and_access_catalog(client, monkeypatch, qa_mp4, tmp_path):
     b = bootstrap(client, monkeypatch)
     source = tmp_path / "Camera1-960x540-cfr24.mp4"

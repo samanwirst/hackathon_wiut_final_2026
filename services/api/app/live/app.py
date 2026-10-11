@@ -92,6 +92,16 @@ class _BodyBoundMiddleware:
         self.app = app
 
     async def __call__(self, scope, receive, send):
+        if os.environ.get("VISIONFLOW_DEMO_BOOTSTRAP_ENABLED", "").lower() == "true":
+            path = scope.get("path", "")
+            if scope.get("type") == "websocket":
+                await send({"type": "websocket.close", "code": 1008})
+                return
+            public_static = {"/static/demo.html", "/static/demo.js", "/static/style.css", "/static/argus-logo.jpg"}
+            legacy_api = {"/api/live/login", "/api/live/rooms", "/api/live/rooms/join", "/camera"}
+            if path in legacy_api or (path.startswith("/static/") and path not in public_static):
+                await _send_simple_json(send, 404, "not found")
+                return
         if scope.get("type") != "http":
             await self.app(scope, receive, send)
             return
@@ -288,11 +298,15 @@ def _reset_drafts_for_tests() -> None:
 @app.get("/", response_class=HTMLResponse)
 def landing() -> HTMLResponse:
     unified = STATIC_DIR / "demo.html"
+    if os.environ.get("VISIONFLOW_DEMO_BOOTSTRAP_ENABLED", "").lower() == "true" and not unified.is_file():
+        raise HTTPException(404, "unified frontend unavailable")
     return HTMLResponse((unified if unified.is_file() else STATIC_DIR / "landing.html").read_text())
 
 
 @app.get("/upload", response_class=HTMLResponse)
 def upload_page() -> HTMLResponse:
+    if os.environ.get("VISIONFLOW_DEMO_BOOTSTRAP_ENABLED", "").lower() == "true":
+        return landing()
     return HTMLResponse((STATIC_DIR / "upload.html").read_text())
 
 
@@ -308,6 +322,8 @@ def camera_page() -> HTMLResponse:
 
 @app.get("/judges", response_class=HTMLResponse)
 def judges_page() -> HTMLResponse:
+    if os.environ.get("VISIONFLOW_DEMO_BOOTSTRAP_ENABLED", "").lower() == "true":
+        return landing()
     return HTMLResponse((STATIC_DIR / "judges.html").read_text())
 
 
