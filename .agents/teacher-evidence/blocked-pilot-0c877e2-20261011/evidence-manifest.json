@@ -1,0 +1,502 @@
+{
+  "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT",
+  "target_sha": "0c877e227062af7d3def121490419be158cb16c4",
+  "accepted_for_integration": false,
+  "artifacts": [
+    {
+      "path": "01-task.json",
+      "bytes": 673,
+      "sha256": "a20543c751555c86d23b5418fc569b0139d69aeaefe11ee1abdf4af1daefb082",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "02-import-00.json",
+      "bytes": 237,
+      "sha256": "a0eaf4e3c78a18c2c2de664eedfe73986a3bacbeada30d32ae5e25d597b46fe3",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "02-import-01.json",
+      "bytes": 236,
+      "sha256": "e9e909fb9cfd37041a9c067ce0ab2a6439dcf992278a8ebada2e0156c4cbd71a",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "02-import-02.json",
+      "bytes": 237,
+      "sha256": "33b52ebf3bd696720e8c2383ed27faa2323f2a27cc0c44afdb956c6405a5d827",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "02-import-03.json",
+      "bytes": 238,
+      "sha256": "64e8ef137a4c43a374a4f6462e060c48092d51c1fe96a627b11c0e22767a6cb4",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "02-import-04.json",
+      "bytes": 237,
+      "sha256": "172646c2263bfa4e4d8414718725d07971ac277e86db8b5592c359c11551d26d",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "02-import-05.json",
+      "bytes": 237,
+      "sha256": "c31c7a25c6c014dc500a368c0afb9f8e39e031888d5ab6ee6428b5e11058278c",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "02-import-06.json",
+      "bytes": 237,
+      "sha256": "2c44195004383417106e4fbe8ec9009ead02ba74eb856e1c3614a5f7c15501d6",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "02-import-07.json",
+      "bytes": 237,
+      "sha256": "ece711e9ab254a1f021794dec675d939a451063330f11cf24bc925dd73215ed6",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "02-import-08.json",
+      "bytes": 238,
+      "sha256": "994767e920a17da244000a95e688adb10d3c893a0571a97c34b995f9c0d9ee18",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "02-import-09.json",
+      "bytes": 238,
+      "sha256": "79f6a52cad23a1ff3c91ed5823ae35f13dbfff90333bba89c114f7e2abb9ca15",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "02-import-10.json",
+      "bytes": 239,
+      "sha256": "062f7ac7ac36ce35e58af7d1f8649229501ec0a95c10a9aa089bdf85a8cf5ac5",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "02-import-11.json",
+      "bytes": 238,
+      "sha256": "22c6d226896b4057009d8d5f1594cb116918298bdca4f2b01446e89b937e7b8d",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "02-import-12.json",
+      "bytes": 239,
+      "sha256": "9360d7d95bfd2536a26278215fc8f639a6db39a480bbd10824b92fd33248372a",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "02-import-13.json",
+      "bytes": 238,
+      "sha256": "0fe1a392cea2ffdd561358385327e9fc7f42303558701c964b2461d2ad3f2f2b",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "02-import-14.json",
+      "bytes": 239,
+      "sha256": "af4d96772df4846cf09393ac5c725f623f0d6d336f33dd5c1f1ce327f4308802",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "02-import-15.json",
+      "bytes": 238,
+      "sha256": "1c51236d7ae7a3c7cf6d0dc953bdf834952aa9c08274af086eabdec8983523e2",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "02-import-16.json",
+      "bytes": 239,
+      "sha256": "4615de9b3200a099684c7e269de8ae831451edd4afb56572e52f181aaee34564",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "02-import-17.json",
+      "bytes": 238,
+      "sha256": "3802572d8d995eecff58a484a7a658cbdce420cb303df4756e49fb15536f3569",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "02-import-18.json",
+      "bytes": 239,
+      "sha256": "43bd43b30cd3933e3a92e6d5a804798ddddd99bd01bd811414b04bb3150aa3a9",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "02-import-19.json",
+      "bytes": 238,
+      "sha256": "d7155e867b7fdc6decd4b5faaaadafea4106c8eb50228d0c84142d7965835304",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "02-import-20.json",
+      "bytes": 238,
+      "sha256": "adf0ceca50c4894fd93c1db19e0756fbe1dbb0db8e3618386dcb91e75ea3d277",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "02-import-21.json",
+      "bytes": 238,
+      "sha256": "dba84d1c55bbeb2395657e7ccc002f05ac6f29493dd37e759d8f2d852f81248e",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "02-import-22.json",
+      "bytes": 238,
+      "sha256": "f81550a7c0733edb38252339f9be23c0848c51237376cdad77693b94d6a96d90",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "02-import-23.json",
+      "bytes": 239,
+      "sha256": "e71e85209bb945377efaaff1b804db5da00009020562fed5e9526aef5d84d689",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "03-real-teacher-labeling.json",
+      "bytes": 400,
+      "sha256": "cff798f62ecea7a1f80e996e5fd0cd4c4e1e41be25561672b620ee61a99aa498",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "04-teacher-samples.json",
+      "bytes": 14044,
+      "sha256": "304100f6e99b544f427791900c69426a9d6c68ac384b20aec7f854a934e039f2",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "05-human-review-01.json",
+      "bytes": 813,
+      "sha256": "1e467ed763ef4ad9afa1c1cef3f02aa177f607994dcdc83775286867ce2b8a51",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "05-human-review-02.json",
+      "bytes": 809,
+      "sha256": "bed5bc988b544af487bddd7ebdedc57b2825faed46ba62988865f540bd798c9f",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "05-human-review-03.json",
+      "bytes": 813,
+      "sha256": "bedbdc5816741a2c10a7cccf4a94f1655819e989fd067ad20ca371b8b651efcb",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "05-human-review-04.json",
+      "bytes": 811,
+      "sha256": "dfbe45935364eb60c3df87dad16b716200fa1cacc37f9ae85200d27c2e6ba323",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "05-human-review-05.json",
+      "bytes": 812,
+      "sha256": "56e96cef59d847af4a836e188f2ce33dd212efe6c05cbc9ce9a8c6641420a3b2",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "05-human-review-06.json",
+      "bytes": 809,
+      "sha256": "8bc06a3cab728965c3ebe5370acacf6e0dc83bc80a7181a46082a8e915176a37",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "05-human-review-07.json",
+      "bytes": 813,
+      "sha256": "305ac94c451eb071cbb78a6afe0a2e64b19d08b1b8615ca355526786a376e1b0",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "05-human-review-08.json",
+      "bytes": 810,
+      "sha256": "8251f380e1c2643644e1646dcf7f2115f716bdc7a8486f2f079fd36c8abe5d6b",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "05-human-review-09.json",
+      "bytes": 813,
+      "sha256": "56c0879ecd7e97a3e4ae4de0f90ee5ae09c3a12432503bc02fc0a59bf8085963",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "05-human-review-10.json",
+      "bytes": 813,
+      "sha256": "f7aa78b437afbbc9361cac770d1ea160edd158d9b38c92fdbd41d18755839f32",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "05-human-review-11.json",
+      "bytes": 814,
+      "sha256": "32c680668079276cb050619714673efa715f25af194fd5771cc6f6ed299f39b3",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "05-human-review-12.json",
+      "bytes": 814,
+      "sha256": "4fdb7f1ccf231dd6d8aa90c8be9b9a6a568922cab5ddb72f953f45858c1df493",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "05-human-review-13.json",
+      "bytes": 816,
+      "sha256": "9695cf27cb896ab0cbd27f74f29b788461f5cf70435105868835f24cb1bd08fa",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "05-human-review-14.json",
+      "bytes": 812,
+      "sha256": "382d5233972021523f3e95dc4dec1432b4e01b6d18d341512f9457ce31354c9d",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "05-human-review-15.json",
+      "bytes": 816,
+      "sha256": "aa22825c48b1c9b6e80c5297466833225a2e4267e097ec86d85843df999bbd8e",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "05-human-review-16.json",
+      "bytes": 814,
+      "sha256": "de99dd1daa66bdc00bb2478d9d444a5307931231ad46df37e48eda6c9be89ea9",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "05-human-review-17.json",
+      "bytes": 816,
+      "sha256": "31568a0e852a0b696d510eef580a138671364cad4c1937fb589554194733eb0e",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "05-human-review-18.json",
+      "bytes": 813,
+      "sha256": "c7d7a8b77e487185622aca6dc66493c6384a79ab7ebdfdbf971280aae3469d37",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "05-human-review-19.json",
+      "bytes": 816,
+      "sha256": "4aede664fe4e13dd8fd45ecf745c9b69965b26a6dfcaab160a0dd9572b3a3de7",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "05-human-review-20.json",
+      "bytes": 813,
+      "sha256": "3876c3da9519b1c7009c7c99d2f11f2e22a5f3974a5c2c152e6490e3ab646faa",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "05-human-review-21.json",
+      "bytes": 816,
+      "sha256": "0bcf96c1131fa9d2e21bce241d088eb318b89220ca493760038f87f3b881db4c",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "05-human-review-22.json",
+      "bytes": 814,
+      "sha256": "ed52b9eabde9fa3f8e56fe5cc90b72065c9d91d1c1bc1622eb283a11371318c6",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "05-human-review-23.json",
+      "bytes": 816,
+      "sha256": "b6705b9667e83ed06b938573a13e7ef52092fad1280bc26fc4d8986a6dd701b2",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "05-human-review-24.json",
+      "bytes": 813,
+      "sha256": "b27e75e4fb2d50ddf7e006844abd420042043324f5b6833f385ad01d6b5f9ddd",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "06-preregistration.json",
+      "bytes": 1765,
+      "sha256": "96a9f28eb36b533976b5292a9bcc42edcd2e63d4b349e2b0815213dba1cfa1a9",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "07-genuine-training.json",
+      "bytes": 1158,
+      "sha256": "b5e6963924e4bac34bb1b67330e8c09477111f766d85098ae5523038faee1390",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "08-reloaded-heldout-evaluation.json",
+      "bytes": 830,
+      "sha256": "9c1f2330f591f158464e846e876bd43ae5a2c6c976f4a22bbe08d6c92232ca12",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "09-shadow.json",
+      "bytes": 2143,
+      "sha256": "75828f4add99134c891015f10d2209eaa10f26c051b8254d34e5beb703a9e8dd",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "10-gate-nonactivating.json",
+      "bytes": 404,
+      "sha256": "35e4ca1c88ff245e8a015ea31052494e025f8394b93631a8aaf491329fef6e93",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "11-teacher-provenance-audit.json",
+      "bytes": 12172,
+      "sha256": "aafb531ca2bf0dcac927579cc4dc6a77aba888c285eda2f32b7037634cae277a",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "12-final-task.json",
+      "bytes": 2101,
+      "sha256": "babf392e1eafd2ecfa30100067164d31a8a4f149072e425ccca642f3f8c8980d",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "13-activation-history.json",
+      "bytes": 197,
+      "sha256": "4913ba68dee9dbeabda01c31e1a122df310d207cc5a9fdfbd8c90849ebf8a377",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "BLOCKED_STATUS.json",
+      "bytes": 2717,
+      "sha256": "f02dbedde1bd8e6f98e552572dd39e672c596432b7639d877f31197f0820d2d8",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "CLEANUP.json",
+      "bytes": 1097,
+      "sha256": "a13c32493e66484294ce92d9f0ea6d192588aa5969dafb23bcd921e45cb17135",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "EXECUTION.json",
+      "bytes": 3285,
+      "sha256": "6029819214e7036a83465d382be867b10b078793857c844b66ddc229a513a32a",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "INDEPENDENT_RELOAD.json",
+      "bytes": 13033,
+      "sha256": "76068e9e2453e9e5abae5597af2e65e18a312b17069f6aa3702bbe476878a872",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "INTENT.json",
+      "bytes": 740,
+      "sha256": "c731bdc38b9596698c5f1c7ade0f119296aaa7fcf43153ec3399f55d76b55497",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "PRECHECK.json",
+      "bytes": 1036,
+      "sha256": "ec98c187a744f4b56f40e0a3a4529b447efe4167cdce51781a5abebafd2b4874",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "RESULT.json",
+      "bytes": 6607,
+      "sha256": "81885e734939b27828147c9a2d3bb1b57b2ce86969585678b97aa3ce9287bd31",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "ROOT_INDEPENDENT_CHECK.json",
+      "bytes": 1257,
+      "sha256": "b835a01dec54b3a2cdbd56b4d688c4be168bab686d0d2413816250aa7e164ee5",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "complete-teacher-trace.json",
+      "bytes": 48010,
+      "sha256": "06649da4317012bef95ed280c1e0e3a5bb838fe30ae60b0ef49e3a22d755c374",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "dataset-manifest.json",
+      "bytes": 15527,
+      "sha256": "c44903b9d08aad28a3e9e2a1d81335fe49d64ea2c89474eef4a787e2c6cc6c26",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "encoder-before.json",
+      "bytes": 349,
+      "sha256": "1181f0a4dba9052623ec9c8e6ae0874b7e97ba36e48f028b54cbdaef945dd528",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "human-groundtruth-approval.json",
+      "bytes": 7032,
+      "sha256": "21dba4e24500468258a0769b19935826d7993318b33400ee0929a2c91b7d4552",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "independent-check.txt",
+      "bytes": 537,
+      "sha256": "fbde6fa8f5016ce8cf8a102fa61e2b9864f1880ec9e98c0c86642ff83c6f7f1d",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "independent_check.py",
+      "bytes": 12532,
+      "sha256": "08a9436314fcefdc9d007203d3d19bd1e038fc99aa66c1fd9ec86c8e76137101",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "private-api.txt",
+      "bytes": 10106,
+      "sha256": "91c66092ebb5e849916b3e0f5432c7b3925b3f7bb2ddffb965b64c68bbe459fa",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "rerun_approved_pilot.py",
+      "bytes": 8340,
+      "sha256": "c1b516ce8d5d7a9a14ecbc401a210c9ec7c501006af7e646c933656ae1311d8c",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "runner.txt",
+      "bytes": 644,
+      "sha256": "e7f2e61e9c04e06e14a13ef293488f81f09cadbe536911e3390f15c7f499f445",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "sample-approval-map.json",
+      "bytes": 5502,
+      "sha256": "9c2cf82ece518e3356241d38e4432fde4de0f2cc7cf11da7ca0e37ad104147d2",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "server-receipt.json",
+      "bytes": 638,
+      "sha256": "0263b42b272dba475f5359f8d1b221d74cf285e5ba8a9754ac30f33bf17c8dca",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "start_accepted_pilot.py",
+      "bytes": 2943,
+      "sha256": "eb3bda1a1469f3fbea244efd0407dbbb8431450bfe833bc9753ee6488fbf9e1f",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "supervisor.txt",
+      "bytes": 614,
+      "sha256": "778f16f36d22c5e8baa8d79bd4067f3fee7c16592c14166630bdf65aeaae201b",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "teacher-server-requests.jsonl",
+      "bytes": 21959,
+      "sha256": "2eba651585fe37d6030e2081cf1c241687034138efabc3b80082b2d94b28186d",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    },
+    {
+      "path": "teacher-startup.json",
+      "bytes": 1503,
+      "sha256": "4c95fef10e7171e9a67d53da4841cbd3196e3e869204fd9fd65ade1e43b1a665",
+      "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT"
+    }
+  ],
+  "weights_and_student_archive_committed": false,
+  "raw_images_committed": false,
+  "credentials_or_pin_committed": false
+}

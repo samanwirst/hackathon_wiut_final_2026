@@ -1,0 +1,239 @@
+{
+  "target_sha": "0c877e227062af7d3def121490419be158cb16c4",
+  "task_id": 1,
+  "version_id": 1,
+  "fresh_teacher_results": 24,
+  "human_approved_images": 24,
+  "corrections": 12,
+  "split": {
+    "counts": {
+      "train": 14,
+      "val": 4,
+      "test": 6
+    },
+    "class_counts": {
+      "train": {
+        "empty": 7,
+        "occupied": 7
+      },
+      "val": {
+        "empty": 2,
+        "occupied": 2
+      },
+      "test": {
+        "empty": 3,
+        "occupied": 3
+      }
+    },
+    "assignments": {
+      "1": "train",
+      "2": "train",
+      "3": "train",
+      "4": "train",
+      "5": "train",
+      "6": "train",
+      "7": "train",
+      "8": "train",
+      "9": "val",
+      "10": "val",
+      "11": "train",
+      "12": "train",
+      "13": "test",
+      "14": "test",
+      "15": "test",
+      "16": "test",
+      "17": "val",
+      "18": "val",
+      "19": "train",
+      "20": "train",
+      "21": "train",
+      "22": "train",
+      "23": "test",
+      "24": "test"
+    },
+    "groups": {
+      "src:none|ses:procedural-session-11": "test",
+      "src:none|ses:procedural-session-07": "test",
+      "src:none|ses:procedural-session-06": "test",
+      "src:none|ses:procedural-session-04": "val",
+      "src:none|ses:procedural-session-08": "val",
+      "src:none|ses:procedural-session-09": "train",
+      "src:none|ses:procedural-session-10": "train",
+      "src:none|ses:procedural-session-00": "train",
+      "src:none|ses:procedural-session-01": "train",
+      "src:none|ses:procedural-session-05": "train",
+      "src:none|ses:procedural-session-03": "train",
+      "src:none|ses:procedural-session-02": "train"
+    },
+    "dataset_hash": "3a83ca9c28de3115a9d932c4d7731fb708f63f4f73bd6bd3adf88085104a8e77",
+    "split_hash": "b338f78465b9245ef8fde6a6f12f0a28cb45fba8ec37a781beb2523dfedf741a",
+    "target_sha": "0c877e227062af7d3def121490419be158cb16c4",
+    "before_first_fit": true,
+    "recorded_epoch": 1791691466.4469812,
+    "split_policy": "production source/session grouping, no outcome-based repartitioning",
+    "old_metrics_reused": false
+  },
+  "training": {
+    "experimental": true,
+    "version": 1,
+    "version_id": 1,
+    "threshold": 0.5,
+    "counts": {
+      "train": 14,
+      "val": 4,
+      "test": 6
+    },
+    "metrics": {
+      "confusion_matrix": {
+        "tp": 3,
+        "fp": 0,
+        "fn": 0,
+        "tn": 3
+      },
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "accuracy": 1.0,
+      "support": 6,
+      "positives": 3,
+      "negatives": 3,
+      "latency": {
+        "count": 6,
+        "p50_ms": 25.13,
+        "p95_ms": 25.311
+      },
+      "threshold": 0.5,
+      "manifest_digest": "f560cbab56dc8f159e607a332067e5a9733b42037dd924e2df837b8b12bcbf0a",
+      "artifact_sha256": "ea6b63ebb16ec05ca9d6ee6bc7232d8fedfd04ff70dd69f6658a5515023049b9"
+    },
+    "train_duration_ms": 96.66750500036869,
+    "dataset_hash": "3a83ca9c28de3115a9d932c4d7731fb708f63f4f73bd6bd3adf88085104a8e77",
+    "split_hash": "b338f78465b9245ef8fde6a6f12f0a28cb45fba8ec37a781beb2523dfedf741a"
+  },
+  "reloaded_evaluation": {
+    "experimental": true,
+    "version": 1,
+    "metrics": {
+      "confusion_matrix": {
+        "tp": 3,
+        "fp": 0,
+        "fn": 0,
+        "tn": 3
+      },
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "accuracy": 1.0,
+      "support": 6,
+      "positives": 3,
+      "negatives": 3,
+      "latency": {
+        "count": 6,
+        "p50_ms": 24.502,
+        "p95_ms": 25.506
+      },
+      "threshold": 0.5,
+      "manifest_digest": "f560cbab56dc8f159e607a332067e5a9733b42037dd924e2df837b8b12bcbf0a",
+      "artifact_sha256": "ea6b63ebb16ec05ca9d6ee6bc7232d8fedfd04ff70dd69f6658a5515023049b9"
+    }
+  },
+  "shadow": {
+    "experimental": true,
+    "version": 1,
+    "compared": 6,
+    "disagreement": {
+      "compared": 6,
+      "disagreements": 3,
+      "rate": 0.5
+    },
+    "items": [
+      {
+        "sample_id": 13,
+        "session_id": "procedural-session-06",
+        "student_label": "occupied",
+        "student_confidence": 1.0,
+        "teacher_label": "occupied",
+        "teacher_status": "labeled",
+        "verified_label": "occupied",
+        "action": "none"
+      },
+      {
+        "sample_id": 14,
+        "session_id": "procedural-session-06",
+        "student_label": "empty",
+        "student_confidence": 0.0,
+        "teacher_label": "occupied",
+        "teacher_status": "labeled",
+        "verified_label": "empty",
+        "action": "none"
+      },
+      {
+        "sample_id": 15,
+        "session_id": "procedural-session-07",
+        "student_label": "occupied",
+        "student_confidence": 1.0,
+        "teacher_label": "occupied",
+        "teacher_status": "labeled",
+        "verified_label": "occupied",
+        "action": "none"
+      },
+      {
+        "sample_id": 16,
+        "session_id": "procedural-session-07",
+        "student_label": "empty",
+        "student_confidence": 0.0,
+        "teacher_label": "occupied",
+        "teacher_status": "labeled",
+        "verified_label": "empty",
+        "action": "none"
+      },
+      {
+        "sample_id": 23,
+        "session_id": "procedural-session-11",
+        "student_label": "occupied",
+        "student_confidence": 1.0,
+        "teacher_label": "occupied",
+        "teacher_status": "labeled",
+        "verified_label": "occupied",
+        "action": "none"
+      },
+      {
+        "sample_id": 24,
+        "session_id": "procedural-session-11",
+        "student_label": "empty",
+        "student_confidence": 0.0,
+        "teacher_label": "occupied",
+        "teacher_status": "labeled",
+        "verified_label": "empty",
+        "action": "none"
+      }
+    ]
+  },
+  "gate_observed_only_untrusted_until_independent_artifact_check": {
+    "experimental": true,
+    "version": 1,
+    "gate": {
+      "passed": true,
+      "f1": 1.0,
+      "support": 6,
+      "min_f1": 0.75,
+      "test_count": 6,
+      "min_test": 4,
+      "reasons": []
+    }
+  },
+  "student_active": false,
+  "activation_rows": 0,
+  "source": "small synthetic pilot; NOT natural-world accuracy",
+  "independent_review_verdict": "CHANGES_REQUIRED",
+  "accepted_for_integration": false,
+  "scope": "ISOLATED_UNACCEPTED_NONACTIONING_EXPERIMENT",
+  "full_adaptive_workflow_accepted": false,
+  "limits": [
+    "M3 remains BLOCKED; experiment does not grant acceptance or integration",
+    "No real Student activation",
+    "Old metrics not reused",
+    "Not full video baseline versus optimized pipeline",
+    "Natural-video quality, foveated improvements, GPU billed cost/event and savings UNVERIFIED"
+  ]
+}

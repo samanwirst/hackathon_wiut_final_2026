@@ -1,0 +1,32 @@
+{
+  "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT",
+  "target_sha": "0c877e227062af7d3def121490419be158cb16c4",
+  "timestamp_epoch": 1791691439.1991055,
+  "models": {
+    "object": "list",
+    "data": [
+      {
+        "id": "HuggingFaceTB/SmolVLM-500M-Instruct",
+        "object": "model",
+        "owned_by": "local-experiment",
+        "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47"
+      }
+    ],
+    "experimental": {
+      "active_request": null,
+      "max_concurrency": 1,
+      "output_mode": "candidate_sequence_scoring",
+      "scoring_labels": [
+        "occupied",
+        "empty"
+      ]
+    }
+  },
+  "teacher_log_path": "/home/samanwirst/Desktop/hackathon_wiut_final_2026/.agents/runtime/ten-hour/TEACHER_EMERGENCY/recovery/evidence/requests.jsonl",
+  "teacher_log_existed": false,
+  "teacher_log_start_bytes": 0,
+  "teacher_log_start_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "max_labeling_jobs": 1,
+  "max_labeling_images": 24,
+  "no_student_activation": true
+}

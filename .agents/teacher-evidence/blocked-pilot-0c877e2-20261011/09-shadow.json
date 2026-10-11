@@ -1,0 +1,79 @@
+{
+  "target_sha": "0c877e227062af7d3def121490419be158cb16c4",
+  "method": "GET",
+  "path": "/api/autolearn/tasks/1/shadow",
+  "status": 200,
+  "wall_ms": 155.62999098619912,
+  "response": {
+    "experimental": true,
+    "version": 1,
+    "compared": 6,
+    "disagreement": {
+      "compared": 6,
+      "disagreements": 3,
+      "rate": 0.5
+    },
+    "items": [
+      {
+        "sample_id": 13,
+        "session_id": "procedural-session-06",
+        "student_label": "occupied",
+        "student_confidence": 1.0,
+        "teacher_label": "occupied",
+        "teacher_status": "labeled",
+        "verified_label": "occupied",
+        "action": "none"
+      },
+      {
+        "sample_id": 14,
+        "session_id": "procedural-session-06",
+        "student_label": "empty",
+        "student_confidence": 0.0,
+        "teacher_label": "occupied",
+        "teacher_status": "labeled",
+        "verified_label": "empty",
+        "action": "none"
+      },
+      {
+        "sample_id": 15,
+        "session_id": "procedural-session-07",
+        "student_label": "occupied",
+        "student_confidence": 1.0,
+        "teacher_label": "occupied",
+        "teacher_status": "labeled",
+        "verified_label": "occupied",
+        "action": "none"
+      },
+      {
+        "sample_id": 16,
+        "session_id": "procedural-session-07",
+        "student_label": "empty",
+        "student_confidence": 0.0,
+        "teacher_label": "occupied",
+        "teacher_status": "labeled",
+        "verified_label": "empty",
+        "action": "none"
+      },
+      {
+        "sample_id": 23,
+        "session_id": "procedural-session-11",
+        "student_label": "occupied",
+        "student_confidence": 1.0,
+        "teacher_label": "occupied",
+        "teacher_status": "labeled",
+        "verified_label": "occupied",
+        "action": "none"
+      },
+      {
+        "sample_id": 24,
+        "session_id": "procedural-session-11",
+        "student_label": "empty",
+        "student_confidence": 0.0,
+        "teacher_label": "occupied",
+        "teacher_status": "labeled",
+        "verified_label": "empty",
+        "action": "none"
+      }
+    ]
+  }
+}

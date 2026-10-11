@@ -1,0 +1,70 @@
+{
+  "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT",
+  "executed_once": true,
+  "do_not_rerun_labeling_or_fit_without_explicit_authorization": true,
+  "root": "/home/samanwirst/Desktop/hackathon_wiut_final_2026",
+  "server_argv": [
+    "/usr/bin/python3",
+    "/home/samanwirst/Desktop/hackathon_wiut_final_2026/.agents/runtime/ten-hour/start_accepted_pilot.py",
+    "--sha",
+    "0c877e227062af7d3def121490419be158cb16c4",
+    "--port",
+    "8096",
+    "--isolated-blocked-experiment"
+  ],
+  "server_owner_unit": "visionflow-blocked-pilot-0c877e2.service",
+  "runner_env_overrides": {
+    "OMP_NUM_THREADS": "2",
+    "MKL_NUM_THREADS": "2",
+    "OPENBLAS_NUM_THREADS": "2",
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "VISIONFLOW_DEMO_SAFE": "true",
+    "VISIONFLOW_DATA_DIR": "/home/samanwirst/Desktop/hackathon_wiut_final_2026/.agents/runtime/ten-hour/CE/blocked-nonactioning-pilot-0c877e2/data",
+    "VLM_BASE_URL": "http://127.0.0.1:18081/v1",
+    "VLM_MODEL": "HuggingFaceTB/SmolVLM-500M-Instruct",
+    "VLM_API_KEY": "",
+    "AUTOLEARN_LABEL_MAX_TOKENS": "64",
+    "AUTOLEARN_LABEL_BUDGET_PER_TASK": "24",
+    "AUTOLEARN_LABEL_JOB_MAX": "24",
+    "PYTHONPATH": "/home/samanwirst/Desktop/hackathon_wiut_final_2026/.agents/runtime/ten-hour/worktrees/C-emergency/services/api:/home/samanwirst/Desktop/hackathon_wiut_final_2026/.agents/runtime/ten-hour/worktrees/C-emergency/packages/vision"
+  },
+  "runner_argv": [
+    "/home/samanwirst/Desktop/hackathon_wiut_final_2026/.agents/runtime/ten-hour/worktrees/C-emergency/services/api/.venv/bin/python",
+    "/home/samanwirst/Desktop/hackathon_wiut_final_2026/.agents/runtime/ten-hour/rerun_approved_pilot.py",
+    "--worktree",
+    "/home/samanwirst/Desktop/hackathon_wiut_final_2026/.agents/runtime/ten-hour/worktrees/C-emergency",
+    "--sha",
+    "0c877e227062af7d3def121490419be158cb16c4",
+    "--base-url",
+    "http://127.0.0.1:8096",
+    "--evidence",
+    "/home/samanwirst/Desktop/hackathon_wiut_final_2026/.agents/runtime/ten-hour/CE/blocked-nonactioning-pilot-0c877e2/evidence",
+    "--isolated-blocked-experiment"
+  ],
+  "independent_checker_argv": [
+    "/home/samanwirst/Desktop/hackathon_wiut_final_2026/.agents/runtime/ten-hour/worktrees/C-emergency/services/api/.venv/bin/python",
+    "/home/samanwirst/Desktop/hackathon_wiut_final_2026/.agents/runtime/ten-hour/TEACHER_EMERGENCY/blocked-pilot-control/independent_check.py"
+  ],
+  "checker_env_overrides": {
+    "OMP_NUM_THREADS": "2",
+    "MKL_NUM_THREADS": "2",
+    "OPENBLAS_NUM_THREADS": "2",
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "VISIONFLOW_DEMO_SAFE": "true",
+    "VISIONFLOW_DATA_DIR": "/home/samanwirst/Desktop/hackathon_wiut_final_2026/.agents/runtime/ten-hour/CE/blocked-nonactioning-pilot-0c877e2/data",
+    "PYTHONPATH": "/home/samanwirst/Desktop/hackathon_wiut_final_2026/.agents/runtime/ten-hour/worktrees/C-emergency/services/api:/home/samanwirst/Desktop/hackathon_wiut_final_2026/.agents/runtime/ten-hour/worktrees/C-emergency/packages/vision",
+    "VISIONFLOW_THREADS": "2"
+  },
+  "cleanup_argv": [
+    "systemctl",
+    "--user",
+    "stop",
+    "visionflow-blocked-pilot-0c877e2.service"
+  ],
+  "credentials_read": false,
+  "max_label_jobs": 1,
+  "actual_label_jobs": 1,
+  "max_images": 24,
+  "actual_images": 24,
+  "activation_calls": 0
+}

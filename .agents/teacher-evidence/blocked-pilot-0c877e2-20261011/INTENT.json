@@ -1,0 +1,17 @@
+{
+  "target_sha": "0c877e227062af7d3def121490419be158cb16c4",
+  "started_epoch": 1791691459.6775627,
+  "dataset_manifest_sha256": "c44903b9d08aad28a3e9e2a1d81335fe49d64ea2c89474eef4a787e2c6cc6c26",
+  "exact_human_approval_sha256": "21dba4e24500468258a0769b19935826d7993318b33400ee0929a2c91b7d4552",
+  "images": 24,
+  "sessions": 12,
+  "one_labeling_job_maximum": 24,
+  "source": "original procedural synthetic drawings; NOT natural videos",
+  "student_activation_authorized": false,
+  "phase": "pre-Teacher/pre-fit",
+  "reuses_old_metrics": false,
+  "independent_review_verdict": "CHANGES_REQUIRED",
+  "accepted_for_integration": false,
+  "scope": "ISOLATED_UNACCEPTED_NONACTIONING_EXPERIMENT",
+  "full_adaptive_workflow_accepted": false
+}

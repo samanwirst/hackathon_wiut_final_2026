@@ -1,0 +1,11 @@
+{
+  "target_sha": "0c877e227062af7d3def121490419be158cb16c4",
+  "method": "POST",
+  "path": "/api/autolearn/tasks/1/images",
+  "status": 201,
+  "wall_ms": 5.568401989876293,
+  "response": {
+    "imported": true,
+    "sample_id": 6
+  }
+}

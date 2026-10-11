@@ -1,0 +1,44 @@
+{
+  "target_sha": "0c877e227062af7d3def121490419be158cb16c4",
+  "method": "POST",
+  "path": "/api/autolearn/tasks/1/train",
+  "status": 200,
+  "wall_ms": 1974.6368519990938,
+  "response": {
+    "experimental": true,
+    "version": 1,
+    "version_id": 1,
+    "threshold": 0.5,
+    "counts": {
+      "train": 14,
+      "val": 4,
+      "test": 6
+    },
+    "metrics": {
+      "confusion_matrix": {
+        "tp": 3,
+        "fp": 0,
+        "fn": 0,
+        "tn": 3
+      },
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "accuracy": 1.0,
+      "support": 6,
+      "positives": 3,
+      "negatives": 3,
+      "latency": {
+        "count": 6,
+        "p50_ms": 25.13,
+        "p95_ms": 25.311
+      },
+      "threshold": 0.5,
+      "manifest_digest": "f560cbab56dc8f159e607a332067e5a9733b42037dd924e2df837b8b12bcbf0a",
+      "artifact_sha256": "ea6b63ebb16ec05ca9d6ee6bc7232d8fedfd04ff70dd69f6658a5515023049b9"
+    },
+    "train_duration_ms": 96.66750500036869,
+    "dataset_hash": "3a83ca9c28de3115a9d932c4d7731fb708f63f4f73bd6bd3adf88085104a8e77",
+    "split_hash": "b338f78465b9245ef8fde6a6f12f0a28cb45fba8ec37a781beb2523dfedf741a"
+  }
+}

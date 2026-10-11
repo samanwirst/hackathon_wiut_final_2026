@@ -1,0 +1,8 @@
+{
+  "target_sha": "0c877e227062af7d3def121490419be158cb16c4",
+  "method": "GET",
+  "path": "/api/autolearn/tasks/1/activations",
+  "status": 200,
+  "wall_ms": 2.774177002720535,
+  "response": []
+}

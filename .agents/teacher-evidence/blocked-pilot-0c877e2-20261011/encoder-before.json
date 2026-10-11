@@ -1,0 +1,9 @@
+{
+  "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT",
+  "before_first_fit": true,
+  "recorded_epoch": 1791691450.3507497,
+  "encoder_weights_path": "/home/samanwirst/.cache/torch/hub/checkpoints/resnet18-f37072fd.pth",
+  "exists": true,
+  "bytes": 46830571,
+  "sha256": "f37072fd47e89c5e827621c5baffa7500819f7896bbacec160b1a16c560e07ec"
+}

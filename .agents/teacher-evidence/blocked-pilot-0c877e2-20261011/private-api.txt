@@ -1,0 +1,91 @@
+INFO:     Started server process [1030875]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8096 (Press CTRL+C to quit)
+INFO:     127.0.0.1:57824 - "GET /api/autolearn/tasks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57824 - "POST /api/autolearn/tasks HTTP/1.1" 201 Created
+INFO:     127.0.0.1:57824 - "POST /api/autolearn/tasks/1/images?session_id=procedural-session-00&group_key=procedural-session-00&video_timestamp=0.0 HTTP/1.1" 201 Created
+INFO:     127.0.0.1:57824 - "POST /api/autolearn/tasks/1/images?session_id=procedural-session-00&group_key=procedural-session-00&video_timestamp=1.0 HTTP/1.1" 201 Created
+INFO:     127.0.0.1:57824 - "POST /api/autolearn/tasks/1/images?session_id=procedural-session-01&group_key=procedural-session-01&video_timestamp=0.0 HTTP/1.1" 201 Created
+INFO:     127.0.0.1:57824 - "POST /api/autolearn/tasks/1/images?session_id=procedural-session-01&group_key=procedural-session-01&video_timestamp=1.0 HTTP/1.1" 201 Created
+INFO:     127.0.0.1:57824 - "POST /api/autolearn/tasks/1/images?session_id=procedural-session-02&group_key=procedural-session-02&video_timestamp=0.0 HTTP/1.1" 201 Created
+INFO:     127.0.0.1:57824 - "POST /api/autolearn/tasks/1/images?session_id=procedural-session-02&group_key=procedural-session-02&video_timestamp=1.0 HTTP/1.1" 201 Created
+INFO:     127.0.0.1:57824 - "POST /api/autolearn/tasks/1/images?session_id=procedural-session-03&group_key=procedural-session-03&video_timestamp=0.0 HTTP/1.1" 201 Created
+INFO:     127.0.0.1:57824 - "POST /api/autolearn/tasks/1/images?session_id=procedural-session-03&group_key=procedural-session-03&video_timestamp=1.0 HTTP/1.1" 201 Created
+INFO:     127.0.0.1:57824 - "POST /api/autolearn/tasks/1/images?session_id=procedural-session-04&group_key=procedural-session-04&video_timestamp=0.0 HTTP/1.1" 201 Created
+INFO:     127.0.0.1:57824 - "POST /api/autolearn/tasks/1/images?session_id=procedural-session-04&group_key=procedural-session-04&video_timestamp=1.0 HTTP/1.1" 201 Created
+INFO:     127.0.0.1:57824 - "POST /api/autolearn/tasks/1/images?session_id=procedural-session-05&group_key=procedural-session-05&video_timestamp=0.0 HTTP/1.1" 201 Created
+INFO:     127.0.0.1:57824 - "POST /api/autolearn/tasks/1/images?session_id=procedural-session-05&group_key=procedural-session-05&video_timestamp=1.0 HTTP/1.1" 201 Created
+INFO:     127.0.0.1:57824 - "POST /api/autolearn/tasks/1/images?session_id=procedural-session-06&group_key=procedural-session-06&video_timestamp=0.0 HTTP/1.1" 201 Created
+INFO:     127.0.0.1:57824 - "POST /api/autolearn/tasks/1/images?session_id=procedural-session-06&group_key=procedural-session-06&video_timestamp=1.0 HTTP/1.1" 201 Created
+INFO:     127.0.0.1:57824 - "POST /api/autolearn/tasks/1/images?session_id=procedural-session-07&group_key=procedural-session-07&video_timestamp=0.0 HTTP/1.1" 201 Created
+INFO:     127.0.0.1:57824 - "POST /api/autolearn/tasks/1/images?session_id=procedural-session-07&group_key=procedural-session-07&video_timestamp=1.0 HTTP/1.1" 201 Created
+INFO:     127.0.0.1:57824 - "POST /api/autolearn/tasks/1/images?session_id=procedural-session-08&group_key=procedural-session-08&video_timestamp=0.0 HTTP/1.1" 201 Created
+INFO:     127.0.0.1:57824 - "POST /api/autolearn/tasks/1/images?session_id=procedural-session-08&group_key=procedural-session-08&video_timestamp=1.0 HTTP/1.1" 201 Created
+INFO:     127.0.0.1:57824 - "POST /api/autolearn/tasks/1/images?session_id=procedural-session-09&group_key=procedural-session-09&video_timestamp=0.0 HTTP/1.1" 201 Created
+INFO:     127.0.0.1:57824 - "POST /api/autolearn/tasks/1/images?session_id=procedural-session-09&group_key=procedural-session-09&video_timestamp=1.0 HTTP/1.1" 201 Created
+INFO:     127.0.0.1:57824 - "POST /api/autolearn/tasks/1/images?session_id=procedural-session-10&group_key=procedural-session-10&video_timestamp=0.0 HTTP/1.1" 201 Created
+INFO:     127.0.0.1:57824 - "POST /api/autolearn/tasks/1/images?session_id=procedural-session-10&group_key=procedural-session-10&video_timestamp=1.0 HTTP/1.1" 201 Created
+INFO:     127.0.0.1:57824 - "POST /api/autolearn/tasks/1/images?session_id=procedural-session-11&group_key=procedural-session-11&video_timestamp=0.0 HTTP/1.1" 201 Created
+INFO:     127.0.0.1:57824 - "POST /api/autolearn/tasks/1/images?session_id=procedural-session-11&group_key=procedural-session-11&video_timestamp=1.0 HTTP/1.1" 201 Created
+2026-10-11 09:04:21,498 httpx INFO HTTP Request: POST http://127.0.0.1:18081/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-11 09:04:21,643 httpx INFO HTTP Request: POST http://127.0.0.1:18081/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-11 09:04:21,875 httpx INFO HTTP Request: POST http://127.0.0.1:18081/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-11 09:04:21,997 httpx INFO HTTP Request: POST http://127.0.0.1:18081/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-11 09:04:22,118 httpx INFO HTTP Request: POST http://127.0.0.1:18081/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-11 09:04:22,236 httpx INFO HTTP Request: POST http://127.0.0.1:18081/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-11 09:04:22,354 httpx INFO HTTP Request: POST http://127.0.0.1:18081/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-11 09:04:22,471 httpx INFO HTTP Request: POST http://127.0.0.1:18081/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-11 09:04:22,594 httpx INFO HTTP Request: POST http://127.0.0.1:18081/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-11 09:04:22,712 httpx INFO HTTP Request: POST http://127.0.0.1:18081/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-11 09:04:22,832 httpx INFO HTTP Request: POST http://127.0.0.1:18081/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-11 09:04:22,948 httpx INFO HTTP Request: POST http://127.0.0.1:18081/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-11 09:04:23,065 httpx INFO HTTP Request: POST http://127.0.0.1:18081/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-11 09:04:23,183 httpx INFO HTTP Request: POST http://127.0.0.1:18081/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-11 09:04:23,299 httpx INFO HTTP Request: POST http://127.0.0.1:18081/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-11 09:04:23,418 httpx INFO HTTP Request: POST http://127.0.0.1:18081/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-11 09:04:23,545 httpx INFO HTTP Request: POST http://127.0.0.1:18081/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-11 09:04:23,661 httpx INFO HTTP Request: POST http://127.0.0.1:18081/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-11 09:04:23,780 httpx INFO HTTP Request: POST http://127.0.0.1:18081/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-11 09:04:23,897 httpx INFO HTTP Request: POST http://127.0.0.1:18081/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-11 09:04:24,016 httpx INFO HTTP Request: POST http://127.0.0.1:18081/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-11 09:04:24,135 httpx INFO HTTP Request: POST http://127.0.0.1:18081/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-11 09:04:24,256 httpx INFO HTTP Request: POST http://127.0.0.1:18081/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-11 09:04:24,376 httpx INFO HTTP Request: POST http://127.0.0.1:18081/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:57824 - "POST /api/autolearn/tasks/1/label?limit=24 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57824 - "GET /api/autolearn/tasks/1/samples HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57824 - "POST /api/autolearn/samples/1/review HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57824 - "POST /api/autolearn/samples/2/review HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57824 - "POST /api/autolearn/samples/3/review HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57824 - "POST /api/autolearn/samples/4/review HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57824 - "POST /api/autolearn/samples/5/review HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57824 - "POST /api/autolearn/samples/6/review HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57824 - "POST /api/autolearn/samples/7/review HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57824 - "POST /api/autolearn/samples/8/review HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57824 - "POST /api/autolearn/samples/9/review HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57824 - "POST /api/autolearn/samples/10/review HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57824 - "POST /api/autolearn/samples/11/review HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57824 - "POST /api/autolearn/samples/12/review HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57824 - "POST /api/autolearn/samples/13/review HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57824 - "POST /api/autolearn/samples/14/review HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57824 - "POST /api/autolearn/samples/15/review HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57824 - "POST /api/autolearn/samples/16/review HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57824 - "POST /api/autolearn/samples/17/review HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57824 - "POST /api/autolearn/samples/18/review HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57824 - "POST /api/autolearn/samples/19/review HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57824 - "POST /api/autolearn/samples/20/review HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57824 - "POST /api/autolearn/samples/21/review HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57824 - "POST /api/autolearn/samples/22/review HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57824 - "POST /api/autolearn/samples/23/review HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57824 - "POST /api/autolearn/samples/24/review HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57824 - "POST /api/autolearn/tasks/1/train HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57824 - "POST /api/autolearn/versions/1/evaluate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57824 - "GET /api/autolearn/tasks/1/shadow HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57824 - "GET /api/autolearn/versions/1/gate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57824 - "GET /api/autolearn/tasks/1/audit HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57824 - "GET /api/autolearn/tasks/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57824 - "GET /api/autolearn/tasks/1/activations HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [1030875]

@@ -1,0 +1,20 @@
+{
+  "target_sha": "0c877e227062af7d3def121490419be158cb16c4",
+  "method": "GET",
+  "path": "/api/autolearn/versions/1/gate",
+  "status": 200,
+  "wall_ms": 6.48345600347966,
+  "response": {
+    "experimental": true,
+    "version": 1,
+    "gate": {
+      "passed": true,
+      "f1": 1.0,
+      "support": 6,
+      "min_f1": 0.75,
+      "test_count": 6,
+      "min_test": 4,
+      "reasons": []
+    }
+  }
+}

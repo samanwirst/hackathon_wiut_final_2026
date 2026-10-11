@@ -1,0 +1,391 @@
+{
+  "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT",
+  "independent_review_verdict": "CHANGES_REQUIRED",
+  "accepted_for_integration": false,
+  "target_sha": "0c877e227062af7d3def121490419be158cb16c4",
+  "recorded_epoch": 1791691550.9825268,
+  "source": "24 owner-verified original procedural synthetic images, 12 sessions; NOT natural videos",
+  "production_preregistration_unchanged": true,
+  "session_disjoint": true,
+  "membership": [
+    {
+      "sample_id": 1,
+      "approved_sample_id": "s00-f00",
+      "image_sha256": "8a0206495f5cb56aa9508c092f87f6ab2c7597b6f9fbec9d5560969d78417dbc",
+      "session_id": "procedural-session-00",
+      "split": "train",
+      "verified_label": "occupied"
+    },
+    {
+      "sample_id": 2,
+      "approved_sample_id": "s00-f01",
+      "image_sha256": "ba8f3169ac956dc5dbf9e7294b053dab673fd6f21961679c7ab433ebdca1d65b",
+      "session_id": "procedural-session-00",
+      "split": "train",
+      "verified_label": "empty"
+    },
+    {
+      "sample_id": 3,
+      "approved_sample_id": "s01-f00",
+      "image_sha256": "ec0dbaccb7268b1e19f933146184cc28f684b619e0c7e9f0bcf86bac449dc6fa",
+      "session_id": "procedural-session-01",
+      "split": "train",
+      "verified_label": "occupied"
+    },
+    {
+      "sample_id": 4,
+      "approved_sample_id": "s01-f01",
+      "image_sha256": "d8596c956bbe136e5f4dade6e66f6415bf0b824041d82657719ebd2aadaccc72",
+      "session_id": "procedural-session-01",
+      "split": "train",
+      "verified_label": "empty"
+    },
+    {
+      "sample_id": 5,
+      "approved_sample_id": "s02-f00",
+      "image_sha256": "46517d26b26a21d6ec55d814c6fe73fc94ec4c2d6522914630fd8a4c4ed673b5",
+      "session_id": "procedural-session-02",
+      "split": "train",
+      "verified_label": "occupied"
+    },
+    {
+      "sample_id": 6,
+      "approved_sample_id": "s02-f01",
+      "image_sha256": "11537071fae26e1d9e23479b0cb2b7f034e3dca8157877d78d9eb35f0d098da0",
+      "session_id": "procedural-session-02",
+      "split": "train",
+      "verified_label": "empty"
+    },
+    {
+      "sample_id": 7,
+      "approved_sample_id": "s03-f00",
+      "image_sha256": "f0a52c53876397b1ccd92d2e65314d69faf1b262eadbdb48cb4b2d94aeb75494",
+      "session_id": "procedural-session-03",
+      "split": "train",
+      "verified_label": "occupied"
+    },
+    {
+      "sample_id": 8,
+      "approved_sample_id": "s03-f01",
+      "image_sha256": "b778080203c1b40ecbf1f5224d3fa041dfcf24ffac3a21ea83776bd30867d560",
+      "session_id": "procedural-session-03",
+      "split": "train",
+      "verified_label": "empty"
+    },
+    {
+      "sample_id": 9,
+      "approved_sample_id": "s04-f00",
+      "image_sha256": "a5160f5b1bd2eb05602458981fcedfda4d3834f502ecc1b9ed345d6b1aac6989",
+      "session_id": "procedural-session-04",
+      "split": "val",
+      "verified_label": "occupied"
+    },
+    {
+      "sample_id": 10,
+      "approved_sample_id": "s04-f01",
+      "image_sha256": "e8e5e4dbc9eeea5f417b4538950abf06c80880054bac0f7c8d91fa90bf6384b7",
+      "session_id": "procedural-session-04",
+      "split": "val",
+      "verified_label": "empty"
+    },
+    {
+      "sample_id": 11,
+      "approved_sample_id": "s05-f00",
+      "image_sha256": "e8573f952c40882c4148408d9ba774ba849406fd4661ffcbf4d3707e07e970a8",
+      "session_id": "procedural-session-05",
+      "split": "train",
+      "verified_label": "occupied"
+    },
+    {
+      "sample_id": 12,
+      "approved_sample_id": "s05-f01",
+      "image_sha256": "4ec62beab20753bebb74117571bace05e1052ec3989365558cee15e725e6cba9",
+      "session_id": "procedural-session-05",
+      "split": "train",
+      "verified_label": "empty"
+    },
+    {
+      "sample_id": 13,
+      "approved_sample_id": "s06-f00",
+      "image_sha256": "4bb6a5baafcd702d4e8fee6e0f5052f3557dc1e1d73c41600c64e7579e7c6e28",
+      "session_id": "procedural-session-06",
+      "split": "test",
+      "verified_label": "occupied"
+    },
+    {
+      "sample_id": 14,
+      "approved_sample_id": "s06-f01",
+      "image_sha256": "f5b86637d254afc8d165383232a6b6ee5f75b27aadf1cb31a21662ca6d24d622",
+      "session_id": "procedural-session-06",
+      "split": "test",
+      "verified_label": "empty"
+    },
+    {
+      "sample_id": 15,
+      "approved_sample_id": "s07-f00",
+      "image_sha256": "e18fea284b68970a59650b24d5cce3ac6e1d76dfb80eb770a196bd2d597824b2",
+      "session_id": "procedural-session-07",
+      "split": "test",
+      "verified_label": "occupied"
+    },
+    {
+      "sample_id": 16,
+      "approved_sample_id": "s07-f01",
+      "image_sha256": "8209024222b92aba6ab0498b3e873d31b4adcdaae3beb6374649cea93c11e38b",
+      "session_id": "procedural-session-07",
+      "split": "test",
+      "verified_label": "empty"
+    },
+    {
+      "sample_id": 17,
+      "approved_sample_id": "s08-f00",
+      "image_sha256": "0e5c871a6dfe0782bab88c6445e1f2d41e76f42b9d612ad54721784946c300b0",
+      "session_id": "procedural-session-08",
+      "split": "val",
+      "verified_label": "occupied"
+    },
+    {
+      "sample_id": 18,
+      "approved_sample_id": "s08-f01",
+      "image_sha256": "a28228276cce09d07a7ff90d61fe20f48f1344d266ad3c0360c832f119304bf3",
+      "session_id": "procedural-session-08",
+      "split": "val",
+      "verified_label": "empty"
+    },
+    {
+      "sample_id": 19,
+      "approved_sample_id": "s09-f00",
+      "image_sha256": "8b9a55be723c493965d72192353dccaf5dde0ca2afedb86de2fb5f275ab70ef8",
+      "session_id": "procedural-session-09",
+      "split": "train",
+      "verified_label": "occupied"
+    },
+    {
+      "sample_id": 20,
+      "approved_sample_id": "s09-f01",
+      "image_sha256": "3adc892f737a7bc955dfec29526bf662e6a7714a4a06a20570419a17ca808ade",
+      "session_id": "procedural-session-09",
+      "split": "train",
+      "verified_label": "empty"
+    },
+    {
+      "sample_id": 21,
+      "approved_sample_id": "s10-f00",
+      "image_sha256": "d5f2f2c04f03a098b25bc31f9a9d19cd46989e2f79da298f4d7694906c0c66c4",
+      "session_id": "procedural-session-10",
+      "split": "train",
+      "verified_label": "occupied"
+    },
+    {
+      "sample_id": 22,
+      "approved_sample_id": "s10-f01",
+      "image_sha256": "45a8657b138ddb71b6b5de16fd43a4098ac92f3ecee677e2184cf16e14d70397",
+      "session_id": "procedural-session-10",
+      "split": "train",
+      "verified_label": "empty"
+    },
+    {
+      "sample_id": 23,
+      "approved_sample_id": "s11-f00",
+      "image_sha256": "b6da660387d56a31feb95ccce77b57ab310a542df5b216e24c03e99ff4d31d84",
+      "session_id": "procedural-session-11",
+      "split": "test",
+      "verified_label": "occupied"
+    },
+    {
+      "sample_id": 24,
+      "approved_sample_id": "s11-f01",
+      "image_sha256": "da565c26891fbf3559fc2dc110750e24bed78cee567f9d26e7dbf7fe74de0a2c",
+      "session_id": "procedural-session-11",
+      "split": "test",
+      "verified_label": "empty"
+    }
+  ],
+  "counts": {
+    "train": 14,
+    "val": 4,
+    "test": 6
+  },
+  "artifact_sha256": "ea6b63ebb16ec05ca9d6ee6bc7232d8fedfd04ff70dd69f6658a5515023049b9",
+  "artifact_bytes": 10699,
+  "artifact_threshold": 0.5,
+  "registry_threshold": 0.5,
+  "evaluated_threshold": 0.5,
+  "class_mapping": {
+    "empty": 0,
+    "occupied": 1
+  },
+  "artifact_extra": {
+    "threshold": 0.5,
+    "class_mapping": {
+      "empty": 0,
+      "occupied": 1
+    },
+    "encoder_name": "resnet18",
+    "encoder_weights_version": "resnet18-f37072fd.pth",
+    "preprocess_version": "resnet18-imagenet1k-v1-rgb-224-centercrop",
+    "dataset_hash": "3a83ca9c28de3115a9d932c4d7731fb708f63f4f73bd6bd3adf88085104a8e77",
+    "split_hash": "b338f78465b9245ef8fde6a6f12f0a28cb45fba8ec37a781beb2523dfedf741a"
+  },
+  "encoder_weights_sha256": "f37072fd47e89c5e827621c5baffa7500819f7896bbacec160b1a16c560e07ec",
+  "encoder_parameters_frozen": true,
+  "encoder_state_sha256_before": "c6fc025cae67cee295fa18eff0998f3ae5f0e7a7d662ca38ab7be77ad49665c9",
+  "encoder_state_sha256_after": "c6fc025cae67cee295fa18eff0998f3ae5f0e7a7d662ca38ab7be77ad49665c9",
+  "input_hashes_before_and_after_match": true,
+  "fresh_teacher_requests": 24,
+  "teacher_model_forward_calls": 48,
+  "actual_model_processed_tokens": 7392,
+  "teacher_server_inference_seconds": 3.8670176599698607,
+  "teacher_all24_metrics": {
+    "confusion_matrix": {
+      "tp": 12,
+      "fp": 12,
+      "fn": 0,
+      "tn": 0
+    },
+    "support": 24,
+    "precision": 0.5,
+    "recall": 1.0,
+    "f1": 0.6667,
+    "accuracy": 0.5
+  },
+  "student_same_heldout_metrics": {
+    "confusion_matrix": {
+      "tp": 3,
+      "fp": 0,
+      "fn": 0,
+      "tn": 3
+    },
+    "support": 6,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0,
+    "accuracy": 1.0
+  },
+  "teacher_same_heldout_metrics": {
+    "confusion_matrix": {
+      "tp": 3,
+      "fp": 3,
+      "fn": 0,
+      "tn": 0
+    },
+    "support": 6,
+    "precision": 0.5,
+    "recall": 1.0,
+    "f1": 0.6667,
+    "accuracy": 0.5
+  },
+  "student_teacher_disagreements": 3,
+  "test_predictions": [
+    {
+      "sample_id": 13,
+      "image_sha256": "4bb6a5baafcd702d4e8fee6e0f5052f3557dc1e1d73c41600c64e7579e7c6e28",
+      "session_id": "procedural-session-06",
+      "verified_label": "occupied",
+      "student_probability": 1.0,
+      "student_label": "occupied",
+      "teacher_label": "occupied",
+      "teacher_probability": 0.9917066674608072,
+      "embedding_latency_ms": 24.990047997562215,
+      "action": "none"
+    },
+    {
+      "sample_id": 14,
+      "image_sha256": "f5b86637d254afc8d165383232a6b6ee5f75b27aadf1cb31a21662ca6d24d622",
+      "session_id": "procedural-session-06",
+      "verified_label": "empty",
+      "student_probability": 1.6277835521716106e-14,
+      "student_label": "empty",
+      "teacher_label": "occupied",
+      "teacher_probability": 0.9835279066203273,
+      "embedding_latency_ms": 24.5853829983389,
+      "action": "none"
+    },
+    {
+      "sample_id": 15,
+      "image_sha256": "e18fea284b68970a59650b24d5cce3ac6e1d76dfb80eb770a196bd2d597824b2",
+      "session_id": "procedural-session-07",
+      "verified_label": "occupied",
+      "student_probability": 1.0,
+      "student_label": "occupied",
+      "teacher_label": "occupied",
+      "teacher_probability": 0.9931740824766658,
+      "embedding_latency_ms": 24.000892997719347,
+      "action": "none"
+    },
+    {
+      "sample_id": 16,
+      "image_sha256": "8209024222b92aba6ab0498b3e873d31b4adcdaae3beb6374649cea93c11e38b",
+      "session_id": "procedural-session-07",
+      "verified_label": "empty",
+      "student_probability": 2.200575783762555e-16,
+      "student_label": "empty",
+      "teacher_label": "occupied",
+      "teacher_probability": 0.9921322351441453,
+      "embedding_latency_ms": 22.874829010106623,
+      "action": "none"
+    },
+    {
+      "sample_id": 23,
+      "image_sha256": "b6da660387d56a31feb95ccce77b57ab310a542df5b216e24c03e99ff4d31d84",
+      "session_id": "procedural-session-11",
+      "verified_label": "occupied",
+      "student_probability": 1.0,
+      "student_label": "occupied",
+      "teacher_label": "occupied",
+      "teacher_probability": 0.9938787738277824,
+      "embedding_latency_ms": 26.780136991874315,
+      "action": "none"
+    },
+    {
+      "sample_id": 24,
+      "image_sha256": "da565c26891fbf3559fc2dc110750e24bed78cee567f9d26e7dbf7fe74de0a2c",
+      "session_id": "procedural-session-11",
+      "verified_label": "empty",
+      "student_probability": 9.123137738864543e-12,
+      "student_label": "empty",
+      "teacher_label": "occupied",
+      "teacher_probability": 0.9623154214406082,
+      "embedding_latency_ms": 24.87714799644891,
+      "action": "none"
+    }
+  ],
+  "reloaded_classifier_total24_ms": 0.8510570041835308,
+  "embedding_latency_ms": [
+    71.1685709975427,
+    23.82932900218293,
+    24.106179000227712,
+    23.18529899639543,
+    23.62035700934939,
+    23.381346996757202,
+    25.03817100659944,
+    26.366845006123185,
+    24.586043000454083,
+    24.19644700421486,
+    23.848914992413484,
+    23.119143006624654,
+    24.990047997562215,
+    24.5853829983389,
+    24.000892997719347,
+    22.874829010106623,
+    25.619869004003704,
+    24.719170993193984,
+    23.600084998179227,
+    23.244622992933728,
+    23.96888598741498,
+    23.24614800454583,
+    26.780136991874315,
+    24.87714799644891
+  ],
+  "student_active_pointer": null,
+  "activation_rows": 0,
+  "actions": "none",
+  "limits": [
+    "M3 remains BLOCKED and unaccepted; a successful experiment is not an acceptance verdict",
+    "Teacher JSON is serialized image-conditioned candidate likelihood, not successful generated JSON; confidence is uncalibrated",
+    "Student evaluation has only 6 original synthetic images, 3 held-out sessions; no natural-video quality claim",
+    "Exact provider raw scoring log preserved; application omitted some provenance and did not persist full HTTP wire body",
+    "GPU kernel execution time, power cost, rental cost/event, full baseline-versus-optimized video savings and foveated gains UNVERIFIED",
+    "No Student activation, external action, retraining, alternate split, app correction or additional Teacher job"
+  ]
+}

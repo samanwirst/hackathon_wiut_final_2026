@@ -1,0 +1,1274 @@
+[
+  {
+    "sample_id": 1,
+    "image_sha256": "8a0206495f5cb56aa9508c092f87f6ab2c7597b6f9fbec9d5560969d78417dbc",
+    "session_id": "procedural-session-00",
+    "prompt": "Is a visible motor vehicle present in the marked synthetic service bay? Label occupied means at least one visible motor vehicle; label empty means none.",
+    "teacher_label": "occupied",
+    "teacher_confidence": 0.9815778078026007,
+    "raw_content_preview": "{\"label\": \"occupied\", \"confidence\": 0.9815778078026007}",
+    "client_wall_latency_ms": 1599.906153001939,
+    "raw_server_record": {
+      "request_id": "local-5cbbe2369ddc4f8596d42f2e93da4fb3",
+      "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+      "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+      "image_count": 1,
+      "input_tokens": 152,
+      "output_tokens": 0,
+      "inference_seconds": 1.5186841399990954,
+      "gpu_peak_allocated_bytes": 1065511424,
+      "gpu_peak_reserved_bytes": 1086324736,
+      "deadline_reached": false,
+      "scoring": {
+        "method": "candidate_sequence_softmax",
+        "uncalibrated": true,
+        "formula": "s(label)=sum_t log P(candidate_token_t | image(s), prompt, prior_candidate_tokens); p(label)=exp(s)/sum_candidates exp(s)",
+        "candidate_labels": [
+          "occupied",
+          "empty"
+        ],
+        "candidate_token_ids": [
+          [
+            27450,
+            18
+          ],
+          [
+            16451,
+            18
+          ]
+        ],
+        "candidate_log_likelihoods": [
+          -2.345867872238159,
+          -6.321473121643066
+        ],
+        "normalized_probabilities": [
+          0.9815778078026007,
+          0.01842219219739925
+        ],
+        "model_forward_calls": 2,
+        "actual_model_processed_tokens": 308,
+        "output_is_generated_json": false
+      }
+    },
+    "correlation": "exclusive sequential job; TrainingSample.id ordering; exact candidate label/probability match; application does not persist request_id"
+  },
+  {
+    "sample_id": 2,
+    "image_sha256": "ba8f3169ac956dc5dbf9e7294b053dab673fd6f21961679c7ab433ebdca1d65b",
+    "session_id": "procedural-session-00",
+    "prompt": "Is a visible motor vehicle present in the marked synthetic service bay? Label occupied means at least one visible motor vehicle; label empty means none.",
+    "teacher_label": "occupied",
+    "teacher_confidence": 0.9929748188236868,
+    "raw_content_preview": "{\"label\": \"occupied\", \"confidence\": 0.9929748188236868}",
+    "client_wall_latency_ms": 127.47292299172841,
+    "raw_server_record": {
+      "request_id": "local-bcce3f7204974b6992d62527684a32fc",
+      "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+      "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+      "image_count": 1,
+      "input_tokens": 152,
+      "output_tokens": 0,
+      "inference_seconds": 0.1176019010017626,
+      "gpu_peak_allocated_bytes": 1065511424,
+      "gpu_peak_reserved_bytes": 1086324736,
+      "deadline_reached": false,
+      "scoring": {
+        "method": "candidate_sequence_softmax",
+        "uncalibrated": true,
+        "formula": "s(label)=sum_t log P(candidate_token_t | image(s), prompt, prior_candidate_tokens); p(label)=exp(s)/sum_candidates exp(s)",
+        "candidate_labels": [
+          "occupied",
+          "empty"
+        ],
+        "candidate_token_ids": [
+          [
+            27450,
+            18
+          ],
+          [
+            16451,
+            18
+          ]
+        ],
+        "candidate_log_likelihoods": [
+          -1.3783488273620605,
+          -6.329553127288818
+        ],
+        "normalized_probabilities": [
+          0.9929748188236868,
+          0.007025181176313114
+        ],
+        "model_forward_calls": 2,
+        "actual_model_processed_tokens": 308,
+        "output_is_generated_json": false
+      }
+    },
+    "correlation": "exclusive sequential job; TrainingSample.id ordering; exact candidate label/probability match; application does not persist request_id"
+  },
+  {
+    "sample_id": 3,
+    "image_sha256": "ec0dbaccb7268b1e19f933146184cc28f684b619e0c7e9f0bcf86bac449dc6fa",
+    "session_id": "procedural-session-01",
+    "prompt": "Is a visible motor vehicle present in the marked synthetic service bay? Label occupied means at least one visible motor vehicle; label empty means none.",
+    "teacher_label": "occupied",
+    "teacher_confidence": 0.9879371344882586,
+    "raw_content_preview": "{\"label\": \"occupied\", \"confidence\": 0.9879371344882586}",
+    "client_wall_latency_ms": 222.89944400836248,
+    "raw_server_record": {
+      "request_id": "local-a36c259670d9411ab1f64dc549aabc38",
+      "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+      "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+      "image_count": 1,
+      "input_tokens": 152,
+      "output_tokens": 0,
+      "inference_seconds": 0.10321257699979469,
+      "gpu_peak_allocated_bytes": 1065511424,
+      "gpu_peak_reserved_bytes": 1086324736,
+      "deadline_reached": false,
+      "scoring": {
+        "method": "candidate_sequence_softmax",
+        "uncalibrated": true,
+        "formula": "s(label)=sum_t log P(candidate_token_t | image(s), prompt, prior_candidate_tokens); p(label)=exp(s)/sum_candidates exp(s)",
+        "candidate_labels": [
+          "occupied",
+          "empty"
+        ],
+        "candidate_token_ids": [
+          [
+            27450,
+            18
+          ],
+          [
+            16451,
+            18
+          ]
+        ],
+        "candidate_log_likelihoods": [
+          -2.5111196041107178,
+          -6.916606903076172
+        ],
+        "normalized_probabilities": [
+          0.9879371344882586,
+          0.012062865511741325
+        ],
+        "model_forward_calls": 2,
+        "actual_model_processed_tokens": 308,
+        "output_is_generated_json": false
+      }
+    },
+    "correlation": "exclusive sequential job; TrainingSample.id ordering; exact candidate label/probability match; application does not persist request_id"
+  },
+  {
+    "sample_id": 4,
+    "image_sha256": "d8596c956bbe136e5f4dade6e66f6415bf0b824041d82657719ebd2aadaccc72",
+    "session_id": "procedural-session-01",
+    "prompt": "Is a visible motor vehicle present in the marked synthetic service bay? Label occupied means at least one visible motor vehicle; label empty means none.",
+    "teacher_label": "occupied",
+    "teacher_confidence": 0.9832326005898643,
+    "raw_content_preview": "{\"label\": \"occupied\", \"confidence\": 0.9832326005898643}",
+    "client_wall_latency_ms": 111.79816401272546,
+    "raw_server_record": {
+      "request_id": "local-7ebddd7caa7b4eb4b44c2af65c5cf0e3",
+      "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+      "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+      "image_count": 1,
+      "input_tokens": 152,
+      "output_tokens": 0,
+      "inference_seconds": 0.10194583800330292,
+      "gpu_peak_allocated_bytes": 1065511424,
+      "gpu_peak_reserved_bytes": 1086324736,
+      "deadline_reached": false,
+      "scoring": {
+        "method": "candidate_sequence_softmax",
+        "uncalibrated": true,
+        "formula": "s(label)=sum_t log P(candidate_token_t | image(s), prompt, prior_candidate_tokens); p(label)=exp(s)/sum_candidates exp(s)",
+        "candidate_labels": [
+          "occupied",
+          "empty"
+        ],
+        "candidate_token_ids": [
+          [
+            27450,
+            18
+          ],
+          [
+            16451,
+            18
+          ]
+        ],
+        "candidate_log_likelihoods": [
+          -3.0939879417419434,
+          -7.1653971672058105
+        ],
+        "normalized_probabilities": [
+          0.9832326005898643,
+          0.016767399410135702
+        ],
+        "model_forward_calls": 2,
+        "actual_model_processed_tokens": 308,
+        "output_is_generated_json": false
+      }
+    },
+    "correlation": "exclusive sequential job; TrainingSample.id ordering; exact candidate label/probability match; application does not persist request_id"
+  },
+  {
+    "sample_id": 5,
+    "image_sha256": "46517d26b26a21d6ec55d814c6fe73fc94ec4c2d6522914630fd8a4c4ed673b5",
+    "session_id": "procedural-session-02",
+    "prompt": "Is a visible motor vehicle present in the marked synthetic service bay? Label occupied means at least one visible motor vehicle; label empty means none.",
+    "teacher_label": "occupied",
+    "teacher_confidence": 0.986553215634858,
+    "raw_content_preview": "{\"label\": \"occupied\", \"confidence\": 0.986553215634858}",
+    "client_wall_latency_ms": 109.12154099787585,
+    "raw_server_record": {
+      "request_id": "local-a89cc01b3b834644adc83a0645dc37ca",
+      "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+      "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+      "image_count": 1,
+      "input_tokens": 152,
+      "output_tokens": 0,
+      "inference_seconds": 0.10132801700092386,
+      "gpu_peak_allocated_bytes": 1065511424,
+      "gpu_peak_reserved_bytes": 1086324736,
+      "deadline_reached": false,
+      "scoring": {
+        "method": "candidate_sequence_softmax",
+        "uncalibrated": true,
+        "formula": "s(label)=sum_t log P(candidate_token_t | image(s), prompt, prior_candidate_tokens); p(label)=exp(s)/sum_candidates exp(s)",
+        "candidate_labels": [
+          "occupied",
+          "empty"
+        ],
+        "candidate_token_ids": [
+          [
+            27450,
+            18
+          ],
+          [
+            16451,
+            18
+          ]
+        ],
+        "candidate_log_likelihoods": [
+          -1.8571306467056274,
+          -6.1526079177856445
+        ],
+        "normalized_probabilities": [
+          0.986553215634858,
+          0.01344678436514214
+        ],
+        "model_forward_calls": 2,
+        "actual_model_processed_tokens": 308,
+        "output_is_generated_json": false
+      }
+    },
+    "correlation": "exclusive sequential job; TrainingSample.id ordering; exact candidate label/probability match; application does not persist request_id"
+  },
+  {
+    "sample_id": 6,
+    "image_sha256": "11537071fae26e1d9e23479b0cb2b7f034e3dca8157877d78d9eb35f0d098da0",
+    "session_id": "procedural-session-02",
+    "prompt": "Is a visible motor vehicle present in the marked synthetic service bay? Label occupied means at least one visible motor vehicle; label empty means none.",
+    "teacher_label": "occupied",
+    "teacher_confidence": 0.9841268937749564,
+    "raw_content_preview": "{\"label\": \"occupied\", \"confidence\": 0.9841268937749564}",
+    "client_wall_latency_ms": 109.30174500390422,
+    "raw_server_record": {
+      "request_id": "local-b49c38b4275f4d408003b60d292a7b6d",
+      "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+      "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+      "image_count": 1,
+      "input_tokens": 152,
+      "output_tokens": 0,
+      "inference_seconds": 0.10158138899714686,
+      "gpu_peak_allocated_bytes": 1065511424,
+      "gpu_peak_reserved_bytes": 1086324736,
+      "deadline_reached": false,
+      "scoring": {
+        "method": "candidate_sequence_softmax",
+        "uncalibrated": true,
+        "formula": "s(label)=sum_t log P(candidate_token_t | image(s), prompt, prior_candidate_tokens); p(label)=exp(s)/sum_candidates exp(s)",
+        "candidate_labels": [
+          "occupied",
+          "empty"
+        ],
+        "candidate_token_ids": [
+          [
+            27450,
+            18
+          ],
+          [
+            16451,
+            18
+          ]
+        ],
+        "candidate_log_likelihoods": [
+          -2.7746219635009766,
+          -6.901750564575195
+        ],
+        "normalized_probabilities": [
+          0.9841268937749564,
+          0.01587310622504366
+        ],
+        "model_forward_calls": 2,
+        "actual_model_processed_tokens": 308,
+        "output_is_generated_json": false
+      }
+    },
+    "correlation": "exclusive sequential job; TrainingSample.id ordering; exact candidate label/probability match; application does not persist request_id"
+  },
+  {
+    "sample_id": 7,
+    "image_sha256": "f0a52c53876397b1ccd92d2e65314d69faf1b262eadbdb48cb4b2d94aeb75494",
+    "session_id": "procedural-session-03",
+    "prompt": "Is a visible motor vehicle present in the marked synthetic service bay? Label occupied means at least one visible motor vehicle; label empty means none.",
+    "teacher_label": "occupied",
+    "teacher_confidence": 0.9923982648322512,
+    "raw_content_preview": "{\"label\": \"occupied\", \"confidence\": 0.9923982648322512}",
+    "client_wall_latency_ms": 108.6146580055356,
+    "raw_server_record": {
+      "request_id": "local-4e788bb247844366bdac8087b3488b24",
+      "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+      "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+      "image_count": 1,
+      "input_tokens": 152,
+      "output_tokens": 0,
+      "inference_seconds": 0.10078314399288502,
+      "gpu_peak_allocated_bytes": 1065511424,
+      "gpu_peak_reserved_bytes": 1086324736,
+      "deadline_reached": false,
+      "scoring": {
+        "method": "candidate_sequence_softmax",
+        "uncalibrated": true,
+        "formula": "s(label)=sum_t log P(candidate_token_t | image(s), prompt, prior_candidate_tokens); p(label)=exp(s)/sum_candidates exp(s)",
+        "candidate_labels": [
+          "occupied",
+          "empty"
+        ],
+        "candidate_token_ids": [
+          [
+            27450,
+            18
+          ],
+          [
+            16451,
+            18
+          ]
+        ],
+        "candidate_log_likelihoods": [
+          -1.8443899154663086,
+          -6.716137886047363
+        ],
+        "normalized_probabilities": [
+          0.9923982648322512,
+          0.007601735167748669
+        ],
+        "model_forward_calls": 2,
+        "actual_model_processed_tokens": 308,
+        "output_is_generated_json": false
+      }
+    },
+    "correlation": "exclusive sequential job; TrainingSample.id ordering; exact candidate label/probability match; application does not persist request_id"
+  },
+  {
+    "sample_id": 8,
+    "image_sha256": "b778080203c1b40ecbf1f5224d3fa041dfcf24ffac3a21ea83776bd30867d560",
+    "session_id": "procedural-session-03",
+    "prompt": "Is a visible motor vehicle present in the marked synthetic service bay? Label occupied means at least one visible motor vehicle; label empty means none.",
+    "teacher_label": "occupied",
+    "teacher_confidence": 0.8716913850053355,
+    "raw_content_preview": "{\"label\": \"occupied\", \"confidence\": 0.8716913850053355}",
+    "client_wall_latency_ms": 107.90364698914345,
+    "raw_server_record": {
+      "request_id": "local-0083189a09264266a81c4648ab2464d7",
+      "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+      "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+      "image_count": 1,
+      "input_tokens": 152,
+      "output_tokens": 0,
+      "inference_seconds": 0.1001576549897436,
+      "gpu_peak_allocated_bytes": 1065511424,
+      "gpu_peak_reserved_bytes": 1086324736,
+      "deadline_reached": false,
+      "scoring": {
+        "method": "candidate_sequence_softmax",
+        "uncalibrated": true,
+        "formula": "s(label)=sum_t log P(candidate_token_t | image(s), prompt, prior_candidate_tokens); p(label)=exp(s)/sum_candidates exp(s)",
+        "candidate_labels": [
+          "occupied",
+          "empty"
+        ],
+        "candidate_token_ids": [
+          [
+            27450,
+            18
+          ],
+          [
+            16451,
+            18
+          ]
+        ],
+        "candidate_log_likelihoods": [
+          -6.106765270233154,
+          -8.022762298583984
+        ],
+        "normalized_probabilities": [
+          0.8716913850053355,
+          0.12830861499466453
+        ],
+        "model_forward_calls": 2,
+        "actual_model_processed_tokens": 308,
+        "output_is_generated_json": false
+      }
+    },
+    "correlation": "exclusive sequential job; TrainingSample.id ordering; exact candidate label/probability match; application does not persist request_id"
+  },
+  {
+    "sample_id": 9,
+    "image_sha256": "a5160f5b1bd2eb05602458981fcedfda4d3834f502ecc1b9ed345d6b1aac6989",
+    "session_id": "procedural-session-04",
+    "prompt": "Is a visible motor vehicle present in the marked synthetic service bay? Label occupied means at least one visible motor vehicle; label empty means none.",
+    "teacher_label": "occupied",
+    "teacher_confidence": 0.9940957996720262,
+    "raw_content_preview": "{\"label\": \"occupied\", \"confidence\": 0.9940957996720262}",
+    "client_wall_latency_ms": 110.96343101235107,
+    "raw_server_record": {
+      "request_id": "local-af931e0c30d345ef880d15043ae5c39a",
+      "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+      "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+      "image_count": 1,
+      "input_tokens": 152,
+      "output_tokens": 0,
+      "inference_seconds": 0.10253901600663085,
+      "gpu_peak_allocated_bytes": 1065511424,
+      "gpu_peak_reserved_bytes": 1086324736,
+      "deadline_reached": false,
+      "scoring": {
+        "method": "candidate_sequence_softmax",
+        "uncalibrated": true,
+        "formula": "s(label)=sum_t log P(candidate_token_t | image(s), prompt, prior_candidate_tokens); p(label)=exp(s)/sum_candidates exp(s)",
+        "candidate_labels": [
+          "occupied",
+          "empty"
+        ],
+        "candidate_token_ids": [
+          [
+            27450,
+            18
+          ],
+          [
+            16451,
+            18
+          ]
+        ],
+        "candidate_log_likelihoods": [
+          -1.7002264261245728,
+          -6.8263959884643555
+        ],
+        "normalized_probabilities": [
+          0.9940957996720262,
+          0.0059042003279737845
+        ],
+        "model_forward_calls": 2,
+        "actual_model_processed_tokens": 308,
+        "output_is_generated_json": false
+      }
+    },
+    "correlation": "exclusive sequential job; TrainingSample.id ordering; exact candidate label/probability match; application does not persist request_id"
+  },
+  {
+    "sample_id": 10,
+    "image_sha256": "e8e5e4dbc9eeea5f417b4538950abf06c80880054bac0f7c8d91fa90bf6384b7",
+    "session_id": "procedural-session-04",
+    "prompt": "Is a visible motor vehicle present in the marked synthetic service bay? Label occupied means at least one visible motor vehicle; label empty means none.",
+    "teacher_label": "occupied",
+    "teacher_confidence": 0.9340584153571877,
+    "raw_content_preview": "{\"label\": \"occupied\", \"confidence\": 0.9340584153571877}",
+    "client_wall_latency_ms": 108.3688990038354,
+    "raw_server_record": {
+      "request_id": "local-6282d2be73a2432ab10094dd8c41ba85",
+      "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+      "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+      "image_count": 1,
+      "input_tokens": 152,
+      "output_tokens": 0,
+      "inference_seconds": 0.10086314899672288,
+      "gpu_peak_allocated_bytes": 1065511424,
+      "gpu_peak_reserved_bytes": 1086324736,
+      "deadline_reached": false,
+      "scoring": {
+        "method": "candidate_sequence_softmax",
+        "uncalibrated": true,
+        "formula": "s(label)=sum_t log P(candidate_token_t | image(s), prompt, prior_candidate_tokens); p(label)=exp(s)/sum_candidates exp(s)",
+        "candidate_labels": [
+          "occupied",
+          "empty"
+        ],
+        "candidate_token_ids": [
+          [
+            27450,
+            18
+          ],
+          [
+            16451,
+            18
+          ]
+        ],
+        "candidate_log_likelihoods": [
+          -4.090108871459961,
+          -6.740878582000732
+        ],
+        "normalized_probabilities": [
+          0.9340584153571877,
+          0.06594158464281219
+        ],
+        "model_forward_calls": 2,
+        "actual_model_processed_tokens": 308,
+        "output_is_generated_json": false
+      }
+    },
+    "correlation": "exclusive sequential job; TrainingSample.id ordering; exact candidate label/probability match; application does not persist request_id"
+  },
+  {
+    "sample_id": 11,
+    "image_sha256": "e8573f952c40882c4148408d9ba774ba849406fd4661ffcbf4d3707e07e970a8",
+    "session_id": "procedural-session-05",
+    "prompt": "Is a visible motor vehicle present in the marked synthetic service bay? Label occupied means at least one visible motor vehicle; label empty means none.",
+    "teacher_label": "occupied",
+    "teacher_confidence": 0.992386309094485,
+    "raw_content_preview": "{\"label\": \"occupied\", \"confidence\": 0.992386309094485}",
+    "client_wall_latency_ms": 109.00078401027713,
+    "raw_server_record": {
+      "request_id": "local-28a0589a293944f78199b655e4bd31d8",
+      "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+      "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+      "image_count": 1,
+      "input_tokens": 152,
+      "output_tokens": 0,
+      "inference_seconds": 0.10122078799759038,
+      "gpu_peak_allocated_bytes": 1065511424,
+      "gpu_peak_reserved_bytes": 1086324736,
+      "deadline_reached": false,
+      "scoring": {
+        "method": "candidate_sequence_softmax",
+        "uncalibrated": true,
+        "formula": "s(label)=sum_t log P(candidate_token_t | image(s), prompt, prior_candidate_tokens); p(label)=exp(s)/sum_candidates exp(s)",
+        "candidate_labels": [
+          "occupied",
+          "empty"
+        ],
+        "candidate_token_ids": [
+          [
+            27450,
+            18
+          ],
+          [
+            16451,
+            18
+          ]
+        ],
+        "candidate_log_likelihoods": [
+          -1.739006519317627,
+          -6.609170913696289
+        ],
+        "normalized_probabilities": [
+          0.992386309094485,
+          0.0076136909055150226
+        ],
+        "model_forward_calls": 2,
+        "actual_model_processed_tokens": 308,
+        "output_is_generated_json": false
+      }
+    },
+    "correlation": "exclusive sequential job; TrainingSample.id ordering; exact candidate label/probability match; application does not persist request_id"
+  },
+  {
+    "sample_id": 12,
+    "image_sha256": "4ec62beab20753bebb74117571bace05e1052ec3989365558cee15e725e6cba9",
+    "session_id": "procedural-session-05",
+    "prompt": "Is a visible motor vehicle present in the marked synthetic service bay? Label occupied means at least one visible motor vehicle; label empty means none.",
+    "teacher_label": "occupied",
+    "teacher_confidence": 0.9834835153446841,
+    "raw_content_preview": "{\"label\": \"occupied\", \"confidence\": 0.9834835153446841}",
+    "client_wall_latency_ms": 107.54027900111396,
+    "raw_server_record": {
+      "request_id": "local-33218820e83b4fddb5e3dc8bd1bb84cc",
+      "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+      "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+      "image_count": 1,
+      "input_tokens": 152,
+      "output_tokens": 0,
+      "inference_seconds": 0.10019578899664339,
+      "gpu_peak_allocated_bytes": 1065511424,
+      "gpu_peak_reserved_bytes": 1086324736,
+      "deadline_reached": false,
+      "scoring": {
+        "method": "candidate_sequence_softmax",
+        "uncalibrated": true,
+        "formula": "s(label)=sum_t log P(candidate_token_t | image(s), prompt, prior_candidate_tokens); p(label)=exp(s)/sum_candidates exp(s)",
+        "candidate_labels": [
+          "occupied",
+          "empty"
+        ],
+        "candidate_token_ids": [
+          [
+            27450,
+            18
+          ],
+          [
+            16451,
+            18
+          ]
+        ],
+        "candidate_log_likelihoods": [
+          -3.9218201637268066,
+          -8.008562088012695
+        ],
+        "normalized_probabilities": [
+          0.9834835153446841,
+          0.01651648465531591
+        ],
+        "model_forward_calls": 2,
+        "actual_model_processed_tokens": 308,
+        "output_is_generated_json": false
+      }
+    },
+    "correlation": "exclusive sequential job; TrainingSample.id ordering; exact candidate label/probability match; application does not persist request_id"
+  },
+  {
+    "sample_id": 13,
+    "image_sha256": "4bb6a5baafcd702d4e8fee6e0f5052f3557dc1e1d73c41600c64e7579e7c6e28",
+    "session_id": "procedural-session-06",
+    "prompt": "Is a visible motor vehicle present in the marked synthetic service bay? Label occupied means at least one visible motor vehicle; label empty means none.",
+    "teacher_label": "occupied",
+    "teacher_confidence": 0.9917066674608072,
+    "raw_content_preview": "{\"label\": \"occupied\", \"confidence\": 0.9917066674608072}",
+    "client_wall_latency_ms": 108.33804801222868,
+    "raw_server_record": {
+      "request_id": "local-815333e2bb4d496681d41d241f3fd7a5",
+      "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+      "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+      "image_count": 1,
+      "input_tokens": 152,
+      "output_tokens": 0,
+      "inference_seconds": 0.10091082699364051,
+      "gpu_peak_allocated_bytes": 1065511424,
+      "gpu_peak_reserved_bytes": 1086324736,
+      "deadline_reached": false,
+      "scoring": {
+        "method": "candidate_sequence_softmax",
+        "uncalibrated": true,
+        "formula": "s(label)=sum_t log P(candidate_token_t | image(s), prompt, prior_candidate_tokens); p(label)=exp(s)/sum_candidates exp(s)",
+        "candidate_labels": [
+          "occupied",
+          "empty"
+        ],
+        "candidate_token_ids": [
+          [
+            27450,
+            18
+          ],
+          [
+            16451,
+            18
+          ]
+        ],
+        "candidate_log_likelihoods": [
+          -1.8398152589797974,
+          -6.623790740966797
+        ],
+        "normalized_probabilities": [
+          0.9917066674608072,
+          0.00829333253919286
+        ],
+        "model_forward_calls": 2,
+        "actual_model_processed_tokens": 308,
+        "output_is_generated_json": false
+      }
+    },
+    "correlation": "exclusive sequential job; TrainingSample.id ordering; exact candidate label/probability match; application does not persist request_id"
+  },
+  {
+    "sample_id": 14,
+    "image_sha256": "f5b86637d254afc8d165383232a6b6ee5f75b27aadf1cb31a21662ca6d24d622",
+    "session_id": "procedural-session-06",
+    "prompt": "Is a visible motor vehicle present in the marked synthetic service bay? Label occupied means at least one visible motor vehicle; label empty means none.",
+    "teacher_label": "occupied",
+    "teacher_confidence": 0.9835279066203273,
+    "raw_content_preview": "{\"label\": \"occupied\", \"confidence\": 0.9835279066203273}",
+    "client_wall_latency_ms": 107.61034600727726,
+    "raw_server_record": {
+      "request_id": "local-835f97b61e0a4cbcaf1fbd1c15db807c",
+      "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+      "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+      "image_count": 1,
+      "input_tokens": 152,
+      "output_tokens": 0,
+      "inference_seconds": 0.10030996899877209,
+      "gpu_peak_allocated_bytes": 1065511424,
+      "gpu_peak_reserved_bytes": 1086324736,
+      "deadline_reached": false,
+      "scoring": {
+        "method": "candidate_sequence_softmax",
+        "uncalibrated": true,
+        "formula": "s(label)=sum_t log P(candidate_token_t | image(s), prompt, prior_candidate_tokens); p(label)=exp(s)/sum_candidates exp(s)",
+        "candidate_labels": [
+          "occupied",
+          "empty"
+        ],
+        "candidate_token_ids": [
+          [
+            27450,
+            18
+          ],
+          [
+            16451,
+            18
+          ]
+        ],
+        "candidate_log_likelihoods": [
+          -1.9970418214797974,
+          -6.086520195007324
+        ],
+        "normalized_probabilities": [
+          0.9835279066203273,
+          0.016472093379672686
+        ],
+        "model_forward_calls": 2,
+        "actual_model_processed_tokens": 308,
+        "output_is_generated_json": false
+      }
+    },
+    "correlation": "exclusive sequential job; TrainingSample.id ordering; exact candidate label/probability match; application does not persist request_id"
+  },
+  {
+    "sample_id": 15,
+    "image_sha256": "e18fea284b68970a59650b24d5cce3ac6e1d76dfb80eb770a196bd2d597824b2",
+    "session_id": "procedural-session-07",
+    "prompt": "Is a visible motor vehicle present in the marked synthetic service bay? Label occupied means at least one visible motor vehicle; label empty means none.",
+    "teacher_label": "occupied",
+    "teacher_confidence": 0.9931740824766658,
+    "raw_content_preview": "{\"label\": \"occupied\", \"confidence\": 0.9931740824766658}",
+    "client_wall_latency_ms": 107.72574800648727,
+    "raw_server_record": {
+      "request_id": "local-2a13d115afa44f029c3a02d65d6b17dc",
+      "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+      "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+      "image_count": 1,
+      "input_tokens": 152,
+      "output_tokens": 0,
+      "inference_seconds": 0.10037154299789108,
+      "gpu_peak_allocated_bytes": 1065511424,
+      "gpu_peak_reserved_bytes": 1086324736,
+      "deadline_reached": false,
+      "scoring": {
+        "method": "candidate_sequence_softmax",
+        "uncalibrated": true,
+        "formula": "s(label)=sum_t log P(candidate_token_t | image(s), prompt, prior_candidate_tokens); p(label)=exp(s)/sum_candidates exp(s)",
+        "candidate_labels": [
+          "occupied",
+          "empty"
+        ],
+        "candidate_token_ids": [
+          [
+            27450,
+            18
+          ],
+          [
+            16451,
+            18
+          ]
+        ],
+        "candidate_log_likelihoods": [
+          -1.809500813484192,
+          -6.789680004119873
+        ],
+        "normalized_probabilities": [
+          0.9931740824766658,
+          0.006825917523334221
+        ],
+        "model_forward_calls": 2,
+        "actual_model_processed_tokens": 308,
+        "output_is_generated_json": false
+      }
+    },
+    "correlation": "exclusive sequential job; TrainingSample.id ordering; exact candidate label/probability match; application does not persist request_id"
+  },
+  {
+    "sample_id": 16,
+    "image_sha256": "8209024222b92aba6ab0498b3e873d31b4adcdaae3beb6374649cea93c11e38b",
+    "session_id": "procedural-session-07",
+    "prompt": "Is a visible motor vehicle present in the marked synthetic service bay? Label occupied means at least one visible motor vehicle; label empty means none.",
+    "teacher_label": "occupied",
+    "teacher_confidence": 0.9921322351441453,
+    "raw_content_preview": "{\"label\": \"occupied\", \"confidence\": 0.9921322351441453}",
+    "client_wall_latency_ms": 108.84395400353242,
+    "raw_server_record": {
+      "request_id": "local-7829605be1b54d0287f1854dace380c0",
+      "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+      "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+      "image_count": 1,
+      "input_tokens": 152,
+      "output_tokens": 0,
+      "inference_seconds": 0.10116819600807503,
+      "gpu_peak_allocated_bytes": 1065511424,
+      "gpu_peak_reserved_bytes": 1086324736,
+      "deadline_reached": false,
+      "scoring": {
+        "method": "candidate_sequence_softmax",
+        "uncalibrated": true,
+        "formula": "s(label)=sum_t log P(candidate_token_t | image(s), prompt, prior_candidate_tokens); p(label)=exp(s)/sum_candidates exp(s)",
+        "candidate_labels": [
+          "occupied",
+          "empty"
+        ],
+        "candidate_token_ids": [
+          [
+            27450,
+            18
+          ],
+          [
+            16451,
+            18
+          ]
+        ],
+        "candidate_log_likelihoods": [
+          -2.446591854095459,
+          -7.283674240112305
+        ],
+        "normalized_probabilities": [
+          0.9921322351441453,
+          0.0078677648558548
+        ],
+        "model_forward_calls": 2,
+        "actual_model_processed_tokens": 308,
+        "output_is_generated_json": false
+      }
+    },
+    "correlation": "exclusive sequential job; TrainingSample.id ordering; exact candidate label/probability match; application does not persist request_id"
+  },
+  {
+    "sample_id": 17,
+    "image_sha256": "0e5c871a6dfe0782bab88c6445e1f2d41e76f42b9d612ad54721784946c300b0",
+    "session_id": "procedural-session-08",
+    "prompt": "Is a visible motor vehicle present in the marked synthetic service bay? Label occupied means at least one visible motor vehicle; label empty means none.",
+    "teacher_label": "occupied",
+    "teacher_confidence": 0.9921183515744377,
+    "raw_content_preview": "{\"label\": \"occupied\", \"confidence\": 0.9921183515744377}",
+    "client_wall_latency_ms": 111.09046800993383,
+    "raw_server_record": {
+      "request_id": "local-91ef17362f5e4cf998400da533148d14",
+      "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+      "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+      "image_count": 1,
+      "input_tokens": 152,
+      "output_tokens": 0,
+      "inference_seconds": 0.10239953201380558,
+      "gpu_peak_allocated_bytes": 1065511424,
+      "gpu_peak_reserved_bytes": 1086324736,
+      "deadline_reached": false,
+      "scoring": {
+        "method": "candidate_sequence_softmax",
+        "uncalibrated": true,
+        "formula": "s(label)=sum_t log P(candidate_token_t | image(s), prompt, prior_candidate_tokens); p(label)=exp(s)/sum_candidates exp(s)",
+        "candidate_labels": [
+          "occupied",
+          "empty"
+        ],
+        "candidate_token_ids": [
+          [
+            27450,
+            18
+          ],
+          [
+            16451,
+            18
+          ]
+        ],
+        "candidate_log_likelihoods": [
+          -1.738174319267273,
+          -6.573479652404785
+        ],
+        "normalized_probabilities": [
+          0.9921183515744377,
+          0.007881648425562202
+        ],
+        "model_forward_calls": 2,
+        "actual_model_processed_tokens": 308,
+        "output_is_generated_json": false
+      }
+    },
+    "correlation": "exclusive sequential job; TrainingSample.id ordering; exact candidate label/probability match; application does not persist request_id"
+  },
+  {
+    "sample_id": 18,
+    "image_sha256": "a28228276cce09d07a7ff90d61fe20f48f1344d266ad3c0360c832f119304bf3",
+    "session_id": "procedural-session-08",
+    "prompt": "Is a visible motor vehicle present in the marked synthetic service bay? Label occupied means at least one visible motor vehicle; label empty means none.",
+    "teacher_label": "occupied",
+    "teacher_confidence": 0.9938789420812388,
+    "raw_content_preview": "{\"label\": \"occupied\", \"confidence\": 0.9938789420812388}",
+    "client_wall_latency_ms": 107.12865699315444,
+    "raw_server_record": {
+      "request_id": "local-df79c8b6ecb54487a648acc8bcc32b34",
+      "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+      "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+      "image_count": 1,
+      "input_tokens": 152,
+      "output_tokens": 0,
+      "inference_seconds": 0.10001731201191433,
+      "gpu_peak_allocated_bytes": 1065511424,
+      "gpu_peak_reserved_bytes": 1086324736,
+      "deadline_reached": false,
+      "scoring": {
+        "method": "candidate_sequence_softmax",
+        "uncalibrated": true,
+        "formula": "s(label)=sum_t log P(candidate_token_t | image(s), prompt, prior_candidate_tokens); p(label)=exp(s)/sum_candidates exp(s)",
+        "candidate_labels": [
+          "occupied",
+          "empty"
+        ],
+        "candidate_token_ids": [
+          [
+            27450,
+            18
+          ],
+          [
+            16451,
+            18
+          ]
+        ],
+        "candidate_log_likelihoods": [
+          -2.11442232131958,
+          -7.204302787780762
+        ],
+        "normalized_probabilities": [
+          0.9938789420812388,
+          0.006121057918761082
+        ],
+        "model_forward_calls": 2,
+        "actual_model_processed_tokens": 308,
+        "output_is_generated_json": false
+      }
+    },
+    "correlation": "exclusive sequential job; TrainingSample.id ordering; exact candidate label/probability match; application does not persist request_id"
+  },
+  {
+    "sample_id": 19,
+    "image_sha256": "8b9a55be723c493965d72192353dccaf5dde0ca2afedb86de2fb5f275ab70ef8",
+    "session_id": "procedural-session-09",
+    "prompt": "Is a visible motor vehicle present in the marked synthetic service bay? Label occupied means at least one visible motor vehicle; label empty means none.",
+    "teacher_label": "occupied",
+    "teacher_confidence": 0.9935285897731443,
+    "raw_content_preview": "{\"label\": \"occupied\", \"confidence\": 0.9935285897731443}",
+    "client_wall_latency_ms": 108.14557000412606,
+    "raw_server_record": {
+      "request_id": "local-c0ba15d589b84754a9cf15725bebf8ab",
+      "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+      "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+      "image_count": 1,
+      "input_tokens": 152,
+      "output_tokens": 0,
+      "inference_seconds": 0.1006742859899532,
+      "gpu_peak_allocated_bytes": 1065511424,
+      "gpu_peak_reserved_bytes": 1086324736,
+      "deadline_reached": false,
+      "scoring": {
+        "method": "candidate_sequence_softmax",
+        "uncalibrated": true,
+        "formula": "s(label)=sum_t log P(candidate_token_t | image(s), prompt, prior_candidate_tokens); p(label)=exp(s)/sum_candidates exp(s)",
+        "candidate_labels": [
+          "occupied",
+          "empty"
+        ],
+        "candidate_token_ids": [
+          [
+            27450,
+            18
+          ],
+          [
+            16451,
+            18
+          ]
+        ],
+        "candidate_log_likelihoods": [
+          -2.0085597038269043,
+          -7.042428493499756
+        ],
+        "normalized_probabilities": [
+          0.9935285897731443,
+          0.0064714102268558175
+        ],
+        "model_forward_calls": 2,
+        "actual_model_processed_tokens": 308,
+        "output_is_generated_json": false
+      }
+    },
+    "correlation": "exclusive sequential job; TrainingSample.id ordering; exact candidate label/probability match; application does not persist request_id"
+  },
+  {
+    "sample_id": 20,
+    "image_sha256": "3adc892f737a7bc955dfec29526bf662e6a7714a4a06a20570419a17ca808ade",
+    "session_id": "procedural-session-09",
+    "prompt": "Is a visible motor vehicle present in the marked synthetic service bay? Label occupied means at least one visible motor vehicle; label empty means none.",
+    "teacher_label": "occupied",
+    "teacher_confidence": 0.9598115734593375,
+    "raw_content_preview": "{\"label\": \"occupied\", \"confidence\": 0.9598115734593375}",
+    "client_wall_latency_ms": 108.33444500167388,
+    "raw_server_record": {
+      "request_id": "local-7dceacf5dd3e4240a7fd07ed2e6ed89b",
+      "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+      "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+      "image_count": 1,
+      "input_tokens": 152,
+      "output_tokens": 0,
+      "inference_seconds": 0.10119336198840756,
+      "gpu_peak_allocated_bytes": 1065511424,
+      "gpu_peak_reserved_bytes": 1086324736,
+      "deadline_reached": false,
+      "scoring": {
+        "method": "candidate_sequence_softmax",
+        "uncalibrated": true,
+        "formula": "s(label)=sum_t log P(candidate_token_t | image(s), prompt, prior_candidate_tokens); p(label)=exp(s)/sum_candidates exp(s)",
+        "candidate_labels": [
+          "occupied",
+          "empty"
+        ],
+        "candidate_token_ids": [
+          [
+            27450,
+            18
+          ],
+          [
+            16451,
+            18
+          ]
+        ],
+        "candidate_log_likelihoods": [
+          -3.6688668727874756,
+          -6.842024803161621
+        ],
+        "normalized_probabilities": [
+          0.9598115734593375,
+          0.040188426540662556
+        ],
+        "model_forward_calls": 2,
+        "actual_model_processed_tokens": 308,
+        "output_is_generated_json": false
+      }
+    },
+    "correlation": "exclusive sequential job; TrainingSample.id ordering; exact candidate label/probability match; application does not persist request_id"
+  },
+  {
+    "sample_id": 21,
+    "image_sha256": "d5f2f2c04f03a098b25bc31f9a9d19cd46989e2f79da298f4d7694906c0c66c4",
+    "session_id": "procedural-session-10",
+    "prompt": "Is a visible motor vehicle present in the marked synthetic service bay? Label occupied means at least one visible motor vehicle; label empty means none.",
+    "teacher_label": "occupied",
+    "teacher_confidence": 0.9873677344825504,
+    "raw_content_preview": "{\"label\": \"occupied\", \"confidence\": 0.9873677344825504}",
+    "client_wall_latency_ms": 109.01982701034285,
+    "raw_server_record": {
+      "request_id": "local-837a3fcbb40240f38331315789eabc83",
+      "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+      "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+      "image_count": 1,
+      "input_tokens": 152,
+      "output_tokens": 0,
+      "inference_seconds": 0.10155295699951239,
+      "gpu_peak_allocated_bytes": 1065511424,
+      "gpu_peak_reserved_bytes": 1086324736,
+      "deadline_reached": false,
+      "scoring": {
+        "method": "candidate_sequence_softmax",
+        "uncalibrated": true,
+        "formula": "s(label)=sum_t log P(candidate_token_t | image(s), prompt, prior_candidate_tokens); p(label)=exp(s)/sum_candidates exp(s)",
+        "candidate_labels": [
+          "occupied",
+          "empty"
+        ],
+        "candidate_token_ids": [
+          [
+            27450,
+            18
+          ],
+          [
+            16451,
+            18
+          ]
+        ],
+        "candidate_log_likelihoods": [
+          -2.385270357131958,
+          -6.744058609008789
+        ],
+        "normalized_probabilities": [
+          0.9873677344825504,
+          0.012632265517449524
+        ],
+        "model_forward_calls": 2,
+        "actual_model_processed_tokens": 308,
+        "output_is_generated_json": false
+      }
+    },
+    "correlation": "exclusive sequential job; TrainingSample.id ordering; exact candidate label/probability match; application does not persist request_id"
+  },
+  {
+    "sample_id": 22,
+    "image_sha256": "45a8657b138ddb71b6b5de16fd43a4098ac92f3ecee677e2184cf16e14d70397",
+    "session_id": "procedural-session-10",
+    "prompt": "Is a visible motor vehicle present in the marked synthetic service bay? Label occupied means at least one visible motor vehicle; label empty means none.",
+    "teacher_label": "occupied",
+    "teacher_confidence": 0.9724986420841778,
+    "raw_content_preview": "{\"label\": \"occupied\", \"confidence\": 0.9724986420841778}",
+    "client_wall_latency_ms": 108.88579199672677,
+    "raw_server_record": {
+      "request_id": "local-e2a79d26fdd84541b784754dd81c2baa",
+      "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+      "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+      "image_count": 1,
+      "input_tokens": 152,
+      "output_tokens": 0,
+      "inference_seconds": 0.1016094759979751,
+      "gpu_peak_allocated_bytes": 1065511424,
+      "gpu_peak_reserved_bytes": 1086324736,
+      "deadline_reached": false,
+      "scoring": {
+        "method": "candidate_sequence_softmax",
+        "uncalibrated": true,
+        "formula": "s(label)=sum_t log P(candidate_token_t | image(s), prompt, prior_candidate_tokens); p(label)=exp(s)/sum_candidates exp(s)",
+        "candidate_labels": [
+          "occupied",
+          "empty"
+        ],
+        "candidate_token_ids": [
+          [
+            27450,
+            18
+          ],
+          [
+            16451,
+            18
+          ]
+        ],
+        "candidate_log_likelihoods": [
+          -5.624927997589111,
+          -9.190561294555664
+        ],
+        "normalized_probabilities": [
+          0.9724986420841778,
+          0.02750135791582214
+        ],
+        "model_forward_calls": 2,
+        "actual_model_processed_tokens": 308,
+        "output_is_generated_json": false
+      }
+    },
+    "correlation": "exclusive sequential job; TrainingSample.id ordering; exact candidate label/probability match; application does not persist request_id"
+  },
+  {
+    "sample_id": 23,
+    "image_sha256": "b6da660387d56a31feb95ccce77b57ab310a542df5b216e24c03e99ff4d31d84",
+    "session_id": "procedural-session-11",
+    "prompt": "Is a visible motor vehicle present in the marked synthetic service bay? Label occupied means at least one visible motor vehicle; label empty means none.",
+    "teacher_label": "occupied",
+    "teacher_confidence": 0.9938787738277824,
+    "raw_content_preview": "{\"label\": \"occupied\", \"confidence\": 0.9938787738277824}",
+    "client_wall_latency_ms": 109.93553099979181,
+    "raw_server_record": {
+      "request_id": "local-1fa2c229bc9342cab9725e9c1cf53970",
+      "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+      "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+      "image_count": 1,
+      "input_tokens": 152,
+      "output_tokens": 0,
+      "inference_seconds": 0.10267985099926591,
+      "gpu_peak_allocated_bytes": 1065511424,
+      "gpu_peak_reserved_bytes": 1086324736,
+      "deadline_reached": false,
+      "scoring": {
+        "method": "candidate_sequence_softmax",
+        "uncalibrated": true,
+        "formula": "s(label)=sum_t log P(candidate_token_t | image(s), prompt, prior_candidate_tokens); p(label)=exp(s)/sum_candidates exp(s)",
+        "candidate_labels": [
+          "occupied",
+          "empty"
+        ],
+        "candidate_token_ids": [
+          [
+            27450,
+            18
+          ],
+          [
+            16451,
+            18
+          ]
+        ],
+        "candidate_log_likelihoods": [
+          -1.8625054359436035,
+          -6.952358245849609
+        ],
+        "normalized_probabilities": [
+          0.9938787738277824,
+          0.006121226172217473
+        ],
+        "model_forward_calls": 2,
+        "actual_model_processed_tokens": 308,
+        "output_is_generated_json": false
+      }
+    },
+    "correlation": "exclusive sequential job; TrainingSample.id ordering; exact candidate label/probability match; application does not persist request_id"
+  },
+  {
+    "sample_id": 24,
+    "image_sha256": "da565c26891fbf3559fc2dc110750e24bed78cee567f9d26e7dbf7fe74de0a2c",
+    "session_id": "procedural-session-11",
+    "prompt": "Is a visible motor vehicle present in the marked synthetic service bay? Label occupied means at least one visible motor vehicle; label empty means none.",
+    "teacher_label": "occupied",
+    "teacher_confidence": 0.9623154214406082,
+    "raw_content_preview": "{\"label\": \"occupied\", \"confidence\": 0.9623154214406082}",
+    "client_wall_latency_ms": 111.49777901300695,
+    "raw_server_record": {
+      "request_id": "local-5df9c88c2e314eec9d1f53526b0f4efe",
+      "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+      "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+      "image_count": 1,
+      "input_tokens": 152,
+      "output_tokens": 0,
+      "inference_seconds": 0.1040169459884055,
+      "gpu_peak_allocated_bytes": 1065511424,
+      "gpu_peak_reserved_bytes": 1086324736,
+      "deadline_reached": false,
+      "scoring": {
+        "method": "candidate_sequence_softmax",
+        "uncalibrated": true,
+        "formula": "s(label)=sum_t log P(candidate_token_t | image(s), prompt, prior_candidate_tokens); p(label)=exp(s)/sum_candidates exp(s)",
+        "candidate_labels": [
+          "occupied",
+          "empty"
+        ],
+        "candidate_token_ids": [
+          [
+            27450,
+            18
+          ],
+          [
+            16451,
+            18
+          ]
+        ],
+        "candidate_log_likelihoods": [
+          -3.816739082336426,
+          -7.056830406188965
+        ],
+        "normalized_probabilities": [
+          0.9623154214406082,
+          0.03768457855939182
+        ],
+        "model_forward_calls": 2,
+        "actual_model_processed_tokens": 308,
+        "output_is_generated_json": false
+      }
+    },
+    "correlation": "exclusive sequential job; TrainingSample.id ordering; exact candidate label/probability match; application does not persist request_id"
+  }
+]

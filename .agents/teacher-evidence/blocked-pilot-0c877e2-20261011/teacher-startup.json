@@ -1,0 +1,7 @@
+{
+  "source_sha256": "6aaadde91576917c8a2d5bec4fc6a981c31d3277a94625b21e5c5e2dbc4e3692",
+  "source_bytes": 1120,
+  "raw_utf8_text": "/home/samanwirst/Desktop/hackathon_wiut_final_2026/.agents/runtime/ten-hour/worktrees/B/scripts/experiments/local_teacher.py:100: DeprecationWarning: \n        on_event is deprecated, use lifespan event handlers instead.\n\n        Read more about it in the\n        [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).\n        \n  @app.on_event(\"startup\")\nINFO:     Started server process [989679]\nINFO:     Waiting for application startup.\n{\"model\": \"HuggingFaceTB/SmolVLM-500M-Instruct\", \"revision\": \"a7da5b986cb59b408707209984f360a5f4ad7e47\", \"license\": \"Apache-2.0\", \"device\": \"NVIDIA GeForce RTX 3050 Laptop GPU\", \"torch\": \"2.7.1+cu118\", \"cuda_runtime\": \"11.8\", \"load_seconds\": 4.765589182003168, \"gpu_allocated_bytes\": 1014973440, \"gpu_reserved_bytes\": 1061158912, \"max_images\": 2, \"max_concurrency\": 1, \"input_longest_edge\": 512, \"experimental\": true, \"teacher_actions_enabled\": false, \"output_mode\": \"candidate_sequence_scoring\", \"scoring_labels\": [\"occupied\", \"empty\"]}\nINFO:     Application startup complete.\nINFO:     Uvicorn running on http://127.0.0.1:18081 (Press CTRL+C to quit)\n",
+  "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT",
+  "note": "Exact startup source text retained in JSON string; no HTTP request access records were emitted in this log"
+}

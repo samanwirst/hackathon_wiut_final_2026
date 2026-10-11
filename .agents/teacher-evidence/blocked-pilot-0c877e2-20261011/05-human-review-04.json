@@ -1,0 +1,25 @@
+{
+  "target_sha": "0c877e227062af7d3def121490419be158cb16c4",
+  "method": "POST",
+  "path": "/api/autolearn/samples/4/review",
+  "status": 200,
+  "wall_ms": 3.4994169982383028,
+  "response": {
+    "id": 4,
+    "task_id": 1,
+    "session_id": "procedural-session-01",
+    "group_key": "procedural-session-01",
+    "image_hash": "d8596c956bbe136e5f4dade6e66f6415bf0b824041d82657719ebd2aadaccc72",
+    "origin": "imported",
+    "image_url": "/api/autolearn/images/4",
+    "video_timestamp": 1.0,
+    "teacher_status": "labeled",
+    "teacher_label": "occupied",
+    "teacher_confidence": 0.9832326005898643,
+    "verified": true,
+    "verified_label": "empty",
+    "verified_by": "human-user exact24 sheet approval; hash 21dba4e245004682",
+    "verified_at": "2026-10-11T04:04:24.408017Z",
+    "split": null
+  }
+}

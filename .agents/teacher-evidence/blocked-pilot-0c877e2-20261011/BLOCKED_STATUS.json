@@ -1,0 +1,41 @@
+{
+  "scope": "M3 BLOCKED / UNACCEPTED_NONACTIONING_EXPERIMENT",
+  "target_sha": "0c877e227062af7d3def121490419be158cb16c4",
+  "verdict": "CHANGES_REQUIRED",
+  "finding_ids": [
+    {
+      "id": "C-002",
+      "severity": "P1",
+      "actual": "The changed threshold activates using cached F1=1.0; genuine reevaluation computes F1=0.6667, below the 0.75 gate. Removing a held-out image also leaves activation eligible. Mixed boolean/numeric predictions are accepted; ragged predictions or ValueError return 500 and preserve the passing gate. Persisted F1=10**400 also returns 500."
+    },
+    {
+      "id": "C-008",
+      "severity": "P1",
+      "actual": "Classify passes require_complete=False: real archives with empty or missing provenance still return Student predictions. Replaced weights continue classifying while the gate fails. Pointing v1 at a genuine v2 archive with matching dataset metadata reports version=1 despite different artifact hashes."
+    },
+    {
+      "id": "CE-001",
+      "severity": "P1",
+      "actual": "Training returns 200/F1=1.0 and gate passes, but registry metadata maps damaged=0, undamaged=1 while saved classes are [undamaged, damaged]. Immediate activation rejects class_ordering; shadow returns 422 and reevaluation fails. Reversed empty/occupied also fails; occupied/empty succeeds."
+    },
+    {
+      "id": "C-005",
+      "severity": "P1",
+      "actual": "Malformed HTTP URLs send zero POSTs but return 500, leave a reserved budget row and no initial audit. Correcting the URL still dedupes the pending sample with budget_remaining=0. Cache rows with confidence=None, unrelated model or wrong image_hash return cache_hit/occupied. Unreadable replaced stored image bytes are sent under the old hash."
+    },
+    {
+      "id": "C-007",
+      "severity": "P1",
+      "actual": "Sample metadata correctly retains candidate_sequence_softmax, explicit revision, forwards, processed tokens and generated-json=false, but drops candidate_token_ids and candidate_log_likelihoods. Fallback loses revision/scores/work counts; its cache lacks complete provenance. Probabilities [2,-1], unrelated labels and unequal arrays are persisted as candidate scores."
+    },
+    {
+      "id": "C-004",
+      "severity": "P1",
+      "actual": "Before completion selected/detail=2 (B); afterward selected/detail=3 (C). Create ignores RunCtx and unconditionally selects the returned task after awaits. Ordinary Create and all 20 expanded task-operation success/error navigation cases correctly recover controls."
+    }
+  ],
+  "owner_exception_exhausted": true,
+  "accepted_for_integration": false,
+  "activation_authorized": false,
+  "qa_report_commit": "c912cb76964ee4a4be56f55bc7c20fb8b6dd17ca"
+}
