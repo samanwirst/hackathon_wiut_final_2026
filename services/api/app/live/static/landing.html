@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>VisionFlow — Live</title>
+<link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+<div class="topbar">
+  <h1>VisionFlow</h1>
+  <span class="tag">Adaptive visual operations · live demo</span>
+  <span class="spacer"></span>
+  <span id="health" class="pill muted"><span class="dot"></span>checking…</span>
+</div>
+<div class="wrap">
+  <div class="card">
+    <h2>Choose how you want to connect</h2>
+    <p class="muted">
+      One device is the stationary <strong>camera</strong>; another device is a
+      <strong>judge</strong> who watches the live feed and sets the AI monitoring task.
+      Both require the demo PIN. The camera then shares a one-time private join code with the judge.
+    </p>
+    <div class="choice">
+      <a href="/camera"><div class="box">
+        <div class="big">📷</div>
+        <h3>Live Camera</h3>
+        <p class="muted">Stream this phone's real camera into a new private room.</p>
+      </div></a>
+      <a href="/judges"><div class="box">
+        <div class="big">🧑‍⚖️</div>
+        <h3>Judges</h3>
+        <p class="muted">Join a camera's room, watch live, and create tasks in natural language.</p>
+      </div></a>
+    </div>
+  </div>
+  <div class="card">
+    <p class="muted" style="margin:0">
+      Consent notice: film only consenting participants and objects. No automatic raw
+      recording is kept — only short-lived event evidence frames. Semantic/temporal
+      judgments from the local VLM are uncalibrated and shown with uncertainty.
+    </p>
+  </div>
+</div>
+<script>
+fetch("/api/live/health").then(r=>r.json()).then(h=>{
+  const el = document.getElementById("health");
+  if (h.pin_configured) { el.className="pill ok"; el.innerHTML='<span class="dot"></span>ready'; }
+  else { el.className="pill danger"; el.innerHTML='<span class="dot"></span>PIN not configured'; }
+}).catch(()=>{});
+</script>
+</body>
+</html>

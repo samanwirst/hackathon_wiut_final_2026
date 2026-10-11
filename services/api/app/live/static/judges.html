@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>VisionFlow — Judges</title>
+<link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+<div class="topbar">
+  <h1>VisionFlow · Judges</h1>
+  <span class="spacer"></span>
+  <span id="teacherPill" class="pill muted"><span class="dot"></span>VLM</span>
+  <a href="/" class="muted" style="font-size:13px;margin-left:10px">← home</a>
+</div>
+<div class="wrap">
+  <div id="banner" class="banner info hidden"></div>
+
+  <div class="card" id="authCard">
+    <h2>1 · Enter demo PIN & join the camera</h2>
+    <label for="pin">Demo PIN</label>
+    <input id="pin" type="password" inputmode="numeric" autocomplete="off" placeholder="PIN" />
+    <label for="code">Private join code (from the camera device)</label>
+    <input id="code" autocomplete="off" placeholder="join code" />
+    <div class="row" style="margin-top:12px"><button id="joinBtn">Join room</button></div>
+  </div>
+
+  <div class="hidden" id="main">
+    <div class="grid2">
+      <div class="card">
+        <h2>Live feed</h2>
+        <img id="feed" class="feed" alt="live camera feed" />
+        <div class="metrics" style="margin-top:12px">
+          <div class="metric"><div class="k">FPS (obs.)</div><div class="v" id="mFps">—</div></div>
+          <div class="metric"><div class="k">Inference</div><div class="v" id="mInf">—</div></div>
+          <div class="metric"><div class="k">Frame age</div><div class="v" id="mAge">—</div></div>
+          <div class="metric"><div class="k">Recv / Drop</div><div class="v" id="mRecv">—</div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Create a monitoring task</h2>
+        <p class="muted">Describe what to watch in plain language. The AI planner proposes a validated task you review before it runs.</p>
+        <textarea id="prompt" placeholder="e.g. Alert me when a car enters the service bay, or: focus on the bottle if anybody opens it"></textarea>
+        <div class="row" style="margin-top:10px">
+          <button id="planBtn">Plan task</button>
+          <span class="muted" id="planMeta"></span>
+        </div>
+        <div id="draft" class="hidden" style="margin-top:14px">
+          <div id="draftNote" class="banner info"></div>
+          <pre class="code" id="draftJson"></pre>
+          <div class="row">
+            <button id="activateBtn" class="ok">Approve & activate</button>
+            <button id="discardBtn" class="secondary">Discard</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Active task</h2>
+      <div id="activeTask" class="muted">No task yet.</div>
+      <div class="row" id="taskControls" style="margin-top:12px"></div>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <h2>Events & evidence</h2>
+        <table><thead><tr><th>#</th><th>Event</th><th>When</th><th>Evidence</th><th>VLM</th></tr></thead>
+        <tbody id="events"><tr><td colspan="5" class="muted">No events yet.</td></tr></tbody></table>
+      </div>
+      <div class="card">
+        <h2>Local notifications</h2>
+        <table><thead><tr><th>#</th><th>Title</th><th>Message</th></tr></thead>
+        <tbody id="notifs"><tr><td colspan="3" class="muted">None yet.</td></tr></tbody></table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/static/common.js"></script>
+<script>
+let roomId=null, feedWs=null, pollTimer=null, currentDraft=null, planProvenance=null;
+
+fetch("/api/live/health").then(r=>r.json()).then(h=>{
+  const p=document.getElementById("teacherPill");
+  if(h.teacher_available){ p.className="pill ok"; p.innerHTML='<span class="dot"></span>VLM available'; }
+  else { p.className="pill muted"; p.innerHTML='<span class="dot"></span>VLM unavailable'; }
+}).catch(()=>{});
+
+document.getElementById("joinBtn").onclick = async () => {
+  const pin=document.getElementById("pin").value, code=document.getElementById("code").value.trim();
+  try {
+    await login("judge", pin);
+    const r = await api("/api/live/rooms/join", { method:"POST", body:{ join_code: code } });
+    roomId = r.room_id;
+    document.getElementById("authCard").classList.add("hidden");
+    document.getElementById("main").classList.remove("hidden");
+    setBanner("banner","info","Joined the live room.");
+    openFeed(); startPolling();
+  } catch(e){ setBanner("banner","err",e.message); }
+};
+
+function openFeed() {
+  feedWs = new WebSocket(wsUrl("/api/live/ws/judge"));
+  feedWs.binaryType = "blob";
+  feedWs.onmessage = (ev) => {
+    const url = URL.createObjectURL(ev.data);
+    const img = document.getElementById("feed");
+    const old = img.src; img.src = url;
+    if (old && old.startsWith("blob:")) URL.revokeObjectURL(old);
+  };
+  feedWs.onclose = () => { if (roomId) setTimeout(openFeed, 1500); };
+}
+
+function startPolling() {
+  const tick = async () => {
+    try {
+      const s = await api(`/api/live/rooms/${roomId}/state`);
+      renderState(s);
+    } catch(e){ /* keep last */ }
+  };
+  tick(); pollTimer = setInterval(tick, 1500);
+}
+
+function renderState(s) {
+  const m = s.metrics;
+  document.getElementById("mFps").textContent = m.observed_fps ? m.observed_fps.toFixed(1) : "—";
+  document.getElementById("mInf").textContent = m.last_inference_ms ? m.last_inference_ms+" ms" : "—";
+  document.getElementById("mAge").textContent = m.last_recv_age_s!=null ? m.last_recv_age_s+" s" : "—";
+  document.getElementById("mRecv").textContent = `${m.frames_received} / ${m.frames_dropped}`;
+
+  const at = document.getElementById("activeTask");
+  const ctrls = document.getElementById("taskControls");
+  if (s.task) {
+    const st = s.task_paused ? "paused" : (s.task_enabled ? "running" : "disabled");
+    at.innerHTML = `<strong>${escapeHtml(s.task.name)}</strong> — <span class="pill ${s.task_enabled&&!s.task_paused?'ok':'warn'}"><span class="dot"></span>${st}</span>
+      <div class="muted" style="margin-top:6px">class <code class="inline">${escapeHtml(s.task.object_class)}</code>,
+      trigger <code class="inline">${escapeHtml(s.task.trigger)}</code>, action <code class="inline">${escapeHtml(s.task.action)}</code>
+      · version ${s.task_version}</div>`;
+    ctrls.innerHTML = "";
+    if (s.task_enabled) {
+      ctrls.appendChild(btn(s.task_paused?"Resume":"Pause","secondary",()=>setState({paused:!s.task_paused})));
+      ctrls.appendChild(btn("Disable","danger",()=>setState({enabled:false})));
+    }
+  } else { at.textContent = "No task yet."; ctrls.innerHTML=""; }
+
+  const ev = document.getElementById("events");
+  if (s.events.length) {
+    ev.innerHTML = s.events.slice().reverse().map(e=>{
+      const t = new Date(e.event_ts*1000).toLocaleTimeString();
+      const vo = e.visual_observation;
+      const voCell = vo ? `${escapeHtml(vo.status)}${vo.label?": "+escapeHtml(vo.label):""}${vo.uncertain?" (uncertain)":""}` : "—";
+      const evi = e.evidence_url ? `<img class="evidence" src="${e.evidence_url}" />` : "—";
+      return `<tr><td>${e.id}</td><td>${escapeHtml(e.detail)}</td><td>${t}</td><td>${evi}</td><td>${voCell}</td></tr>`;
+    }).join("");
+  } else ev.innerHTML = `<tr><td colspan="5" class="muted">No events yet.</td></tr>`;
+
+  const nf = document.getElementById("notifs");
+  if (s.notifications.length) {
+    nf.innerHTML = s.notifications.slice().reverse().map(n=>
+      `<tr><td>${n.id}</td><td>${escapeHtml(n.title)}</td><td class="muted">${escapeHtml(n.message)}</td></tr>`).join("");
+  } else nf.innerHTML = `<tr><td colspan="3" class="muted">None yet.</td></tr>`;
+}
+
+document.getElementById("planBtn").onclick = async () => {
+  const text = document.getElementById("prompt").value.trim();
+  if (text.length < 3) { setBanner("banner","err","Describe the task first."); return; }
+  setBanner("banner","info","Planning with the AI agent…");
+  try {
+    const r = await api(`/api/live/rooms/${roomId}/task/plan`, { method:"POST", body:{ text } });
+    showDraft(r);
+  } catch(e){ setBanner("banner","err",e.message); }
+};
+
+function showDraft(r) {
+  setBanner("banner","info","");
+  const draft = document.getElementById("draft");
+  const note = document.getElementById("draftNote");
+  const json = document.getElementById("draftJson");
+  const actBtn = document.getElementById("activateBtn");
+  const pm = document.getElementById("planMeta");
+  const prov = r.provenance||{};
+  pm.textContent = prov.model ? `model ${prov.model} · ${prov.duration_ms?Math.round(prov.duration_ms)+"ms":""} · $${(prov.cost_usd||0).toFixed(4)} · attempt ${prov.attempt}/${r.planner_budget||''}` : "";
+  currentDraft = null;
+  draft.classList.remove("hidden");
+  if (r.status === "ok" && r.task) {
+    currentDraft = r.task;
+    note.className = "banner info";
+    note.innerHTML = `<strong>Proposed task</strong> for: “${escapeHtml(r.original_text)}”.<br>${escapeHtml(r.task.explanation||"")}
+      ${r.clarification?`<br><em>Note: ${escapeHtml(r.clarification)}</em>`:""}`;
+    json.textContent = JSON.stringify(r.task, null, 2);
+    actBtn.classList.remove("hidden");
+  } else {
+    note.className = "banner err";
+    const why = r.unsupported_reason || r.clarification || r.error || "The agent could not express this request.";
+    note.innerHTML = `<strong>${escapeHtml(r.status)}</strong> — ${escapeHtml(why)}`;
+    json.textContent = r.proposal ? JSON.stringify(r.proposal, null, 2) : "(no structured proposal)";
+    actBtn.classList.add("hidden");
+  }
+}
+
+document.getElementById("activateBtn").onclick = async () => {
+  if (!currentDraft) return;
+  try {
+    const r = await api(`/api/live/rooms/${roomId}/task/activate`, { method:"POST", body:{ task: currentDraft } });
+    setBanner("banner","info",`Task activated (version ${r.task_version}).`);
+    document.getElementById("draft").classList.add("hidden");
+    currentDraft = null;
+  } catch(e){ setBanner("banner","err",e.message); }
+};
+document.getElementById("discardBtn").onclick = () => {
+  document.getElementById("draft").classList.add("hidden"); currentDraft=null;
+};
+// Editing the prompt invalidates a pending approval.
+document.getElementById("prompt").addEventListener("input", ()=>{
+  if(currentDraft){ currentDraft=null; document.getElementById("activateBtn").classList.add("hidden");
+    document.getElementById("draftNote").innerHTML="<em>Prompt edited — re-plan to approve.</em>"; }
+});
+
+async function setState(patch){
+  try { await api(`/api/live/rooms/${roomId}/task/state`, { method:"POST", body:patch }); }
+  catch(e){ setBanner("banner","err",e.message); }
+}
+function btn(label,cls,fn){ const b=document.createElement("button"); b.className=cls; b.textContent=label; b.onclick=fn; return b; }
+function escapeHtml(s){ return String(s==null?"":s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+</script>
+</body>
+</html>
