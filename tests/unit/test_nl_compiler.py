@@ -388,3 +388,79 @@ def test_count_with_duration_rejected():
         1, ZONES,
     )
     assert not r.ok and r.draft is None
+
+
+# -- M2-001 emergency regressions (independently reproduced defects) -----------
+# Each of the following reduced a complete/ambiguous request to a partial rule.
+
+def test_action_first_alert_duration_not_absorbed_as_dwell():
+    # "Create an alert for 5 minutes when a car stays ..." used to donate the
+    # ALERT's "5 minutes" to the dwell rule (threshold 300s) though no dwell
+    # duration was stated. The action tail before the trigger marker must be
+    # validated and rejected, not absorbed.
+    r = compile_text(
+        "Create an alert for 5 minutes when a car stays in Service Bay A", 1, ZONES
+    )
+    assert not r.ok and r.draft is None
+    assert any("action clause" in e.lower() for e in r.errors)
+
+
+def test_action_first_notify_duration_not_absorbed_as_dwell():
+    r = compile_text(
+        "Notify me for 5 minutes when a car stays in Service Bay A", 1, ZONES
+    )
+    assert not r.ok and r.draft is None
+
+
+def test_two_conditions_sharing_state_rejected():
+    # "hood and trunk open" used to become trunk-only (or drop both). Two parts
+    # must be rejected as multiple conditions, never silently reduced.
+    r = compile_text(
+        "When a car enters Service Bay A with hood and trunk open, create an alert",
+        1, ZONES,
+    )
+    assert not r.ok and r.draft is None
+    assert any("more than one visual condition" in e.lower() for e in r.errors)
+
+
+def test_condition_plus_bare_second_part_rejected():
+    # "hood open and lights" — a complete condition plus a bare part. The dangling
+    # "lights" must not be silently dropped.
+    r = compile_text(
+        "When a car enters Service Bay A with hood open and lights, create an alert",
+        1, ZONES,
+    )
+    assert not r.ok and r.draft is None
+
+
+def test_incomplete_bare_condition_rejected():
+    # "with hood" (no state) used to disappear into a plain geometric rule.
+    r = compile_text(
+        "When a car enters Service Bay A with hood, create an alert", 1, ZONES
+    )
+    assert not r.ok and r.draft is None
+
+
+def test_multiple_inclusive_count_comparisons_rejected():
+    # "3 or more or 5 or more" used to match "3 or more" (threshold 2) and drop
+    # the rest. Every comparison syntax must be counted.
+    r = compile_text(
+        "When 3 or more or 5 or more cars are in Service Bay A, create an alert",
+        1, ZONES,
+    )
+    assert not r.ok and r.draft is None
+    assert any("more than one count comparison" in e.lower() for e in r.errors)
+
+
+def test_decimal_dwell_more_than_still_ok():
+    # "more than 2.5 minutes" is a SUPPORTED decimal minimum dwell; the count
+    # detector used to mis-read "2" as a count, falsely rejecting two trigger
+    # families. It must compile to a 150s dwell.
+    r = compile_text(
+        "When a car stays in Service Bay A for more than 2.5 minutes, create an alert",
+        1, ZONES,
+    )
+    assert r.ok, r.errors
+    assert r.draft["trigger"]["type"] == "dwell_in_zone"
+    assert r.draft["trigger"]["duration_seconds"] == 150.0
+    WorkflowDSL.model_validate(r.draft)

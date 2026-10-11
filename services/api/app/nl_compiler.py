@@ -90,6 +90,13 @@ _COND_STATE = (
 )
 _COND_CANDIDATE = re.compile(rf"\b{_COND_PART}\b{_COND_GAP}\s+\b{_COND_STATE}\b")
 
+# Every vehicle-part mention on its own. Counting part mentions (not just complete
+# part+state candidates) lets the compiler reject an INCOMPLETE condition (a bare
+# "with hood" with no state) and a SHARED-state multiple condition ("hood and
+# trunk open", where only "trunk open" is a complete candidate) rather than
+# silently dropping the unmatched part (M2-001).
+_COND_PART_RE = re.compile(rf"\b{_COND_PART}\b")
+
 # Connectives that introduce a condition clause. Their presence means the user
 # asked for an extra check; if it is not a recognised visual condition the
 # request is rejected rather than compiled without it (M2-AC1).
@@ -208,6 +215,12 @@ _ACTION_PHRASE = re.compile(
     r"|\bflag\s+(?:it|this|the\s+event|the\s+vehicle|the\s+car)\b"
     r"|\blet\s+(?:me|us)\s+know\b|\btell\s+(?:me|us)\b|\breport\s+(?:it|this)\b"
 )
+
+# Words that introduce the trigger/condition clause. In an action-first request
+# ("create an alert <tail> when a car ...") the trigger clause starts here; any
+# text between the action phrase and this marker is action-tail content that must
+# be validated, so an alert duration cannot be absorbed as a dwell (M2-001).
+_TRIGGER_INTRO = re.compile(r"\b(?:when|whenever|if|once|after|while|as soon as)\b")
 
 # Upper-bound / non-lower-bound duration comparison for a dwell rule. The dwell
 # engine only expresses a MINIMUM dwell ("for N" / "longer than N"); an upper
@@ -354,9 +367,13 @@ def _has_count(text: str) -> bool:
     """True when the text expresses an object-count comparison (not a duration)."""
     for m in re.finditer(
         r"\b(?:more than|at least|at most|no more than|fewer than|less than|over|"
-        r"exceeds?|up to|minimum of|maximum of)\s+(\d+)\s*(\w+)?",
+        r"exceeds?|up to|minimum of|maximum of)\s+(\d+(?:\.\d+)?)\s*(\w+)?",
         text,
     ):
+        # Match the FULL number (incl. a decimal) so a decimal-duration comparison
+        # such as "more than 2.5 minutes" is recognised as a dwell duration, not
+        # mis-read as a count because the regex stopped at "2" before "minutes"
+        # (M2-001).
         unit = m.group(2) or ""
         if not re.match(r"(second|sec|minute|min|hour|hr)", unit):
             return True
@@ -390,7 +407,12 @@ def _split_action(low: str) -> tuple[str, str]:
     action clause (M2-001).
 
     - If a supported action phrase is found at the start (only filler precedes it),
-      it is action-first and the trigger clause is the suffix.
+      it is action-first. The trigger clause begins at the trigger-introducer
+      marker ("when"/"if"/...); the span BETWEEN the action phrase and that marker
+      is part of the action tail and must be validated. This stops an action's own
+      duration — "create an alert FOR 5 MINUTES when a car stays ..." — from leaking
+      into the trigger clause and being read as a dwell duration (the reviewed
+      defect). If no marker follows, the whole suffix is the trigger clause.
     - Otherwise it is a trailing action and the trigger clause is the prefix; the
       text after the matched phrase (``action_leftover``) must be filler-only or
       the request carries unsupported content in the action clause.
@@ -403,8 +425,13 @@ def _split_action(low: str) -> tuple[str, str]:
     before = low[: m.start()]
     before_tokens = re.findall(r"[a-z0-9]+", before)
     if not before_tokens or all(t in _FILLER for t in before_tokens):
-        # action-first: trigger clause is everything after the action phrase.
-        return low[m.end():], before
+        # action-first: delimit the trigger clause at the trigger-introducer marker
+        # so the action tail (between the action phrase and the marker) is validated.
+        after = low[m.end():]
+        intro = _TRIGGER_INTRO.search(after)
+        if intro is not None:
+            return after[intro.start():], before + " " + after[: intro.start()]
+        return after, before
     # trailing action: trigger clause is the prefix; validate the action tail.
     return low[: m.start()], low[m.end():]
 
@@ -596,9 +623,15 @@ def compile_text(text: str, source_id: int, zones: list[dict]) -> CompileResult:
                 errors.append("dwell rule needs a duration, e.g. 'for 10 minutes'")
     if trigger_type == "object_count_exceeded":
         # A request with more than one count comparison ("more than 3 or more than
-        # 5 cars") is ambiguous and is rejected rather than matching an accidental
-        # "3 or more" span (M2-001).
-        comparisons = re.findall(rf"\b{_COMPARATORS}\s+\d+", trigger_part)
+        # 5 cars", "3 or more or 5 or more cars") is ambiguous and is rejected
+        # rather than matching the first span and silently dropping the rest
+        # (M2-001). Every comparison SYNTAX is counted: an explicit comparator with
+        # a number, the inclusive "N or more/above" suffix, and the "N+" shorthand.
+        comparisons = (
+            re.findall(rf"\b{_COMPARATORS}\s+\d+(?:\.\d+)?", trigger_part)
+            + re.findall(r"\b\d+\s*(?:or more|or above)\b", trigger_part)
+            + re.findall(r"\b\d+\s*\+", trigger_part)
+        )
         if len(comparisons) > 1:
             errors.append(
                 "more than one count comparison was specified "
@@ -639,34 +672,43 @@ def compile_text(text: str, source_id: int, zones: list[dict]) -> CompileResult:
         )
 
     # Visual condition handling (M2-001): preserve a single positive recognised
-    # condition; reject negation, multiple conditions, and unrecognised clauses.
-    # ``candidates`` counts EVERY part-next-to-state clause (supported or not), so a
-    # smuggled second condition ("hood open and trunk up") is rejected instead of
-    # keeping only the first recognised one. Parsed on the trigger clause so an
-    # action-clause verb is never read as a condition.
-    conditions = _match_visual_conditions(trigger_part)
-    candidates = _COND_CANDIDATE.findall(trigger_part)
-    had_condition_marker = any(m in trigger_part for m in _CONDITION_MARKERS)
-    negated = bool(_NEGATION_NEAR_STATE.search(trigger_part) or _CLOSED_STATE.search(trigger_part))
+    # condition; reject negation, multiple/incomplete conditions, and unrecognised
+    # clauses. Parsed on the zone-stripped trigger clause so an action-clause verb
+    # and a zone name are never read as a condition.
+    #
+    # Three counts drive the decision:
+    #  - ``part_hits``: every vehicle-part mention (hood/trunk/door/lights/...).
+    #  - ``candidates``: every COMPLETE part+state clause ("hood open", "trunk up").
+    #  - ``conditions``: the SUPPORTED recognised conditions among the candidates.
+    # A bare part with no state ("with hood") makes part_hits>candidates → reject as
+    # incomplete; two parts ("hood and trunk open", "hood open and lights") make
+    # part_hits>1 → reject as multiple; neither is silently dropped.
+    cond_src = trigger_part.replace(zone_name, " ") if zone_name else trigger_part
+    conditions = _match_visual_conditions(cond_src)
+    candidates = _COND_CANDIDATE.findall(cond_src)
+    part_hits = _COND_PART_RE.findall(cond_src)
+    had_condition_marker = any(m in cond_src for m in _CONDITION_MARKERS)
+    negated = bool(_NEGATION_NEAR_STATE.search(cond_src) or _CLOSED_STATE.search(cond_src))
     visual_predicate: dict | None = None
-    if negated and (candidates or had_condition_marker):
+    if negated and (part_hits or had_condition_marker):
         errors.append(
             "negated visual conditions (e.g. 'hood not open') are not supported; "
             "state the positive condition to verify"
         )
-    elif len(candidates) > 1:
+    elif len(part_hits) > 1 or len(candidates) > 1:
         errors.append(
             "more than one visual condition was requested; specify a single "
             "visual condition (supported: hood/trunk/door open, lights on)"
         )
-    elif len(conditions) == 1 and len(candidates) == 1:
+    elif len(part_hits) == 1 and len(candidates) == 1 and len(conditions) == 1:
         visual_predicate = _build_predicate(conditions[0])
-    elif candidates or had_condition_marker:
-        # A requested condition clause that is not a supported visual condition is
-        # rejected rather than silently dropped (M2-AC1).
+    elif part_hits or candidates or had_condition_marker:
+        # A requested condition clause that is incomplete (a bare part with no
+        # state) or not a supported visual condition is rejected rather than
+        # silently dropped (M2-AC1).
         errors.append(
-            "an unsupported or unrecognized visual condition was requested; "
-            "supported visual conditions: hood/trunk/door open, lights on"
+            "an incomplete, unsupported or unrecognized visual condition was "
+            "requested; supported visual conditions: hood/trunk/door open, lights on"
         )
 
     # Unsupported appearance/attribute clause (colour, tint, damage, ...). Checked
