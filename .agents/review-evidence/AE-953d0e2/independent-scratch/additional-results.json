@@ -1,0 +1,256 @@
+{
+  "target_sha": "953d0e275177951a71c4c8fccf6b915693e43550",
+  "results": [
+    {
+      "name": "absolute_admission",
+      "elapsed": 0.27125557500403374,
+      "deadline": 0.2,
+      "result": {
+        "status": "timeout",
+        "label": null,
+        "confidence": null,
+        "model": "owned-qa-fixture",
+        "prompt_version": "v1",
+        "latency_ms": 271.00293499825057,
+        "usage": {},
+        "error": "provider timeout (attempt 1): overall deadline exceeded before sending request"
+      },
+      "posts": 0,
+      "attempts": 0
+    },
+    {
+      "name": "provider_public_privacy",
+      "status": "ok",
+      "contains_token": false,
+      "contains_endpoint": false,
+      "contains_image": false
+    },
+    {
+      "name": "additional_compile",
+      "text": "When a car enters Service Bay A with headlights on or off, create an alert",
+      "http_status": 200,
+      "result": {
+        "ok": true,
+        "draft": {
+          "name": "car entered zone + verify the vehicle lights are on",
+          "source_id": 3,
+          "object_class": "car",
+          "trigger": {
+            "type": "object_entered_zone",
+            "zone_id": 3,
+            "duration_seconds": null,
+            "threshold": null
+          },
+          "action": {
+            "type": "create_notification",
+            "config": {
+              "title": "car entered zone + verify the vehicle lights are on"
+            }
+          },
+          "visual_predicate": {
+            "prompt": "Does the image clearly show that the vehicle lights are on?",
+            "labels": [
+              "yes",
+              "no"
+            ],
+            "expected_label": "yes",
+            "description": "the vehicle lights are on",
+            "sample_interval_seconds": null,
+            "cooldown_seconds": null,
+            "budget": null
+          },
+          "cooldown_seconds": 10.0,
+          "requires_approval": true
+        },
+        "errors": [],
+        "warnings": [
+          "a visual predicate was detected; it requires a configured Teacher VLM at runtime and is checked only on candidate events"
+        ],
+        "explanation": "car \u00b7 object_entered_zone \u00b7 visual: the vehicle lights are on \u2192 create_notification (draft, disabled until you approve)"
+      }
+    },
+    {
+      "name": "additional_compile",
+      "text": "When a car enters Service Bay A with headlights on and off, create an alert",
+      "http_status": 200,
+      "result": {
+        "ok": true,
+        "draft": {
+          "name": "car entered zone + verify the vehicle lights are on",
+          "source_id": 3,
+          "object_class": "car",
+          "trigger": {
+            "type": "object_entered_zone",
+            "zone_id": 3,
+            "duration_seconds": null,
+            "threshold": null
+          },
+          "action": {
+            "type": "create_notification",
+            "config": {
+              "title": "car entered zone + verify the vehicle lights are on"
+            }
+          },
+          "visual_predicate": {
+            "prompt": "Does the image clearly show that the vehicle lights are on?",
+            "labels": [
+              "yes",
+              "no"
+            ],
+            "expected_label": "yes",
+            "description": "the vehicle lights are on",
+            "sample_interval_seconds": null,
+            "cooldown_seconds": null,
+            "budget": null
+          },
+          "cooldown_seconds": 10.0,
+          "requires_approval": true
+        },
+        "errors": [],
+        "warnings": [
+          "a visual predicate was detected; it requires a configured Teacher VLM at runtime and is checked only on candidate events"
+        ],
+        "explanation": "car \u00b7 object_entered_zone \u00b7 visual: the vehicle lights are on \u2192 create_notification (draft, disabled until you approve)"
+      }
+    },
+    {
+      "name": "additional_compile",
+      "text": "When a car enters Service Bay A with headlights off, create an alert",
+      "http_status": 200,
+      "result": {
+        "ok": false,
+        "draft": null,
+        "errors": [
+          "negated visual conditions (e.g. 'hood not open') are not supported; state the positive condition to verify"
+        ],
+        "warnings": [],
+        "explanation": "Could not compile a complete, unambiguous workflow."
+      }
+    },
+    {
+      "name": "additional_compile",
+      "text": "When a car enters Service Bay A with headlights on, create an alert",
+      "http_status": 200,
+      "result": {
+        "ok": true,
+        "draft": {
+          "name": "car entered zone + verify the vehicle lights are on",
+          "source_id": 3,
+          "object_class": "car",
+          "trigger": {
+            "type": "object_entered_zone",
+            "zone_id": 3,
+            "duration_seconds": null,
+            "threshold": null
+          },
+          "action": {
+            "type": "create_notification",
+            "config": {
+              "title": "car entered zone + verify the vehicle lights are on"
+            }
+          },
+          "visual_predicate": {
+            "prompt": "Does the image clearly show that the vehicle lights are on?",
+            "labels": [
+              "yes",
+              "no"
+            ],
+            "expected_label": "yes",
+            "description": "the vehicle lights are on",
+            "sample_interval_seconds": null,
+            "cooldown_seconds": null,
+            "budget": null
+          },
+          "cooldown_seconds": 10.0,
+          "requires_approval": true
+        },
+        "errors": [],
+        "warnings": [
+          "a visual predicate was detected; it requires a configured Teacher VLM at runtime and is checked only on candidate events"
+        ],
+        "explanation": "car \u00b7 object_entered_zone \u00b7 visual: the vehicle lights are on \u2192 create_notification (draft, disabled until you approve)"
+      }
+    },
+    {
+      "name": "additional_compile",
+      "text": "Create an alert for 5 minutes a car stays in Service Bay A",
+      "http_status": 200,
+      "result": {
+        "ok": true,
+        "draft": {
+          "name": "car dwell in zone",
+          "source_id": 3,
+          "object_class": "car",
+          "trigger": {
+            "type": "dwell_in_zone",
+            "zone_id": 3,
+            "duration_seconds": 300.0,
+            "threshold": null
+          },
+          "action": {
+            "type": "create_notification",
+            "config": {
+              "title": "car dwell in zone"
+            }
+          },
+          "visual_predicate": null,
+          "cooldown_seconds": 10.0,
+          "requires_approval": true
+        },
+        "errors": [],
+        "warnings": [],
+        "explanation": "car \u00b7 dwell_in_zone \u2265300s \u2192 create_notification (draft, disabled until you approve)"
+      }
+    },
+    {
+      "name": "additional_compile",
+      "text": "When a car enters Service Bay A and then enters Service Bay A, create an alert",
+      "http_status": 200,
+      "result": {
+        "ok": true,
+        "draft": {
+          "name": "car entered zone",
+          "source_id": 3,
+          "object_class": "car",
+          "trigger": {
+            "type": "object_entered_zone",
+            "zone_id": 3,
+            "duration_seconds": null,
+            "threshold": null
+          },
+          "action": {
+            "type": "create_notification",
+            "config": {
+              "title": "car entered zone"
+            }
+          },
+          "visual_predicate": null,
+          "cooldown_seconds": 10.0,
+          "requires_approval": true
+        },
+        "errors": [],
+        "warnings": [],
+        "explanation": "car \u00b7 object_entered_zone \u2192 create_notification (draft, disabled until you approve)"
+      }
+    },
+    {
+      "name": "webhook_api_rejection",
+      "http_status": 422
+    },
+    {
+      "name": "ui_engine_semantics",
+      "results": [
+        {
+          "dsl": "original_draft",
+          "duration": 1.25,
+          "emitted_at_1_1": 0
+        },
+        {
+          "dsl": "ui_saved",
+          "duration": 1.0,
+          "emitted_at_1_1": 1
+        }
+      ]
+    }
+  ]
+}

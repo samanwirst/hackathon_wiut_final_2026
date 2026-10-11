@@ -1,0 +1,20 @@
+[
+  {
+    "file": "grammar_probe.py",
+    "original_sha256": "ba6d90cb2d7c4d8e96037a900da6fd953138f1fd82254219afd8791215847183",
+    "adapted_sha256": "09eacd36e1371b0727e15364896f1b0c45ad1b01bdb0e4d8f6215fbf6f651d3a",
+    "adaptation": "scratch path only; embedded target metadata retained from original and is not current-target attribution"
+  },
+  {
+    "file": "network_probe.py",
+    "original_sha256": "1860ea5f36d02af666ef439b492ef812a22627a11c7e1907e06696042ea44c2e",
+    "adapted_sha256": "9a892ac588debe497a6ec21daebc72517170e572eda0af3a17de29a4dc7eb68b",
+    "adaptation": "scratch path only; embedded target metadata retained from original and is not current-target attribution"
+  },
+  {
+    "file": "test_acceptance.py",
+    "original_sha256": "fa62b564dceb4eeb451bc6bd9dbcceae24984624c5ad421bdf5e40e0d7af267c",
+    "adapted_sha256": "30a8cebfc075f8df66649ce03f620552bfcf3379f7933060dfaa6e37bdd6c595",
+    "adaptation": "scratch path only; embedded target metadata retained from original and is not current-target attribution"
+  }
+]

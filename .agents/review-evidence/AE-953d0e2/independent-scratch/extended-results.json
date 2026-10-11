@@ -1,0 +1,818 @@
+{
+  "target_sha": "953d0e275177951a71c4c8fccf6b915693e43550",
+  "results": [
+    {
+      "name": "dns_actual_capacity",
+      "limit": 1,
+      "peak": 4,
+      "started": 4,
+      "active_after_timeouts": 4,
+      "results": [
+        {
+          "result": {
+            "status": "timeout",
+            "label": null,
+            "confidence": null,
+            "model": "owned-qa-fixture",
+            "prompt_version": "v1",
+            "latency_ms": 60.367158002918586,
+            "usage": {},
+            "error": "provider timeout (attempt 1): overall deadline exceeded during connect"
+          },
+          "elapsed": 0.060580303994356655,
+          "permit_free": true,
+          "active_helpers": 1
+        },
+        {
+          "result": {
+            "status": "timeout",
+            "label": null,
+            "confidence": null,
+            "model": "owned-qa-fixture",
+            "prompt_version": "v1",
+            "latency_ms": 60.936287001823075,
+            "usage": {},
+            "error": "provider timeout (attempt 1): overall deadline exceeded during connect"
+          },
+          "elapsed": 0.06113855198782403,
+          "permit_free": true,
+          "active_helpers": 2
+        },
+        {
+          "result": {
+            "status": "timeout",
+            "label": null,
+            "confidence": null,
+            "model": "owned-qa-fixture",
+            "prompt_version": "v1",
+            "latency_ms": 60.79288000182714,
+            "usage": {},
+            "error": "provider timeout (attempt 1): overall deadline exceeded during connect"
+          },
+          "elapsed": 0.06098371600091923,
+          "permit_free": true,
+          "active_helpers": 3
+        },
+        {
+          "result": {
+            "status": "timeout",
+            "label": null,
+            "confidence": null,
+            "model": "owned-qa-fixture",
+            "prompt_version": "v1",
+            "latency_ms": 60.88143400847912,
+            "usage": {},
+            "error": "provider timeout (attempt 1): overall deadline exceeded during connect"
+          },
+          "elapsed": 0.0610664919950068,
+          "permit_free": true,
+          "active_helpers": 4
+        }
+      ]
+    },
+    {
+      "name": "dns_helpers_terminated",
+      "completed": 4,
+      "active": 0,
+      "posts": 0,
+      "tcp_connections": 4
+    },
+    {
+      "name": "tls_connect_phase",
+      "result": {
+        "status": "timeout",
+        "label": null,
+        "confidence": null,
+        "model": "owned-qa-fixture",
+        "prompt_version": "v1",
+        "latency_ms": 509.8056249989895,
+        "usage": {},
+        "error": "provider timeout (attempt 1): _ssl.c:1064: The handshake operation timed out"
+      },
+      "elapsed": 0.5114275360101601,
+      "connect_timeout": 0.04,
+      "overall_timeout": 0.5
+    },
+    {
+      "name": "extended_framing",
+      "mode": "content_length_control",
+      "routed": true,
+      "visual_status": "ok",
+      "action_status": "done",
+      "notifications": 1,
+      "posts": 1,
+      "attempts": 1
+    },
+    {
+      "name": "extended_framing",
+      "mode": "chunked_control",
+      "routed": true,
+      "visual_status": "ok",
+      "action_status": "done",
+      "notifications": 1,
+      "posts": 1,
+      "attempts": 1
+    },
+    {
+      "name": "extended_framing",
+      "mode": "valid_trailer_control",
+      "routed": true,
+      "visual_status": "ok",
+      "action_status": "done",
+      "notifications": 1,
+      "posts": 1,
+      "attempts": 1
+    },
+    {
+      "name": "extended_framing",
+      "mode": "conflicting_duplicate_lengths",
+      "routed": true,
+      "visual_status": "ok",
+      "action_status": "done",
+      "notifications": 1,
+      "posts": 1,
+      "attempts": 1
+    },
+    {
+      "name": "extended_framing",
+      "mode": "negative_length",
+      "routed": false,
+      "visual_status": "error",
+      "action_status": "skipped_visual",
+      "notifications": 0,
+      "posts": 1,
+      "attempts": 1
+    },
+    {
+      "name": "extended_framing",
+      "mode": "comma_conflicting_length",
+      "routed": false,
+      "visual_status": "error",
+      "action_status": "skipped_visual",
+      "notifications": 0,
+      "posts": 1,
+      "attempts": 1
+    },
+    {
+      "name": "extended_framing",
+      "mode": "length_and_chunked",
+      "routed": false,
+      "visual_status": "error",
+      "action_status": "skipped_visual",
+      "notifications": 0,
+      "posts": 1,
+      "attempts": 1
+    },
+    {
+      "name": "extended_framing",
+      "mode": "missing_trailer_blank_line",
+      "routed": true,
+      "visual_status": "ok",
+      "action_status": "done",
+      "notifications": 1,
+      "posts": 1,
+      "attempts": 1
+    },
+    {
+      "name": "extended_framing",
+      "mode": "invalid_trailer",
+      "routed": true,
+      "visual_status": "ok",
+      "action_status": "done",
+      "notifications": 1,
+      "posts": 1,
+      "attempts": 1
+    },
+    {
+      "name": "extended_framing",
+      "mode": "invalid_data_crlf",
+      "routed": false,
+      "visual_status": "error",
+      "action_status": "skipped_visual",
+      "notifications": 0,
+      "posts": 1,
+      "attempts": 1
+    },
+    {
+      "name": "extended_framing",
+      "mode": "empty_terminal_size",
+      "routed": true,
+      "visual_status": "ok",
+      "action_status": "done",
+      "notifications": 1,
+      "posts": 1,
+      "attempts": 1
+    },
+    {
+      "name": "extended_framing",
+      "mode": "signed_chunk_size",
+      "routed": true,
+      "visual_status": "ok",
+      "action_status": "done",
+      "notifications": 1,
+      "posts": 1,
+      "attempts": 1
+    },
+    {
+      "name": "extended_framing",
+      "mode": "negative_terminal_size",
+      "routed": true,
+      "visual_status": "ok",
+      "action_status": "done",
+      "notifications": 1,
+      "posts": 1,
+      "attempts": 1
+    },
+    {
+      "name": "extended_framing",
+      "mode": "invalid_status_line",
+      "routed": true,
+      "visual_status": "ok",
+      "action_status": "done",
+      "notifications": 1,
+      "posts": 1,
+      "attempts": 1
+    },
+    {
+      "name": "extended_framing",
+      "mode": "invalid_transfer_encoding",
+      "routed": true,
+      "visual_status": "ok",
+      "action_status": "done",
+      "notifications": 1,
+      "posts": 1,
+      "attempts": 1
+    },
+    {
+      "name": "extended_compile",
+      "text": "When a car enters Service Bay A with hood open or flashing, create an alert",
+      "http_status": 200,
+      "result": {
+        "ok": true,
+        "draft": {
+          "name": "car entered zone + verify the vehicle hood is open",
+          "source_id": 2,
+          "object_class": "car",
+          "trigger": {
+            "type": "object_entered_zone",
+            "zone_id": 2,
+            "duration_seconds": null,
+            "threshold": null
+          },
+          "action": {
+            "type": "create_notification",
+            "config": {
+              "title": "car entered zone + verify the vehicle hood is open"
+            }
+          },
+          "visual_predicate": {
+            "prompt": "Does the image clearly show that the vehicle hood is open?",
+            "labels": [
+              "yes",
+              "no"
+            ],
+            "expected_label": "yes",
+            "description": "the vehicle hood is open",
+            "sample_interval_seconds": null,
+            "cooldown_seconds": null,
+            "budget": null
+          },
+          "cooldown_seconds": 10.0,
+          "requires_approval": true
+        },
+        "errors": [],
+        "warnings": [
+          "a visual predicate was detected; it requires a configured Teacher VLM at runtime and is checked only on candidate events"
+        ],
+        "explanation": "car \u00b7 object_entered_zone \u00b7 visual: the vehicle hood is open \u2192 create_notification (draft, disabled until you approve)"
+      }
+    },
+    {
+      "name": "extended_compile",
+      "text": "When a car enters Service Bay A with hood open or off, create an alert",
+      "http_status": 200,
+      "result": {
+        "ok": true,
+        "draft": {
+          "name": "car entered zone + verify the vehicle hood is open",
+          "source_id": 2,
+          "object_class": "car",
+          "trigger": {
+            "type": "object_entered_zone",
+            "zone_id": 2,
+            "duration_seconds": null,
+            "threshold": null
+          },
+          "action": {
+            "type": "create_notification",
+            "config": {
+              "title": "car entered zone + verify the vehicle hood is open"
+            }
+          },
+          "visual_predicate": {
+            "prompt": "Does the image clearly show that the vehicle hood is open?",
+            "labels": [
+              "yes",
+              "no"
+            ],
+            "expected_label": "yes",
+            "description": "the vehicle hood is open",
+            "sample_interval_seconds": null,
+            "cooldown_seconds": null,
+            "budget": null
+          },
+          "cooldown_seconds": 10.0,
+          "requires_approval": true
+        },
+        "errors": [],
+        "warnings": [
+          "a visual predicate was detected; it requires a configured Teacher VLM at runtime and is checked only on candidate events"
+        ],
+        "explanation": "car \u00b7 object_entered_zone \u00b7 visual: the vehicle hood is open \u2192 create_notification (draft, disabled until you approve)"
+      }
+    },
+    {
+      "name": "extended_compile",
+      "text": "When a car enters Service Bay A with hood open and up, create an alert",
+      "http_status": 200,
+      "result": {
+        "ok": true,
+        "draft": {
+          "name": "car entered zone + verify the vehicle hood is open",
+          "source_id": 2,
+          "object_class": "car",
+          "trigger": {
+            "type": "object_entered_zone",
+            "zone_id": 2,
+            "duration_seconds": null,
+            "threshold": null
+          },
+          "action": {
+            "type": "create_notification",
+            "config": {
+              "title": "car entered zone + verify the vehicle hood is open"
+            }
+          },
+          "visual_predicate": {
+            "prompt": "Does the image clearly show that the vehicle hood is open?",
+            "labels": [
+              "yes",
+              "no"
+            ],
+            "expected_label": "yes",
+            "description": "the vehicle hood is open",
+            "sample_interval_seconds": null,
+            "cooldown_seconds": null,
+            "budget": null
+          },
+          "cooldown_seconds": 10.0,
+          "requires_approval": true
+        },
+        "errors": [],
+        "warnings": [
+          "a visual predicate was detected; it requires a configured Teacher VLM at runtime and is checked only on candidate events"
+        ],
+        "explanation": "car \u00b7 object_entered_zone \u00b7 visual: the vehicle hood is open \u2192 create_notification (draft, disabled until you approve)"
+      }
+    },
+    {
+      "name": "extended_compile",
+      "text": "When a car stays in Service Bay A for 1.4 seconds, create an alert",
+      "http_status": 200,
+      "result": {
+        "ok": true,
+        "draft": {
+          "name": "car dwell in zone",
+          "source_id": 2,
+          "object_class": "car",
+          "trigger": {
+            "type": "dwell_in_zone",
+            "zone_id": 2,
+            "duration_seconds": 1.4,
+            "threshold": null
+          },
+          "action": {
+            "type": "create_notification",
+            "config": {
+              "title": "car dwell in zone"
+            }
+          },
+          "visual_predicate": null,
+          "cooldown_seconds": 10.0,
+          "requires_approval": true
+        },
+        "errors": [],
+        "warnings": [],
+        "explanation": "car \u00b7 dwell_in_zone \u22651s \u2192 create_notification (draft, disabled until you approve)"
+      }
+    },
+    {
+      "name": "extended_compile",
+      "text": "When a car stays in Service Bay A for 1.25 seconds, create an alert",
+      "http_status": 200,
+      "result": {
+        "ok": true,
+        "draft": {
+          "name": "car dwell in zone",
+          "source_id": 2,
+          "object_class": "car",
+          "trigger": {
+            "type": "dwell_in_zone",
+            "zone_id": 2,
+            "duration_seconds": 1.25,
+            "threshold": null
+          },
+          "action": {
+            "type": "create_notification",
+            "config": {
+              "title": "car dwell in zone"
+            }
+          },
+          "visual_predicate": null,
+          "cooldown_seconds": 10.0,
+          "requires_approval": true
+        },
+        "errors": [],
+        "warnings": [],
+        "explanation": "car \u00b7 dwell_in_zone \u22651s \u2192 create_notification (draft, disabled until you approve)"
+      }
+    },
+    {
+      "name": "extended_compile",
+      "text": "When a car stays in Service Bay A for 0.024 minutes, create an alert",
+      "http_status": 200,
+      "result": {
+        "ok": true,
+        "draft": {
+          "name": "car dwell in zone",
+          "source_id": 2,
+          "object_class": "car",
+          "trigger": {
+            "type": "dwell_in_zone",
+            "zone_id": 2,
+            "duration_seconds": 1.44,
+            "threshold": null
+          },
+          "action": {
+            "type": "create_notification",
+            "config": {
+              "title": "car dwell in zone"
+            }
+          },
+          "visual_predicate": null,
+          "cooldown_seconds": 10.0,
+          "requires_approval": true
+        },
+        "errors": [],
+        "warnings": [],
+        "explanation": "car \u00b7 dwell_in_zone \u22651s \u2192 create_notification (draft, disabled until you approve)"
+      }
+    },
+    {
+      "name": "extended_compile",
+      "text": "Create an alert for 5 minutes a car stays in Service Bay A",
+      "http_status": 200,
+      "result": {
+        "ok": true,
+        "draft": {
+          "name": "car dwell in zone",
+          "source_id": 2,
+          "object_class": "car",
+          "trigger": {
+            "type": "dwell_in_zone",
+            "zone_id": 2,
+            "duration_seconds": 300.0,
+            "threshold": null
+          },
+          "action": {
+            "type": "create_notification",
+            "config": {
+              "title": "car dwell in zone"
+            }
+          },
+          "visual_predicate": null,
+          "cooldown_seconds": 10.0,
+          "requires_approval": true
+        },
+        "errors": [],
+        "warnings": [],
+        "explanation": "car \u00b7 dwell_in_zone \u2265300s \u2192 create_notification (draft, disabled until you approve)"
+      }
+    },
+    {
+      "name": "extended_compile",
+      "text": "When a car enters Service Bay A with hood open or closed, create an alert",
+      "http_status": 200,
+      "result": {
+        "ok": false,
+        "draft": null,
+        "errors": [
+          "negated visual conditions (e.g. 'hood not open') are not supported; state the positive condition to verify"
+        ],
+        "warnings": [],
+        "explanation": "Could not compile a complete, unambiguous workflow."
+      }
+    },
+    {
+      "name": "extended_compile",
+      "text": "When a car enters Service Bay A, open the gate",
+      "http_status": 200,
+      "result": {
+        "ok": false,
+        "draft": null,
+        "errors": [
+          "that action is not available (physical actuation / external dispatch); only in-app notifications are supported",
+          "unsupported or unrecognized phrasing: 'gate'; rephrase using the supported grammar (class, enter/exit/dwell/count, zone, optional single visual condition)"
+        ],
+        "warnings": [],
+        "explanation": "Could not compile a complete, unambiguous workflow."
+      }
+    },
+    {
+      "name": "extended_compile",
+      "text": "When a car enters Service Bay A, bake a cake",
+      "http_status": 200,
+      "result": {
+        "ok": false,
+        "draft": null,
+        "errors": [
+          "unsupported or unrecognized phrasing: 'bake', 'cake'; rephrase using the supported grammar (class, enter/exit/dwell/count, zone, optional single visual condition)"
+        ],
+        "warnings": [],
+        "explanation": "Could not compile a complete, unambiguous workflow."
+      }
+    },
+    {
+      "name": "ui_roundtrip",
+      "text": "When a car stays in Service Bay A for 1.4 seconds, create an alert",
+      "draft": {
+        "name": "car dwell in zone",
+        "source_id": 2,
+        "object_class": "car",
+        "trigger": {
+          "type": "dwell_in_zone",
+          "zone_id": 2,
+          "duration_seconds": 1.4,
+          "threshold": null
+        },
+        "action": {
+          "type": "create_notification",
+          "config": {
+            "title": "car dwell in zone"
+          }
+        },
+        "visual_predicate": null,
+        "cooldown_seconds": 10.0,
+        "requires_approval": true
+      },
+      "ui": {
+        "payload": {
+          "name": "car dwell in zone",
+          "source_id": 2,
+          "object_class": "car",
+          "trigger": {
+            "type": "dwell_in_zone",
+            "zone_id": 2,
+            "duration_seconds": 1
+          },
+          "action": {
+            "type": "create_notification",
+            "config": {
+              "title": "car dwell in zone"
+            }
+          },
+          "cooldown_seconds": 10
+        },
+        "calls": [
+          "http://QA_ONLY/api/workflows"
+        ]
+      },
+      "stored_dsl": {
+        "name": "car dwell in zone",
+        "source_id": 2,
+        "object_class": "car",
+        "trigger": {
+          "type": "dwell_in_zone",
+          "zone_id": 2,
+          "duration_seconds": 1.0,
+          "threshold": null
+        },
+        "action": {
+          "type": "create_notification",
+          "config": {
+            "title": "car dwell in zone"
+          }
+        },
+        "visual_predicate": null,
+        "cooldown_seconds": 10.0,
+        "requires_approval": true
+      },
+      "created_enabled": false,
+      "explicit_enabled": true
+    },
+    {
+      "name": "ui_roundtrip",
+      "text": "When a car stays in Service Bay A for 1.25 seconds, create an alert",
+      "draft": {
+        "name": "car dwell in zone",
+        "source_id": 2,
+        "object_class": "car",
+        "trigger": {
+          "type": "dwell_in_zone",
+          "zone_id": 2,
+          "duration_seconds": 1.25,
+          "threshold": null
+        },
+        "action": {
+          "type": "create_notification",
+          "config": {
+            "title": "car dwell in zone"
+          }
+        },
+        "visual_predicate": null,
+        "cooldown_seconds": 10.0,
+        "requires_approval": true
+      },
+      "ui": {
+        "payload": {
+          "name": "car dwell in zone",
+          "source_id": 2,
+          "object_class": "car",
+          "trigger": {
+            "type": "dwell_in_zone",
+            "zone_id": 2,
+            "duration_seconds": 1
+          },
+          "action": {
+            "type": "create_notification",
+            "config": {
+              "title": "car dwell in zone"
+            }
+          },
+          "cooldown_seconds": 10
+        },
+        "calls": [
+          "http://QA_ONLY/api/workflows"
+        ]
+      },
+      "stored_dsl": {
+        "name": "car dwell in zone",
+        "source_id": 2,
+        "object_class": "car",
+        "trigger": {
+          "type": "dwell_in_zone",
+          "zone_id": 2,
+          "duration_seconds": 1.0,
+          "threshold": null
+        },
+        "action": {
+          "type": "create_notification",
+          "config": {
+            "title": "car dwell in zone"
+          }
+        },
+        "visual_predicate": null,
+        "cooldown_seconds": 10.0,
+        "requires_approval": true
+      },
+      "created_enabled": false,
+      "explicit_enabled": true
+    },
+    {
+      "name": "ui_roundtrip",
+      "text": "When a car stays in Service Bay A for 0.024 minutes, create an alert",
+      "draft": {
+        "name": "car dwell in zone",
+        "source_id": 2,
+        "object_class": "car",
+        "trigger": {
+          "type": "dwell_in_zone",
+          "zone_id": 2,
+          "duration_seconds": 1.44,
+          "threshold": null
+        },
+        "action": {
+          "type": "create_notification",
+          "config": {
+            "title": "car dwell in zone"
+          }
+        },
+        "visual_predicate": null,
+        "cooldown_seconds": 10.0,
+        "requires_approval": true
+      },
+      "ui": {
+        "payload": {
+          "name": "car dwell in zone",
+          "source_id": 2,
+          "object_class": "car",
+          "trigger": {
+            "type": "dwell_in_zone",
+            "zone_id": 2,
+            "duration_seconds": 1
+          },
+          "action": {
+            "type": "create_notification",
+            "config": {
+              "title": "car dwell in zone"
+            }
+          },
+          "cooldown_seconds": 10
+        },
+        "calls": [
+          "http://QA_ONLY/api/workflows"
+        ]
+      },
+      "stored_dsl": {
+        "name": "car dwell in zone",
+        "source_id": 2,
+        "object_class": "car",
+        "trigger": {
+          "type": "dwell_in_zone",
+          "zone_id": 2,
+          "duration_seconds": 1.0,
+          "threshold": null
+        },
+        "action": {
+          "type": "create_notification",
+          "config": {
+            "title": "car dwell in zone"
+          }
+        },
+        "visual_predicate": null,
+        "cooldown_seconds": 10.0,
+        "requires_approval": true
+      },
+      "created_enabled": false,
+      "explicit_enabled": true
+    },
+    {
+      "name": "ui_roundtrip",
+      "text": "When a car stays in Service Bay A for 2.5 minutes, create an alert",
+      "draft": {
+        "name": "car dwell in zone",
+        "source_id": 2,
+        "object_class": "car",
+        "trigger": {
+          "type": "dwell_in_zone",
+          "zone_id": 2,
+          "duration_seconds": 150.0,
+          "threshold": null
+        },
+        "action": {
+          "type": "create_notification",
+          "config": {
+            "title": "car dwell in zone"
+          }
+        },
+        "visual_predicate": null,
+        "cooldown_seconds": 10.0,
+        "requires_approval": true
+      },
+      "ui": {
+        "payload": {
+          "name": "car dwell in zone",
+          "source_id": 2,
+          "object_class": "car",
+          "trigger": {
+            "type": "dwell_in_zone",
+            "zone_id": 2,
+            "duration_seconds": 150
+          },
+          "action": {
+            "type": "create_notification",
+            "config": {
+              "title": "car dwell in zone"
+            }
+          },
+          "cooldown_seconds": 10
+        },
+        "calls": [
+          "http://QA_ONLY/api/workflows"
+        ]
+      },
+      "stored_dsl": {
+        "name": "car dwell in zone",
+        "source_id": 2,
+        "object_class": "car",
+        "trigger": {
+          "type": "dwell_in_zone",
+          "zone_id": 2,
+          "duration_seconds": 150.0,
+          "threshold": null
+        },
+        "action": {
+          "type": "create_notification",
+          "config": {
+            "title": "car dwell in zone"
+          }
+        },
+        "visual_predicate": null,
+        "cooldown_seconds": 10.0,
+        "requires_approval": true
+      },
+      "created_enabled": false,
+      "explicit_enabled": true
+    }
+  ]
+}

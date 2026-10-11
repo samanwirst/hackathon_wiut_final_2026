@@ -1,0 +1,71 @@
+{
+  "target_sha": "953d0e275177951a71c4c8fccf6b915693e43550",
+  "results": [
+    {
+      "name": "raw_preflight",
+      "status": "error",
+      "attempts": 0,
+      "posts": 0,
+      "connections": 0,
+      "budget": {}
+    },
+    {
+      "name": "raw_preflight_supported_control",
+      "status": "ok",
+      "attempts": 1,
+      "posts": 1,
+      "budget": {
+        "k": 1
+      }
+    },
+    {
+      "name": "real_tcp_cache_invalidation",
+      "statuses": [
+        "called",
+        "cache_hit",
+        "called",
+        "called",
+        "called",
+        "called"
+      ],
+      "posts": 5,
+      "attempts": 5
+    },
+    {
+      "name": "real_tcp_inflight_dedup",
+      "statuses": [
+        "called",
+        "deduped"
+      ],
+      "result_statuses": [
+        "timeout",
+        "timeout"
+      ],
+      "posts": 1,
+      "attempts": 1
+    },
+    {
+      "name": "retry_budget_1",
+      "status": "error",
+      "posts": 1,
+      "attempts": 1,
+      "budget": {
+        "k": 1
+      }
+    },
+    {
+      "name": "tls_failure_normalized",
+      "result": {
+        "status": "timeout",
+        "label": null,
+        "confidence": null,
+        "model": "owned-qa-fixture",
+        "prompt_version": "v1",
+        "latency_ms": 107.11441798775923,
+        "usage": {},
+        "error": "provider timeout (attempt 1): _ssl.c:1064: The handshake operation timed out"
+      },
+      "elapsed": 0.1086482770042494
+    }
+  ]
+}
