@@ -37,6 +37,7 @@ from fastapi import (
 )
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, ConfigDict, Field
 
 import secrets
 
@@ -55,7 +56,7 @@ def _startup() -> None:
     rooms.LIVE_EVIDENCE_DIR.mkdir(parents=True, exist_ok=True)
     rooms.LIVE_VIDEO_DIR.mkdir(parents=True, exist_ok=True)
     # Wire session teardown to room cleanup (logout / expiry) — LIVE-006.
-    auth.on_session_dropped = rooms.evict_session
+    auth.on_session_dropped = _drop_membership
     worker.start()
 
 
@@ -217,7 +218,23 @@ def _require_room_member(sess: auth.Session, room_id: str) -> rooms.RoomState:
     if sess.room_id != room_id:
         # A valid session bound to a different room (or none) cannot cross over.
         raise HTTPException(403, "not a member of this room")
+    if room.retired or not auth.session_current(sess):
+        raise HTTPException(401, "session no longer valid")
     return room
+
+
+class DemoSessionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+
+class PlanRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    text: str = Field(min_length=1, max_length=1000)
+
+
+class ValidateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    task: dict
 
 
 # ------------------------------------------------- canonical approval drafts
@@ -254,6 +271,12 @@ def _pop_draft(room_id: str) -> None:
         _drafts.pop(room_id, None)
 
 
+def _drop_membership(token: str, room_id: str, owns: bool) -> None:
+    rooms.evict_session(token, room_id, owns)
+    if owns:
+        _pop_draft(room_id)
+
+
 def _reset_drafts_for_tests() -> None:
     with _drafts_lock:
         _drafts.clear()
@@ -264,7 +287,8 @@ def _reset_drafts_for_tests() -> None:
 
 @app.get("/", response_class=HTMLResponse)
 def landing() -> HTMLResponse:
-    return HTMLResponse((STATIC_DIR / "landing.html").read_text())
+    unified = STATIC_DIR / "demo.html"
+    return HTMLResponse((unified if unified.is_file() else STATIC_DIR / "landing.html").read_text())
 
 
 @app.get("/upload", response_class=HTMLResponse)
@@ -326,6 +350,40 @@ def login(request: Request, response: Response, body: dict = Body(...)):
         raise HTTPException(503, "session capacity reached")
     _set_session_cookies(response, sess)
     return {"role": sess.role, "csrf": sess.csrf}
+
+
+@app.post("/api/demo/session")
+def demo_session(request: Request, response: Response, body: DemoSessionRequest):
+    # Explicit deployment opt-in: this demo surface must sit behind its configured
+    # access barrier. It never accepts a caller-supplied "authenticated" header.
+    if os.environ.get("VISIONFLOW_DEMO_BOOTSTRAP_ENABLED", "").lower() != "true":
+        raise HTTPException(404, "not found")
+    if not auth.origin_allowed(request.headers.get("origin"), request.headers.get("host")):
+        raise HTTPException(403, "origin not allowed")
+    existing = auth.get_session(request.cookies.get(config.SESSION_COOKIE_NAME))
+    if existing is not None and existing.role == "judge" and existing.owns_room:
+        room = _require_room_member(existing, existing.room_id)
+        _set_session_cookies(response, existing)
+        return {"room_id": room.room_id, "csrf_token": existing.csrf,
+                "task_version": room.task_version}
+    ip = _client_ip(request)
+    if auth.login_locked(ip):
+        raise HTTPException(429, "too many demo sessions; try again later")
+    auth.record_failure(ip)  # count successful allocation attempts as well
+    try:
+        sess = auth.create_session("judge")
+    except RuntimeError:
+        raise HTTPException(503, "session capacity reached")
+    try:
+        room = rooms.create_room(sess.token)
+        auth.bind_room(sess.token, room.room_id, owns=True)
+        with room.lock:
+            room.judges.add(sess.token)
+    except RuntimeError:
+        auth.destroy_session(sess.token)
+        raise HTTPException(503, "room capacity reached")
+    _set_session_cookies(response, sess)
+    return {"room_id": room.room_id, "csrf_token": sess.csrf, "task_version": 0}
 
 
 @app.post("/api/live/logout")
@@ -472,9 +530,21 @@ def room_evidence(room_id: str, filename: str, sess: auth.Session = Depends(requ
     if "/" in filename or ".." in filename or not filename.startswith(f"room_{room_id}_"):
         raise HTTPException(404, "evidence not found")
     path = rooms.LIVE_EVIDENCE_DIR / filename
-    if not path.exists():
-        raise HTTPException(404, "evidence not found")
-    return FileResponse(path, media_type="image/jpeg", headers={"Cache-Control": "no-store"})
+    with room.lock:
+        if (room.retired or not auth.session_current(sess)
+                or path not in room._evidence_files
+                or not any(e.evidence_file == filename for e in room.events)):
+            raise HTTPException(404, "evidence not found")
+        try:
+            fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+            with os.fdopen(fd, "rb") as handle:
+                info = os.fstat(handle.fileno())
+                if not stat.S_ISREG(info.st_mode) or info.st_size > 2 * 1024 * 1024:
+                    raise HTTPException(404, "evidence not found")
+                content = handle.read(2 * 1024 * 1024 + 1)
+        except OSError:
+            raise HTTPException(404, "evidence not found")
+    return Response(content, media_type="image/jpeg", headers={"Cache-Control": "private, no-store"})
 
 
 # ---------------------------------------------------------------- video source (owner)
@@ -532,7 +602,7 @@ async def upload_video(room_id: str, request: Request):
     sess = require_session(request)
     if not auth.csrf_valid(sess, request.headers.get("x-csrf-token")):
         raise HTTPException(403, "invalid CSRF token")
-    if sess.role != "camera":
+    if sess.role not in {"camera", "judge"} or not sess.owns_room:
         raise HTTPException(403, "only the room owner can upload a video")
     room = _require_room_member(sess, room_id)
     if not sess.owns_room:
@@ -546,10 +616,9 @@ async def upload_video(room_id: str, request: Request):
     def authorized() -> bool:
         # Called INSIDE replace_source's job/registered-room/room lock scope.
         # Do not reacquire the non-reentrant rooms registry lock here.
-        current = auth.get_session(sess.token)
-        return (not cancelled.is_set() and current is sess and current.role == "camera"
-                and current.owns_room and current.room_id == room_id
-                and room.owner_token == current.token)
+        return (not cancelled.is_set() and auth.session_current(sess)
+                and sess.role in {"camera", "judge"} and sess.owns_room
+                and sess.room_id == room_id and room.owner_token == sess.token)
 
     def finish_upload() -> tuple[dict, str]:
         attached = False
@@ -636,7 +705,7 @@ def _demo_video_path(input_id: str) -> Path | None:
 
 @app.get("/api/live/video-catalog")
 def video_catalog(sess: auth.Session = Depends(require_session)):
-    if sess.role != "camera" or not sess.owns_room or not sess.room_id:
+    if sess.role not in {"camera", "judge"} or not sess.owns_room or not sess.room_id:
         raise HTTPException(403, "only a room owner can select prepared videos")
     _require_room_member(sess, sess.room_id)
     inputs = [{"id": key, "label": _DEMO_VIDEO_LABEL}
@@ -648,7 +717,7 @@ def video_catalog(sess: auth.Session = Depends(require_session)):
 @app.post("/api/live/rooms/{room_id}/video/select")
 async def select_video(room_id: str, request: Request, body: dict = Body(...),
                        sess: auth.Session = Depends(require_mutation)):
-    if sess.role != "camera" or not sess.owns_room:
+    if sess.role not in {"camera", "judge"} or not sess.owns_room:
         raise HTTPException(403, "only the room owner can select a video")
     _require_room_member(sess, room_id)
     if set(body) != {"id"} or not isinstance(body.get("id"), str) or body["id"] not in _DEMO_VIDEO_FILES:
@@ -714,7 +783,7 @@ def inspect_video_scene(room_id: str, sess: auth.Session = Depends(require_mutat
         raise HTTPException(422, "invalid scene request")
 
     def session_is_current():
-        current = auth.get_session(sess.token)
+        current = auth.peek_session(sess.token)
         return current is sess and current.role == "judge" and current.room_id == room_id
 
     return scene.inspect_scene(room, body["question"], body["source_sha256"],
@@ -726,21 +795,31 @@ def inspect_video_scene(room_id: str, sess: auth.Session = Depends(require_mutat
 
 @app.post("/api/live/rooms/{room_id}/task/plan")
 def plan_task(room_id: str, sess: auth.Session = Depends(require_mutation),
-              body: dict = Body(...)):
+              body: PlanRequest = Body(...)):
     if sess.role != "judge":
         raise HTTPException(403, "only a judge can plan a task")
     room = _require_room_member(sess, room_id)
-    text = str(body.get("text", ""))
+    text = body.text
+    with room.lock:
+        if room.retired or not auth.session_current(sess):
+            raise HTTPException(401, "session no longer valid")
+        room.draft_generation += 1
+        generation = room.draft_generation
+        src, path, ver = room.video_sha256, room.video_path, room.task_version
+        _pop_draft(room_id)
     result = planner.plan(text, room.room_id)
     # A successful plan issues a server-bound canonical draft so the judge can
     # approve the EXACT task that was previewed (LIVE-VIDEO-005).
     draft_hash = None
     expected_version = None
-    if result.status == "ok" and result.task:
-        with room.lock:
-            src = room.video_sha256
-            ver = room.task_version
-        draft_hash, expected_version = _store_draft(room.room_id, result.task, src, ver)
+    with room.lock:
+        if not auth.session_current(sess) or sess.room_id != room_id or room.retired:
+            raise HTTPException(401, "planner session no longer valid")
+        if (room.video_sha256 != src or room.video_path != path
+                or room.task_version != ver or room.draft_generation != generation):
+            raise HTTPException(409, "source, task or draft changed during planning; plan again")
+        if result.status == "ok" and result.task:
+            draft_hash, expected_version = _store_draft(room.room_id, result.task, src, ver)
     return {
         "status": result.status,
         "original_text": text,
@@ -761,14 +840,14 @@ def plan_task(room_id: str, sess: auth.Session = Depends(require_mutation),
 
 @app.post("/api/live/rooms/{room_id}/task/validate")
 def validate_task(room_id: str, sess: auth.Session = Depends(require_mutation),
-                  body: dict = Body(...)):
+                  body: ValidateRequest = Body(...)):
     """Validate an edited task against the backend-owned DSL and issue a server-bound
     canonical draft (hash + version) the judge can then approve verbatim. This
     supports manual JSON edits of a planned task (LIVE-VIDEO-005)."""
     if sess.role != "judge":
         raise HTTPException(403, "only a judge can validate a task")
     room = _require_room_member(sess, room_id)
-    raw_task = body.get("task")
+    raw_task = body.task
     if not isinstance(raw_task, dict):
         raise HTTPException(400, "task object required")
     try:
@@ -777,9 +856,12 @@ def validate_task(room_id: str, sess: auth.Session = Depends(require_mutation),
         raise HTTPException(422, f"task failed validation: {exc}")
     canonical = task.model_dump()
     with room.lock:
+        if room.retired or not auth.session_current(sess) or sess.room_id != room_id:
+            raise HTTPException(401, "session no longer valid")
+        room.draft_generation += 1
         src = room.video_sha256
         ver = room.task_version
-    digest, expected = _store_draft(room.room_id, canonical, src, ver)
+        digest, expected = _store_draft(room.room_id, canonical, src, ver)
     return {"task": canonical, "draft_hash": digest, "expected_version": expected}
 
 
@@ -813,6 +895,8 @@ def activate_task(room_id: str, sess: auth.Session = Depends(require_mutation),
     with room.lock:
         if room.retired:
             raise HTTPException(409, "room retired")
+        if not auth.session_current(sess) or sess.room_id != room_id:
+            raise HTTPException(401, "approval session no longer valid")
         src = room.video_sha256
         if room.task_version != expected_version:
             raise HTTPException(409, "stale approval: task version changed; re-validate")
@@ -828,6 +912,7 @@ def activate_task(room_id: str, sess: auth.Session = Depends(require_mutation),
             fw = room.latest_meta.get("w") or 1
             fh = room.latest_meta.get("h") or 1
             version = rooms.activate_task(room, canonical, fw, fh)
+            room.approved_hash = want
             has_video = room.video_path is not None
             _drafts.pop(room_id, None)
     # A new approved request on the SAME video reruns the analysis from frame 0

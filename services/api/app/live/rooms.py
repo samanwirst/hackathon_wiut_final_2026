@@ -60,7 +60,7 @@ class RoomState:
     owner_token: str
     created_at: float = field(default_factory=time.time)
     judges: set[str] = field(default_factory=set)
-    lock: threading.Lock = field(default_factory=threading.Lock)
+    lock: threading.RLock = field(default_factory=threading.RLock)
 
     # volatile media
     latest_jpeg: bytes | None = None
@@ -93,6 +93,8 @@ class RoomState:
     # task state
     task: dict | None = None                             # validated LiveTask.model_dump()
     task_version: int = 0
+    draft_generation: int = 0  # newer plan/edit requests revoke older in-flight plans
+    approved_hash: str | None = None
     task_enabled: bool = False
     task_paused: bool = False
     engines: list = field(default_factory=list)          # [(EventType engine)] for current version

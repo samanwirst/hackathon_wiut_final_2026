@@ -34,7 +34,7 @@ class Session:
     owns_room: bool = False     # camera that created the room
 
     def expired(self, now: float | None = None) -> bool:
-        return (now or time.time()) >= self.expires_at
+        return (time.time() if now is None else now) >= self.expires_at
 
 
 _sessions: dict[str, Session] = {}
@@ -96,16 +96,18 @@ def clear_failures(ip: str) -> None:
 # --- sessions --------------------------------------------------------------
 
 
-def _sweep(now: float) -> None:
+def _sweep(now: float) -> list[Session]:
+    dropped = [s for s in _sessions.values() if s.expired(now)]
     dead = [t for t, s in _sessions.items() if s.expired(now)]
     for t in dead:
         _sessions.pop(t, None)
+    return dropped
 
 
 def create_session(role: Role) -> Session:
     now = time.time()
+    sweep_expired()
     with _sessions_lock:
-        _sweep(now)
         if len(_sessions) >= config.MAX_SESSIONS:
             raise RuntimeError("session capacity reached")
         token = secrets.token_urlsafe(32)
@@ -118,7 +120,7 @@ def create_session(role: Role) -> Session:
             expires_at=now + config.SESSION_TTL_SECONDS,
         )
         _sessions[token] = sess
-        return sess
+    return sess
 
 
 def get_session(token: str | None) -> Session | None:
@@ -129,10 +131,26 @@ def get_session(token: str | None) -> Session | None:
         sess = _sessions.get(token)
         if sess is None:
             return None
-        if sess.expired(now):
+        expired = sess.expired(now)
+        if expired:
             _sessions.pop(token, None)
-            return None
-        return sess
+    if expired:
+        _notify_dropped([sess])
+        return None
+    return sess
+
+
+def session_current(sess: Session) -> bool:
+    """Check authority without a teardown callback while holding a room lock."""
+    with _sessions_lock:
+        return _sessions.get(sess.token) is sess and not sess.expired()
+
+
+def peek_session(token: str | None) -> Session | None:
+    """Non-callback authority lookup for callers already holding room.lock."""
+    with _sessions_lock:
+        sess = _sessions.get(token)
+        return sess if sess is not None and not sess.expired() else None
 
 
 # Optional hook (set by the app layer) invoked when a session's membership must
