@@ -1,0 +1,266 @@
+.....FFFFFFFFFFFFFFFFFFFFFFF.F.FFF...FFFFF                               [100%]
+=================================== FAILURES ===================================
+______________ test_origin_allowlist_is_authoritative[None-None] _______________
+/tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py:224: in test_origin_allowlist_is_authoritative
+    assert r.status_code == 403, f'non-allowed Origin/Host login returned {r.status_code}'
+E   AssertionError: non-allowed Origin/Host login returned 200
+E   assert 200 == 403
+E    +  where 200 = <Response [200 OK]>.status_code
+_ test_origin_allowlist_is_authoritative[https://attacker.invalid-attacker.invalid] _
+/tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py:224: in test_origin_allowlist_is_authoritative
+    assert r.status_code == 403, f'non-allowed Origin/Host login returned {r.status_code}'
+E   AssertionError: non-allowed Origin/Host login returned 200
+E   assert 200 == 403
+E    +  where 200 = <Response [200 OK]>.status_code
+_ test_origin_allowlist_is_authoritative[http://live.qa.invalid-live.qa.invalid] _
+/tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py:224: in test_origin_allowlist_is_authoritative
+    assert r.status_code == 403, f'non-allowed Origin/Host login returned {r.status_code}'
+E   AssertionError: non-allowed Origin/Host login returned 200
+E   assert 200 == 403
+E    +  where 200 = <Response [200 OK]>.status_code
+____________________ test_mutation_missing_origin_rejected _____________________
+/tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py:230: in test_mutation_missing_origin_rejected
+    assert r.status_code == 403
+E   assert 200 == 403
+E    +  where 200 = <Response [200 OK]>.status_code
+_____________________ test_logout_requires_origin_and_csrf _____________________
+/tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py:236: in test_logout_requires_origin_and_csrf
+    assert r.status_code == 403
+E   assert 200 == 403
+E    +  where 200 = <Response [200 OK]>.status_code
+______________________ test_ws_missing_origin_is_rejected ______________________
+/tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py:241: in test_ws_missing_origin_is_rejected
+    with pytest.raises(WebSocketDisconnect):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE WebSocketDisconnect
+_____________ test_rate_limit_cannot_be_bypassed_by_untrusted_xff ______________
+/tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py:251: in test_rate_limit_cannot_be_bypassed_by_untrusted_xff
+    assert 429 in statuses, f'all attempts from one peer escaped lockout: {statuses}'
+E   AssertionError: all attempts from one peer escaped lockout: [401, 401, 401, 401, 401, 401, 401]
+E   assert 429 in [401, 401, 401, 401, 401, 401, ...]
+___________ test_camera_socket_revoked_after_login_lifetime[logout] ____________
+/tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py:265: in test_camera_socket_revoked_after_login_lifetime
+    assert room.frames_received == 0, 'revoked camera socket still ingested private frames'
+E   AssertionError: revoked camera socket still ingested private frames
+E   assert 1 == 0
+E    +  where 1 = RoomState(room_id='Xeq3Jn3UAJLuJjpI', join_code='CiK855QfC2oF', owner_token='TgFWpsdeJ-p60yuRDrdBD9rzRut9WiJ1IJRT8NB8w..._inferred=0, last_recv_ts=1791692256.5658264, last_inference_ms=0.0, recv_times=deque([1791692256.5658264], maxlen=20)).frames_received
+___________ test_camera_socket_revoked_after_login_lifetime[expiry] ____________
+/tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py:265: in test_camera_socket_revoked_after_login_lifetime
+    assert room.frames_received == 0, 'revoked camera socket still ingested private frames'
+E   AssertionError: revoked camera socket still ingested private frames
+E   assert 1 == 0
+E    +  where 1 = RoomState(room_id='BVT-Vpu3x0sQGCgc', join_code='czGgUXk9PjQR', owner_token='wzfN4WY9nPZAGOf6OTPRbzxLPwK1FL9eZa1q_VAJj..._inferred=0, last_recv_ts=1791692256.5904286, last_inference_ms=0.0, recv_times=deque([1791692256.5904286], maxlen=20)).frames_received
+_____________ test_judge_socket_stops_disclosing_old_room[logout] ______________
+/tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py:286: in test_judge_socket_stops_disclosing_old_room
+    with pytest.raises(WebSocketDisconnect):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE WebSocketDisconnect
+_____________ test_judge_socket_stops_disclosing_old_room[expiry] ______________
+/tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py:286: in test_judge_socket_stops_disclosing_old_room
+    with pytest.raises(WebSocketDisconnect):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE WebSocketDisconnect
+_____________ test_judge_socket_stops_disclosing_old_room[rebind] ______________
+/tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py:286: in test_judge_socket_stops_disclosing_old_room
+    with pytest.raises(WebSocketDisconnect):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE WebSocketDisconnect
+__________ test_rooms_retire_on_owner_logout_and_new_users_can_start ___________
+/tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py:297: in test_rooms_retire_on_owner_logout_and_new_users_can_start
+    assert all(s == 200 for s in statuses), f'logged-out rooms exhaust capacity: {statuses}'
+E   AssertionError: logged-out rooms exhaust capacity: [200, 200, 200, 200, 200, 200, 200, 200, 503]
+E   assert False
+E    +  where False = all(<generator object test_rooms_retire_on_owner_logout_and_new_users_can_start.<locals>.<genexpr> at 0x7f40cf96c860>)
+__________________ test_duplicate_and_stale_sequence_rejected __________________
+/tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py:304: in test_duplicate_and_stale_sequence_rejected
+    assert room.frames_received == 1, f'{room.frames_received} frames admitted for duplicate/stale seq'
+E   AssertionError: 3 frames admitted for duplicate/stale seq
+E   assert 3 == 1
+E    +  where 3 = RoomState(room_id='3bfJo7YaE8ycTpyD', join_code='gVuDCHBTqkIi', owner_token='rRu73N-nJTdgKdcSERaLSTlKoIEep6OhW2F6ciG5F...rence_ms=0.004215005901642144, recv_times=deque([1791692257.5489662, 1791692257.5495884, 1791692257.55078], maxlen=20)).frames_received
+__________ test_actual_jpeg_dimensions_bound_even_when_metadata_lies ___________
+/tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py:316: in test_actual_jpeg_dimensions_bound_even_when_metadata_lies
+    assert h.detector.sizes == [], f'oversize decoded image reached inference: {h.detector.sizes}'
+E   AssertionError: oversize decoded image reached inference: [(1200, 64)]
+E   assert [(1200, 64)] == []
+E     
+E     Left contains one more item: (1200, 64)
+E     Use -v to get more diff
+___________________ test_empty_frame_cannot_terminate_worker ___________________
+/tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py:324: in test_empty_frame_cannot_terminate_worker
+    worker._process_room_if_ready(room)
+services/api/app/live/worker.py:106: in _process_room_if_ready
+    process_frame(room, jpeg, meta, version, enabled, task, engines)
+services/api/app/live/worker.py:114: in process_frame
+    frame = cv2.imdecode(np.frombuffer(jpeg, dtype=np.uint8), cv2.IMREAD_COLOR)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   cv2.error: OpenCV(5.0.0) /io/opencv/modules/imgcodecs/src/loadsave.cpp:1291: error: (-215:Assertion failed) !buf.empty() in function 'imdecode_'
+_________ test_nonfinite_capture_timestamp_cannot_break_state_endpoint _________
+/tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py:334: in test_nonfinite_capture_timestamp_cannot_break_state_endpoint
+    assert r.status_code == 200, f'accepted NaN poisons state response: {r.status_code}'
+E   AssertionError: accepted NaN poisons state response: 500
+E   assert 500 == 200
+E    +  where 500 = <Response [500 Internal Server Error]>.status_code
+_______________ test_http_payload_is_bounded_before_json_parsing _______________
+/tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py:341: in test_http_payload_is_bounded_before_json_parsing
+    assert r.status_code == 413, f'oversize JSON body accepted: {r.status_code}'
+E   AssertionError: oversize JSON body accepted: 200
+E   assert 200 == 413
+E    +  where 200 = <Response [200 OK]>.status_code
+_____________________ test_ws_metadata_payload_is_bounded ______________________
+/tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py:349: in test_ws_metadata_payload_is_bounded
+    assert room.frames_received == 0
+E   AssertionError: assert 1 == 0
+E    +  where 1 = RoomState(room_id='rKp3dq6Q5Vj7Cihu', join_code='1pMYkgdFQYiq', owner_token='VUnxUityZhZafxFSyujvTg3_52Edfky8Z6PmXUfA8..._inferred=0, last_recv_ts=1791692257.6742136, last_inference_ms=0.0, recv_times=deque([1791692257.6742136], maxlen=20)).frames_received
+_____________________ test_latest_queue_drops_are_counted ______________________
+/tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py:357: in test_latest_queue_drops_are_counted
+    assert room.frames_dropped == 4, f'four overwritten frames reported as {room.frames_dropped} drops'
+E   AssertionError: four overwritten frames reported as 0 drops
+E   assert 0 == 4
+E    +  where 0 = RoomState(room_id='rmgCqZaKjQQoATkl', join_code='kUnUMeCuV5wo', owner_token='9EWsrNfSFTCcO63PksFTZ7npRkGK9_2deVsTER_Jv...s=deque([1791692257.6931787, 1791692257.693374, 1791692257.693519, 1791692257.6936584, 1791692257.6937966], maxlen=20)).frames_dropped
+____ test_semantic_condition_never_degrades_to_presence_alert[unavailable] _____
+/tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py:370: in test_semantic_condition_never_degrades_to_presence_alert
+    assert len(room.notifications) == 0, (
+E   AssertionError: bottle-opening task notified on presence with unavailable Teacher: 1 events, 1 notifications
+E   assert 1 == 0
+E    +  where 1 = len(deque([{'id': 1, 'event_id': 1, 'title': 'QA_ONLY Bottle opening', 'message': 'bottle #2 entered QA_ONLY Bottle opening', ...}]))
+E    +    where deque([{'id': 1, 'event_id': 1, 'title': 'QA_ONLY Bottle opening', 'message': 'bottle #2 entered QA_ONLY Bottle opening', ...}]) = RoomState(room_id='oA5wXpDpj7ZBtk25', join_code='NxnR7x2mZJzI', owner_token='A8hBt4h7mcNYVfevratnZdLbpdYOByr4YaNTiAx3P...7223442, last_inference_ms=0.004926012479700148, recv_times=deque([1791692257.7215796, 1791692257.7223442], maxlen=20)).notifications
+_______ test_semantic_condition_never_degrades_to_presence_alert[closed] _______
+/tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py:370: in test_semantic_condition_never_degrades_to_presence_alert
+    assert len(room.notifications) == 0, (
+E   AssertionError: bottle-opening task notified on presence with closed Teacher: 1 events, 1 notifications
+E   assert 1 == 0
+E    +  where 1 = len(deque([{'id': 1, 'event_id': 1, 'title': 'QA_ONLY Bottle opening', 'message': 'bottle #2 entered QA_ONLY Bottle opening', ...}]))
+E    +    where deque([{'id': 1, 'event_id': 1, 'title': 'QA_ONLY Bottle opening', 'message': 'bottle #2 entered QA_ONLY Bottle opening', ...}]) = RoomState(room_id='r12lo5Acmf05fvfz', join_code='-_jL-fH2A5HD', owner_token='dldlgrphRWNmev_YKGGBS00yDsgoeudk6Ips1AZs1...7.753479, last_inference_ms=0.003793000360019505, recv_times=deque([1791692257.7526507, 1791692257.753479], maxlen=20)).notifications
+_______ test_semantic_condition_never_degrades_to_presence_alert[error] ________
+/tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py:370: in test_semantic_condition_never_degrades_to_presence_alert
+    assert len(room.notifications) == 0, (
+E   AssertionError: bottle-opening task notified on presence with error Teacher: 1 events, 1 notifications
+E   assert 1 == 0
+E    +  where 1 = len(deque([{'id': 1, 'event_id': 1, 'title': 'QA_ONLY Bottle opening', 'message': 'bottle #2 entered QA_ONLY Bottle opening', ...}]))
+E    +    where deque([{'id': 1, 'event_id': 1, 'title': 'QA_ONLY Bottle opening', 'message': 'bottle #2 entered QA_ONLY Bottle opening', ...}]) = RoomState(room_id='Ml6wjRy1w099NEnf', join_code='1I5S0Y6vzcVB', owner_token='bMQI_qEsRJtxC9w6wQQsiZQKyPAlAYxIXyaImhxbi...7803142, last_inference_ms=0.004756002454087138, recv_times=deque([1791692257.7796671, 1791692257.7803142], maxlen=20)).notifications
+________ test_task_reenable_restores_detection_without_resetting_camera ________
+/tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py:396: in test_task_reenable_restores_detection_without_resetting_camera
+    assert len(room.notifications) == 1, f'running task has {len(room.engines)} engines and no alert'
+E   AssertionError: running task has 0 engines and no alert
+E   assert 0 == 1
+E    +  where 0 = len(deque([]))
+E    +    where deque([]) = RoomState(room_id='ltIfMtAR53R1UM1f', join_code='NTj217rcX5Bm', owner_token='LZgl5dJvNo2YI86zCZx9YtPUI0Jtu2jYIK1fPuoCI...ence_ms=0.0035150005714967847, recv_times=deque([1791692257.830541, 1791692257.8312318, 1791692257.832086], maxlen=20)).notifications
+_______________ test_pause_resume_invalidates_old_inflight_work ________________
+/tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py:423: in test_pause_resume_invalidates_old_inflight_work
+    assert not room.notifications, 'inflight work survived acknowledged pause/resume'
+E   AssertionError: inflight work survived acknowledged pause/resume
+E   assert not deque([{'id': 1, 'event_id': 1, 'title': 'QA_ONLY car', 'message': 'car #1 entered QA_ONLY car', ...}])
+E    +  where deque([{'id': 1, 'event_id': 1, 'title': 'QA_ONLY car', 'message': 'car #1 entered QA_ONLY car', ...}]) = RoomState(room_id='SiJQiFwvz9Mbc9k0', join_code='xjORR-lXkNFH', owner_token='e5khakJGdKrF4fFOomPhTQprv_oAhO5jvDkHoMK2-...7.8782516, last_inference_ms=3.9651429979130626, recv_times=deque([1791692257.8775988, 1791692257.8782516], maxlen=20)).notifications
+______ test_disable_before_teacher_send_prevents_private_image_admission _______
+/tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py:437: in test_disable_before_teacher_send_prevents_private_image_admission
+    assert calls == [], 'private Teacher image sent after disable ACK'
+E   AssertionError: private Teacher image sent after disable ACK
+E   assert [[b'\xff\xd8\...80?\xff\xd9']] == []
+E     
+E     Left contains one more item: [b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00\xff\xdb\x00C\x00\x02\x01\x01\x01\x01\x01\x02\x...(\xa2\x80\n(\xa2\x80\n(\xa2\x80\n(\xa2\x80\n(\xa2\x80\n(\xa2\x80\n(\xa2\x80\n(\xa2\x80\n(\xa2\x80\n(\xa2\x80?\xff\xd9']
+E     Use -v to get more diff
+____________________ test_task_state_requires_typed_boolean ____________________
+/tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py:443: in test_task_state_requires_typed_boolean
+    assert r.status_code==422, f'string false accepted as enabled={r.json().get("task_enabled")}'
+E   AssertionError: string false accepted as enabled=True
+E   assert 200 == 422
+E    +  where 200 = <Response [200 OK]>.status_code
+___________ test_schema_rejects_unsupported_tools_urls_classes[code] ___________
+/tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py:477: in test_schema_rejects_unsupported_tools_urls_classes
+    assert r.status=='unsupported', f'backend accepts non-strict {kind} proposal'
+E   AssertionError: backend accepts non-strict code proposal
+E   assert 'ok' == 'unsupported'
+E     
+E     - unsupported
+E     + ok
+_______________ test_invalid_model_visual_observation_is_handled _______________
+/tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py:485: in test_invalid_model_visual_observation_is_handled
+    assert r.status_code==200, f'invalid model output raised server error {r.status_code}'
+E   AssertionError: invalid model output raised server error 500
+E   assert 500 == 200
+E    +  where 500 = <Response [500 Internal Server Error]>.status_code
+________________ test_planner_deadline_includes_admission_wait _________________
+/tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py:500: in test_planner_deadline_includes_admission_wait
+    assert calls==[], f'planner spawned after {elapsed:.3f}s for .04s deadline'
+E   AssertionError: planner spawned after 0.121s for .04s deadline
+E   assert [{'input': 'Q...peiq18', ...}] == []
+E     
+E     Left contains one more item: {'input': 'QA_ONLY no actual model', 'text': True, 'capture_output': True, 'cwd': '/tmp/visionflow-live-review-1-f5aeae3/tmp/vf-live-planner-crpeiq18', ...}
+E     Use -v to get more diff
+------------------------------ Captured log call -------------------------------
+WARNING  visionflow.live.planner:planner.py:307 planner CLI exit 1: QA_ONLY
+______________________ test_event_exposes_frame_identity _______________________
+/tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py:508: in test_event_exposes_frame_identity
+    assert event.get('frame_seq')==12 or event.get('seq')==12, 'event has no frame sequence/hash'
+E   AssertionError: event has no frame sequence/hash
+E   assert (None == 12 or None == 12)
+E    +  where None = <built-in method get of dict object at 0x7f40cd221480>('frame_seq')
+E    +    where <built-in method get of dict object at 0x7f40cd221480> = {'id': 1, 'type': 'object_entered_zone', 'class_name': 'car', 'track_id': 1, ...}.get
+E    +  and   None = <built-in method get of dict object at 0x7f40cd221480>('seq')
+E    +    where <built-in method get of dict object at 0x7f40cd221480> = {'id': 1, 'type': 'object_entered_zone', 'class_name': 'car', 'track_id': 1, ...}.get
+_______________ test_model_proposal_requires_strict_scalar_types _______________
+/tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py:514: in test_model_proposal_requires_strict_scalar_types
+    assert r.status=='unsupported', f'nonboolean supported and Boolean threshold became {r.task}'
+E   AssertionError: nonboolean supported and Boolean threshold became {'name': 'QA_ONLY car', 'object_class': 'car', 'zone': {'type': 'full_frame', 'polygon': [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)]}, 'trigger': 'count_exceeded', 'duration_seconds': None, 'threshold': 1, 'action': 'notify', 'focus': False, 'visual_observation': None, 'explanation': 'QA_ONLY simulated model output'}
+E   assert 'ok' == 'unsupported'
+E     
+E     - unsupported
+E     + ok
+=============================== warnings summary ===============================
+services/api/.venv/lib/python3.14/site-packages/fastapi/testclient.py:1
+  /home/samanwirst/Desktop/hackathon_wiut_final_2026/.agents/runtime/ten-hour/worktrees/review-live-review-1/services/api/.venv/lib/python3.14/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+services/api/app/live/app.py:45
+  /home/samanwirst/Desktop/hackathon_wiut_final_2026/.agents/runtime/ten-hour/worktrees/review-live-review-1/services/api/app/live/app.py:45: DeprecationWarning: 
+          on_event is deprecated, use lifespan event handlers instead.
+  
+          Read more about it in the
+          [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+          
+    @app.on_event("startup")
+
+services/api/.venv/lib/python3.14/site-packages/fastapi/applications.py:4745
+  /home/samanwirst/Desktop/hackathon_wiut_final_2026/.agents/runtime/ten-hour/worktrees/review-live-review-1/services/api/.venv/lib/python3.14/site-packages/fastapi/applications.py:4745: DeprecationWarning: 
+          on_event is deprecated, use lifespan event handlers instead.
+  
+          Read more about it in the
+          [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+          
+    return self.router.on_event(event_type)  # ty: ignore[deprecated]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED ../../../../../../../../../tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py::test_origin_allowlist_is_authoritative[None-None]
+FAILED ../../../../../../../../../tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py::test_origin_allowlist_is_authoritative[https://attacker.invalid-attacker.invalid]
+FAILED ../../../../../../../../../tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py::test_origin_allowlist_is_authoritative[http://live.qa.invalid-live.qa.invalid]
+FAILED ../../../../../../../../../tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py::test_mutation_missing_origin_rejected
+FAILED ../../../../../../../../../tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py::test_logout_requires_origin_and_csrf
+FAILED ../../../../../../../../../tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py::test_ws_missing_origin_is_rejected
+FAILED ../../../../../../../../../tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py::test_rate_limit_cannot_be_bypassed_by_untrusted_xff
+FAILED ../../../../../../../../../tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py::test_camera_socket_revoked_after_login_lifetime[logout]
+FAILED ../../../../../../../../../tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py::test_camera_socket_revoked_after_login_lifetime[expiry]
+FAILED ../../../../../../../../../tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py::test_judge_socket_stops_disclosing_old_room[logout]
+FAILED ../../../../../../../../../tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py::test_judge_socket_stops_disclosing_old_room[expiry]
+FAILED ../../../../../../../../../tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py::test_judge_socket_stops_disclosing_old_room[rebind]
+FAILED ../../../../../../../../../tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py::test_rooms_retire_on_owner_logout_and_new_users_can_start
+FAILED ../../../../../../../../../tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py::test_duplicate_and_stale_sequence_rejected
+FAILED ../../../../../../../../../tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py::test_actual_jpeg_dimensions_bound_even_when_metadata_lies
+FAILED ../../../../../../../../../tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py::test_empty_frame_cannot_terminate_worker
+FAILED ../../../../../../../../../tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py::test_nonfinite_capture_timestamp_cannot_break_state_endpoint
+FAILED ../../../../../../../../../tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py::test_http_payload_is_bounded_before_json_parsing
+FAILED ../../../../../../../../../tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py::test_ws_metadata_payload_is_bounded
+FAILED ../../../../../../../../../tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py::test_latest_queue_drops_are_counted
+FAILED ../../../../../../../../../tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py::test_semantic_condition_never_degrades_to_presence_alert[unavailable]
+FAILED ../../../../../../../../../tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py::test_semantic_condition_never_degrades_to_presence_alert[closed]
+FAILED ../../../../../../../../../tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py::test_semantic_condition_never_degrades_to_presence_alert[error]
+FAILED ../../../../../../../../../tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py::test_task_reenable_restores_detection_without_resetting_camera
+FAILED ../../../../../../../../../tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py::test_pause_resume_invalidates_old_inflight_work
+FAILED ../../../../../../../../../tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py::test_disable_before_teacher_send_prevents_private_image_admission
+FAILED ../../../../../../../../../tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py::test_task_state_requires_typed_boolean
+FAILED ../../../../../../../../../tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py::test_schema_rejects_unsupported_tools_urls_classes[code]
+FAILED ../../../../../../../../../tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py::test_invalid_model_visual_observation_is_handled
+FAILED ../../../../../../../../../tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py::test_planner_deadline_includes_admission_wait
+FAILED ../../../../../../../../../tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py::test_event_exposes_frame_identity
+FAILED ../../../../../../../../../tmp/visionflow-live-review-1-f5aeae3/test_acceptance.py::test_model_proposal_requires_strict_scalar_types
+32 failed, 10 passed, 3 warnings in 2.44s

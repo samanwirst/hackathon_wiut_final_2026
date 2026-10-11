@@ -1,0 +1,23 @@
+{
+  "configured_timeout_s": 0.06,
+  "elapsed_s": 0.28251721800188534,
+  "status": 200,
+  "result": {
+    "status": "ok",
+    "label": "opening",
+    "confidence": 0.9,
+    "uncertain": true,
+    "image_hash": "6c09e08a1b0b32f0fc1b09fbb2139301ac7f9e25ce3c4efce3b3919a9a66b109",
+    "model": "QA_ONLY_MOCK",
+    "latency_ms": 269.4052360020578,
+    "raw": {
+      "scoring": null,
+      "inference_seconds": null,
+      "image_count": 1,
+      "output_is_generated_json": null
+    },
+    "reason": "uncalibrated observation (non-actioning)"
+  },
+  "requests": 1,
+  "QA_ONLY": true
+}

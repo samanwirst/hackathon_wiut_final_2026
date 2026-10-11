@@ -1,0 +1,50 @@
+{
+  "QA_ONLY": true,
+  "method": "exact scripts in node:vm with simulated DOM/HTTP/media",
+  "results": [
+    {
+      "name": "common API sends backend CSRF cookie and exact typed task",
+      "status": "PASS"
+    },
+    {
+      "name": "canonical JSON is shown and draft does not auto-activate",
+      "status": "PASS"
+    },
+    {
+      "name": "editing a displayed draft invalidates approval control",
+      "status": "PASS"
+    },
+    {
+      "name": "editing while plan is inflight invalidates the late result",
+      "status": "FAIL",
+      "reason": "stale plan becomes approvable after prompt edit"
+    },
+    {
+      "name": "disabled task offers re-enable without phone reset",
+      "status": "FAIL",
+      "reason": "disabled task has no re-enable control"
+    },
+    {
+      "name": "unknown model cost stays unknown in the UI",
+      "status": "FAIL",
+      "reason": "missing cost rendered as $0.0000"
+    },
+    {
+      "name": "unsupported response cannot be approved and text is escaped",
+      "status": "PASS"
+    },
+    {
+      "name": "camera invokes getUserMedia, draws actual source, pairs metadata and bytes",
+      "status": "PASS"
+    },
+    {
+      "name": "camera permission refusal surfaces a retryable error",
+      "status": "PASS"
+    },
+    {
+      "name": "expired camera session stops reconnect loop and shows reauthentication",
+      "status": "FAIL",
+      "reason": "4401 schedules automatic reconnect with expired cookie\n\n1 !== 0\n"
+    }
+  ]
+}

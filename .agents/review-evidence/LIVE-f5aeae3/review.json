@@ -1,0 +1,106 @@
+{
+  "verdict": "CHANGES_REQUIRED",
+  "target_sha": "f5aeae3a9f0c04145671ffcdb51ab91f3a0fcc49",
+  "findings": [
+    {
+      "id": "LIVE-001",
+      "severity": "P1",
+      "file_line": "services/api/app/live/worker.py:188,215; services/api/app/live/planner.py:125",
+      "reproduction": "Approve the simulated model proposal for \u201cfocus on the bottle if anybody opens it\u201d; process two owned JPEGs with a scripted bottle track. Exercise an unconfigured Teacher, a closed/negative observation, and a provider error.",
+      "expected": "Unavailable or uncalibrated opening semantics remain unsupported/unknown and cannot authorize an opening-conditioned action.",
+      "actual": "All three cases create an event and notification titled Bottle opening. The observation never gates dispatch; an absent Teacher produces no unavailable observation. Keeping the condition in visual_observation does not preserve its execution semantics.",
+      "fix": "Reject or clarify unsupported semantic conditional tasks. Keep weak observations informational; offer geometric presence monitoring only as a separately disclosed and approved task."
+    },
+    {
+      "id": "LIVE-002",
+      "severity": "P1",
+      "file_line": "services/api/app/live/app.py:405,473",
+      "reproduction": "Open camera/judge sockets, then logout or expire the session. Send another frame or update the feed. Also rebind a judge to room B while its room A socket remains open. Logout failures were reproduced over actual uvicorn/TCP.",
+      "expected": "Revocation, expiry and changed room membership stop camera ingestion and private feed delivery.",
+      "actual": "HTTP returns 401/403, but the existing camera socket accepts another frame and the judge receives new private bytes. Rebinding retains old-room socket access. Authorization is checked only at handshake.",
+      "fix": "Close associated sockets on logout, expiry and rebinding; revalidate authoritative session, role and membership before receive/send. Stop frontend 4401 reconnect loops and request reauthentication."
+    },
+    {
+      "id": "LIVE-003",
+      "severity": "P1",
+      "file_line": "services/api/app/live/auth.py:162; services/api/app/live/app.py:164,384",
+      "reproduction": "With an exact origin allowlist configured, login without Origin, with matching attacker Origin/Host, or with the wrong scheme. Open camera sockets without Origin or the CSRF cookie. Logout with hostile Origin and no CSRF header.",
+      "expected": "Configured Origin/Host policy is authoritative; mutations and upgrades enforce the specified Origin and CSRF boundaries.",
+      "actual": "The logins, mutation, deficient upgrades and logout succeed. Caller-controlled Host matching bypasses the allowlist. Logout lacks the mutation guard, and WebSocket authentication does not check the CSRF cookie.",
+      "fix": "Validate the deployment host and exact origin using trusted proxy metadata. Require allowed Origin on mutations/upgrades, protect logout, and validate the required WebSocket CSRF token/cookie."
+    },
+    {
+      "id": "LIVE-004",
+      "severity": "P1",
+      "file_line": "services/api/app/live/app.py:57; services/api/app/live/__main__.py:27",
+      "reproduction": "From one actual TCP client, submit seven wrong PINs while changing X-Forwarded-For on each request.",
+      "expected": "Untrusted forwarding headers cannot evade the five-failure PIN limit.",
+      "actual": "All seven attempts return 401 instead of lockout 429. The handler trusts the first supplied XFF address; the entrypoint trusts forwarding from every peer.",
+      "fix": "Configure the trusted proxy chain, strip or replace untrusted forwarding headers, and rate-limit by verified client identity. Bound and prune failure-key storage. External cloudflared header rewriting remains NOT TESTED."
+    },
+    {
+      "id": "LIVE-005",
+      "severity": "P1",
+      "file_line": "services/api/app/live/app.py:409,433; services/api/app/live/worker.py:87,114",
+      "reproduction": "Send empty camera bytes, a small 1200\u00d764 JPEG declared as 320\u00d7240, sequences 9/9/8, NaN capture_ts, and 512-KiB HTTP JSON/WebSocket metadata. Exercise the empty frame through actual TCP and the production worker loop.",
+      "expected": "Validate bounded payloads, decoded dimensions, finite metadata and increasing sequence numbers; malformed frames must not terminate processing.",
+      "actual": "Empty bytes raise cv2.error and kill the sole worker while health remains ok. Oversize decoded dimensions reach inference; duplicate/stale frames are accepted; NaN events make state return 500. Oversize JSON and metadata are accepted.",
+      "fix": "Enforce pre-parse body/text limits and strict metadata; inspect JPEG dimensions before inference; reject empty, invalid, nonfinite and stale input. Catch per-frame worker failures and expose worker liveness in readiness."
+    },
+    {
+      "id": "LIVE-006",
+      "severity": "P1",
+      "file_line": "services/api/app/live/rooms.py:117,150; services/api/app/live/auth.py:130",
+      "reproduction": "Create rooms with nine fresh camera sessions, logging each owner out immediately with no remaining judges.",
+      "expected": "Orphaned rooms, pairing codes and retained media retire and release capacity for later users.",
+      "actual": "Eight creations return 200; the ninth returns 503. Production code never calls close_room. Room memberships and evidence lack lifecycle/TTL cleanup.",
+      "fix": "Wire logout, session expiry and idle/retention deadlines to room retirement, pairing/media cleanup and evidence deletion. Remove expired judge memberships and release capacity."
+    },
+    {
+      "id": "LIVE-007",
+      "severity": "P1",
+      "file_line": "services/api/app/live/rooms.py:215; services/api/app/live/app.py:348; services/api/app/live/static/judges.html:140",
+      "reproduction": "Activate, disable, re-enable and process three frames. Separately pause/resume while inference is held, then release it. POST enabled=\"false\" and render a disabled task in the frontend.",
+      "expected": "Re-enable restores processing without resetting the camera; pause invalidates old work; controls are typed and expose re-enable.",
+      "actual": "Re-enable reports running with zero engines and no alerts. Pause/resume preserves the generation, allowing old inference to notify after the pause ACK. String \"false\" enables the task. The disabled UI has no re-enable control.",
+      "fix": "Use strict Boolean request models, invalidate execution generations on revocation, rebuild engines on re-enable/resume with explicit timing semantics, and provide a re-enable control for the approved task."
+    },
+    {
+      "id": "LIVE-008",
+      "severity": "P1",
+      "file_line": "services/api/app/live/worker.py:185,192; services/api/app/live/teacher.py:144",
+      "reproduction": "Pause the production httpcore socket write before POST headers, complete HTTP task disable, then resume the actual write to an owned loopback Teacher fixture.",
+      "expected": "No new Teacher image request starts after disable acknowledgment.",
+      "actual": "One actual POST containing two JPEGs arrives after disable ACK. The final version check cancels the local notification but does not protect private frame admission.",
+      "fix": "Carry an authoritative room/task generation guard into Teacher admission and serialize its check with the actual first write and disable acknowledgment. Recheck after semaphore waiting and cancel unsent work."
+    },
+    {
+      "id": "LIVE-009",
+      "severity": "P1",
+      "file_line": "services/api/app/live/teacher.py:140,146; services/api/app/live/planner.py:275,286",
+      "reproduction": "Trickle an actual Teacher response every 20 ms under a 60-ms timeout. Hold Teacher and planner admission for 120 ms under 40-ms timeouts; intercept planner subprocess execution.",
+      "expected": "One overall deadline includes admission and completion; expired waiting work cannot start provider calls.",
+      "actual": "Teacher returns ok after 282.5 ms. A Teacher POST starts after admission expiry, and the planner reaches the intercepted subprocess boundary after 120 ms. The per-operation httpx timeout permits a paced response to stall the sole CV worker.",
+      "fix": "Use one absolute monotonic deadline across admission and transport/process phases, recompute remaining time, bound responses and terminate expired work. Retain concurrency capacity until underlying work ends."
+    },
+    {
+      "id": "LIVE-010",
+      "severity": "P1",
+      "file_line": "services/api/app/live/teacher.py:85,122,168",
+      "reproduction": "Send twelve malformed confidence fixtures through actual HTTP to /probe. Return the committed local Teacher occupancy-scoring envelope for an opening/closed request. Change room, labels and model while retaining image/question.",
+      "expected": "Strict confidence and requested-label validation; unsupported capabilities return unknown. Cache identity preserves scope, schema and model provenance.",
+      "actual": "Boolean, string, out-of-range and missing confidence becomes ok or raw fallback; NaN/infinities cause 500. Occupancy scoring is accepted for an opening question. Requested labels are not sent. Changed room/model/schema reuses the first observation.",
+      "fix": "Validate a bounded typed provider contract, reject malformed confidence and out-of-schema labels, preserve actual scoring/model/revision/usage, reject unsupported questions, and scope/version cache identity appropriately."
+    },
+    {
+      "id": "LIVE-011",
+      "severity": "P1",
+      "file_line": "services/api/app/live/static/judges.html:171,216",
+      "reproduction": "Execute the committed Judges script with a delayed simulated plan response. Edit the prompt while planning, then resolve the old response.",
+      "expected": "Every edit invalidates pending approval, including in-flight planning.",
+      "actual": "The edit handler only clears an existing draft. The late response installs the obsolete task and reveals Approve & activate.",
+      "fix": "Track prompt/request generations, invalidate approval immediately on edit/discard/new planning, and discard stale responses. Bind approval to the displayed canonical task."
+    }
+  ],
+  "report_markdown": "# Review \u2014 LIVE / Judges\n\nVERDICT: CHANGES_REQUIRED\nTARGET_SHA: f5aeae3a9f0c04145671ffcdb51ab91f3a0fcc49\n\n- Reviewed commit: `f5aeae3a9f0c04145671ffcdb51ab91f3a0fcc49`.\n- Base commit: `d35eb21be8acc9565817949abf9d8d051e51fed8`.\n- Review status: FAIL \u2014 eleven P1 findings. Additional findings exceed five because they are P1.\n- One bounded fresh LIVE review. Historical M2/M3 BLOCKED verdicts, reports and accepted fallback remain unchanged. No correction cycle, integration or publication is authorized by this result.\n- Read the handoff, AGENTS/CLAUDE, official extracted text, PRD acceptance/TRACEABILITY/protocol, deployment/security instructions, all 23 changed files and necessary dependencies. Original source PDF is absent.\n- [Full structured report](/tmp/visionflow-live-review-1-f5aeae3/LIVE.md); [JSON artifact](/tmp/visionflow-live-review-1-f5aeae3/report.json). Source and `.agents` were read-only.\n\n## Commands executed and results\n\n- Read-only Git status/HEAD/history, base ancestry, diff stat/name-status/numstat/check; focused rg/cat/sed/nl reads.\n- Inspected exact-SHA root receipts: make check exited 0 with 229 tests and legacy frontend build; make smoke exited 0 with real M1 YOLO/evidence/notification. These were not repeated and do not establish LIVE phone/planner/Teacher acceptance.\n- Owned `run_pytest.py -p no:cacheprovider`: existing `tests/live` **34 passed**; fresh `test_acceptance.py` **10 passed, 32 failed**; actual-loopback `test_teacher_tcp.py` **5 passed, 17 failed**; additional framing/WS-CSRF checks **5 passed, 1 failed**, including two repeated controls. Initial harness WebSocket cookie-host mismatch was corrected before using results.\n- `node frontend-contract.cjs`: committed scripts under simulated DOM/HTTP/media, **6 passed, 4 failed**. This establishes executable script contracts, not browser rendering or phone operation.\n- `python live_tcp_probe.py`: actual local uvicorn/HTTP/WebSockets with owned JPEGs and scripted CV. Valid geometric control produced one notification and retrievable evidence; recorded post-logout leakage and worker death. All **28** inventoried legacy/upload/media/AutoLearn/Teacher paths returned 404 over actual TCP.\n- Tests used a cleared environment, two CPU thread limits, PYTHONDONTWRITEBYTECODE=1, TMPDIR=/tmp, disabled pytest cache and owned data/basetemp paths. Python temporary artifacts stayed in the owned directory. Local TCP tests explicitly used insecure QA cookies, random PIN fixtures and scripted CV/model outputs.\n- No coding CLI/agent, credentials, real provider/GPU, root experiment data, physical capture, Student activation or publication was used.\n\n## Original fault-boundary adaptations\n\n- **M2-001:** old keyword compilation is absent from LIVE. Tested novel truck/dwell wording through the actual model branch with intercepted subprocess output, plus semantic-condition dispatch. Real model translation remains NOT TESTED.\n- **M2-003:** adapted admission/deadline checks to LIVE semaphore/httpx boundaries. Actual body trickle returned ok after **282.5 ms** against **60 ms**; expired Teacher admission still posted. Planner reached its intercepted subprocess boundary after **120 ms** against **40 ms**. Actual CLI descendants/DNS/TLS stalls were not tested.\n- **M2-007:** intercepted the production httpcore first socket write, completed HTTP disable, then resumed the actual write. One local POST containing two images arrived after ACK; the later notification was correctly cancelled.\n- **M2-008:** twelve malformed confidence fixtures traversed actual HTTP. Valid 0.9/integer-1 controls remained uncertain; malformed confidence rejection failed.\n- **Historical transport controls:** failed HTTP attempts consume the budget; truncated Content-Length, absent chunk terminator and invalid length are rejected; correctly framed chunked response succeeds. These controls do not repair semantic dispatch.\n- **M3:** isolated Student/AutoLearn routes are absent/rejected. No training, activation or rollback acceptance was inferred.\n\n## Acceptance criteria\n\n- **Passed portions:** exactly two landing entries; no default/bundled PIN; ordinary HTTP CSRF/role/private pairing/cross-room evidence controls; legacy rejection and no permissive CORS; concrete isolated local server startup. Actual JPEG decode/shared temporal engine/local notification/evidence/dedupe passed with scripted detections and zero geometric Teacher calls. Production source routes inference to genuine YOLO/tracking. Drafts stay inactive, canonical JSON and explicit approval work, displayed-draft edits invalidate approval, class/action rejection and escaping pass. Intercepted invocation verifies argv/stdin, shell=False, disabled tools/MCP and reduced environment.\n- **Failed:** A session revocation, Origin/Host/WS/proxy trust, payload bounds and room retirement; B input validity, worker resilience and frame identity/drop accounting; C semantic fidelity, in-flight edit approval and complete deadlines; D actual-send revocation, strict confidence/labels/cache and unknown/error behavior; E re-enable/pause/expiry recovery. Valid controls do not negate these failures.\n- **Deferrable discrepancies also reproduced:** extra/coerced proposal fields and overlong visual-observation question returning 500; overwritten frames reported as zero drops; events omit sequence/hash; missing cost displayed as $0.0000. No cost, accuracy or savings claims are inferred.\n- **NOT TESTED / UNVERIFIED:** public HTTPS/cloudflared trust chain; external browser/device rendering; physical phone/getUserMedia/reconnect/wake lock; real subscription planner behavior and process cleanup; genuine Teacher image reasoning, authentication/model quality; real LIVE YOLO on phone frames; Student training/evaluation/activation/rollback; night/rain/local vehicle quality; billed usage/cost, savings, foveation and final public deliverables. Fixtures are not genuine Teacher or phone evidence.\n\n## Final recommendation\n\nFix the P1 defects before public exposure or integration. Preserve accepted fallback and all historical BLOCKED reports. Review artifacts remain under `/tmp/visionflow-live-review-1-f5aeae3`; no source/ref changes, fetch, commit, push, real activation or publication occurred.\n\nFinal exact HEAD/status verification: HEAD `f5aeae3a9f0c04145671ffcdb51ab91f3a0fcc49`; `git status --porcelain=v1 --untracked-files=all` is empty; staged and unstaged diffs are empty. Frozen worktree is clean."
+}

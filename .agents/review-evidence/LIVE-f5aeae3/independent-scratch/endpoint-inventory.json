@@ -1,0 +1,192 @@
+[
+  {
+    "method": "GET",
+    "path": "/api/health",
+    "status": 404
+  },
+  {
+    "method": "POST",
+    "path": "/api/sources/upload",
+    "status": 404
+  },
+  {
+    "method": "GET",
+    "path": "/api/sources",
+    "status": 404
+  },
+  {
+    "method": "GET",
+    "path": "/api/sources/1",
+    "status": 404
+  },
+  {
+    "method": "GET",
+    "path": "/api/sources/1/snapshot",
+    "status": 404
+  },
+  {
+    "method": "POST",
+    "path": "/api/sources/1/process",
+    "status": 404
+  },
+  {
+    "method": "POST",
+    "path": "/api/zones",
+    "status": 404
+  },
+  {
+    "method": "GET",
+    "path": "/api/zones",
+    "status": 404
+  },
+  {
+    "method": "POST",
+    "path": "/api/workflows/compile",
+    "status": 404
+  },
+  {
+    "method": "POST",
+    "path": "/api/workflows",
+    "status": 404
+  },
+  {
+    "method": "GET",
+    "path": "/api/workflows",
+    "status": 404
+  },
+  {
+    "method": "POST",
+    "path": "/api/workflows/1/enable",
+    "status": 404
+  },
+  {
+    "method": "POST",
+    "path": "/api/workflows/1/disable",
+    "status": 404
+  },
+  {
+    "method": "GET",
+    "path": "/api/events",
+    "status": 404
+  },
+  {
+    "method": "GET",
+    "path": "/api/events/1",
+    "status": 404
+  },
+  {
+    "method": "GET",
+    "path": "/api/events/1/actions",
+    "status": 404
+  },
+  {
+    "method": "GET",
+    "path": "/api/notifications",
+    "status": 404
+  },
+  {
+    "method": "GET",
+    "path": "/api/metrics",
+    "status": 404
+  },
+  {
+    "method": "GET",
+    "path": "/api/vlm/stats",
+    "status": 404
+  },
+  {
+    "method": "GET",
+    "path": "/api/vlm/calls",
+    "status": 404
+  },
+  {
+    "method": "GET",
+    "path": "/media/evidence/qa.jpg",
+    "status": 404
+  },
+  {
+    "method": "GET",
+    "path": "/api/autolearn/jobs",
+    "status": 404
+  },
+  {
+    "method": "POST",
+    "path": "/api/autolearn/jobs",
+    "status": 404
+  },
+  {
+    "method": "POST",
+    "path": "/api/autolearn/jobs/1/train",
+    "status": 404
+  },
+  {
+    "method": "POST",
+    "path": "/api/autolearn/jobs/1/activate",
+    "status": 404
+  },
+  {
+    "method": "GET",
+    "path": "/api/autolearn/tasks",
+    "status": 404
+  },
+  {
+    "method": "POST",
+    "path": "/v1/chat/completions",
+    "status": 404
+  },
+  {
+    "method": "GET",
+    "path": "/v1/models",
+    "status": 404
+  },
+  {
+    "method": "GET",
+    "path": "/api/live/me",
+    "status": 401
+  },
+  {
+    "method": "POST",
+    "path": "/api/live/rooms",
+    "status": 401
+  },
+  {
+    "method": "POST",
+    "path": "/api/live/rooms/join",
+    "status": 401
+  },
+  {
+    "method": "GET",
+    "path": "/api/live/rooms/qa/state",
+    "status": 401
+  },
+  {
+    "method": "GET",
+    "path": "/api/live/rooms/qa/frame",
+    "status": 401
+  },
+  {
+    "method": "GET",
+    "path": "/api/live/rooms/qa/evidence/qa.jpg",
+    "status": 401
+  },
+  {
+    "method": "POST",
+    "path": "/api/live/rooms/qa/task/plan",
+    "status": 401
+  },
+  {
+    "method": "POST",
+    "path": "/api/live/rooms/qa/task/activate",
+    "status": 401
+  },
+  {
+    "method": "POST",
+    "path": "/api/live/rooms/qa/task/state",
+    "status": 401
+  },
+  {
+    "method": "POST",
+    "path": "/api/live/rooms/qa/probe",
+    "status": 401
+  }
+]

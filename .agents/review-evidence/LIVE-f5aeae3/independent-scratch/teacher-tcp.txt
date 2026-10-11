@@ -1,0 +1,139 @@
+FFFFFFFFFFFFF....FFFF.                                                   [100%]
+=================================== FAILURES ===================================
+________ test_original_strict_confidence_boundary_on_actual_http[True] _________
+/tmp/visionflow-live-review-1-f5aeae3/test_teacher_tcp.py:70: in test_original_strict_confidence_boundary_on_actual_http
+    assert response.json()['status'] in {'error','unsupported','unknown','invalid_response'}, (
+E   AssertionError: invalid confidence bool classified ok: {'status': 'ok', 'label': 'opening', 'confidence': 1.0, 'uncertain': True, 'image_hash': '6c09e08a1b0b32f0fc1b09fbb2139301ac7f9e25ce3c4efce3b3919a9a66b109', 'model': 'QA_ONLY_MOCK', 'latency_ms': 13.632846996188164, 'raw': {'scoring': None, 'inference_seconds': None, 'image_count': 1, 'output_is_generated_json': None}, 'reason': 'uncalibrated observation (non-actioning)'}
+E   assert 'ok' in {'error', 'invalid_response', 'unknown', 'unsupported'}
+________ test_original_strict_confidence_boundary_on_actual_http[False] ________
+/tmp/visionflow-live-review-1-f5aeae3/test_teacher_tcp.py:70: in test_original_strict_confidence_boundary_on_actual_http
+    assert response.json()['status'] in {'error','unsupported','unknown','invalid_response'}, (
+E   AssertionError: invalid confidence bool classified ok: {'status': 'ok', 'label': 'opening', 'confidence': 0.0, 'uncertain': True, 'image_hash': '6c09e08a1b0b32f0fc1b09fbb2139301ac7f9e25ce3c4efce3b3919a9a66b109', 'model': 'QA_ONLY_MOCK', 'latency_ms': 7.808700000168756, 'raw': {'scoring': None, 'inference_seconds': None, 'image_count': 1, 'output_is_generated_json': None}, 'reason': 'uncalibrated observation (non-actioning)'}
+E   assert 'ok' in {'error', 'invalid_response', 'unknown', 'unsupported'}
+________ test_original_strict_confidence_boundary_on_actual_http[None] _________
+/tmp/visionflow-live-review-1-f5aeae3/test_teacher_tcp.py:70: in test_original_strict_confidence_boundary_on_actual_http
+    assert response.json()['status'] in {'error','unsupported','unknown','invalid_response'}, (
+E   AssertionError: invalid confidence NoneType classified ok: {'status': 'ok', 'label': 'opening', 'confidence': None, 'uncertain': True, 'image_hash': '6c09e08a1b0b32f0fc1b09fbb2139301ac7f9e25ce3c4efce3b3919a9a66b109', 'model': 'QA_ONLY_MOCK', 'latency_ms': 6.08017599734012, 'raw': {'scoring': None, 'inference_seconds': None, 'image_count': 1, 'output_is_generated_json': None}, 'reason': 'uncalibrated observation (non-actioning)'}
+E   assert 'ok' in {'error', 'invalid_response', 'unknown', 'unsupported'}
+_________ test_original_strict_confidence_boundary_on_actual_http[0.9] _________
+/tmp/visionflow-live-review-1-f5aeae3/test_teacher_tcp.py:70: in test_original_strict_confidence_boundary_on_actual_http
+    assert response.json()['status'] in {'error','unsupported','unknown','invalid_response'}, (
+E   AssertionError: invalid confidence str classified ok: {'status': 'ok', 'label': 'opening', 'confidence': 0.9, 'uncertain': True, 'image_hash': '6c09e08a1b0b32f0fc1b09fbb2139301ac7f9e25ce3c4efce3b3919a9a66b109', 'model': 'QA_ONLY_MOCK', 'latency_ms': 6.426211999496445, 'raw': {'scoring': None, 'inference_seconds': None, 'image_count': 1, 'output_is_generated_json': None}, 'reason': 'uncalibrated observation (non-actioning)'}
+E   assert 'ok' in {'error', 'invalid_response', 'unknown', 'unsupported'}
+_________ test_original_strict_confidence_boundary_on_actual_http[-1] __________
+/tmp/visionflow-live-review-1-f5aeae3/test_teacher_tcp.py:70: in test_original_strict_confidence_boundary_on_actual_http
+    assert response.json()['status'] in {'error','unsupported','unknown','invalid_response'}, (
+E   AssertionError: invalid confidence int classified ok: {'status': 'ok', 'label': 'opening', 'confidence': -1.0, 'uncertain': True, 'image_hash': '6c09e08a1b0b32f0fc1b09fbb2139301ac7f9e25ce3c4efce3b3919a9a66b109', 'model': 'QA_ONLY_MOCK', 'latency_ms': 6.346426991512999, 'raw': {'scoring': None, 'inference_seconds': None, 'image_count': 1, 'output_is_generated_json': None}, 'reason': 'uncalibrated observation (non-actioning)'}
+E   assert 'ok' in {'error', 'invalid_response', 'unknown', 'unsupported'}
+__________ test_original_strict_confidence_boundary_on_actual_http[2] __________
+/tmp/visionflow-live-review-1-f5aeae3/test_teacher_tcp.py:70: in test_original_strict_confidence_boundary_on_actual_http
+    assert response.json()['status'] in {'error','unsupported','unknown','invalid_response'}, (
+E   AssertionError: invalid confidence int classified ok: {'status': 'ok', 'label': 'opening', 'confidence': 2.0, 'uncertain': True, 'image_hash': '6c09e08a1b0b32f0fc1b09fbb2139301ac7f9e25ce3c4efce3b3919a9a66b109', 'model': 'QA_ONLY_MOCK', 'latency_ms': 7.8074780030874535, 'raw': {'scoring': None, 'inference_seconds': None, 'image_count': 1, 'output_is_generated_json': None}, 'reason': 'uncalibrated observation (non-actioning)'}
+E   assert 'ok' in {'error', 'invalid_response', 'unknown', 'unsupported'}
+_______ test_original_strict_confidence_boundary_on_actual_http[value6] ________
+/tmp/visionflow-live-review-1-f5aeae3/test_teacher_tcp.py:70: in test_original_strict_confidence_boundary_on_actual_http
+    assert response.json()['status'] in {'error','unsupported','unknown','invalid_response'}, (
+E   AssertionError: invalid confidence list classified ok: {'status': 'ok', 'label': '{"label": "opening", "confidence": []}', 'confidence': None, 'uncertain': True, 'image_hash': '6c09e08a1b0b32f0fc1b09fbb2139301ac7f9e25ce3c4efce3b3919a9a66b109', 'model': 'QA_ONLY_MOCK', 'latency_ms': 7.916499991551973, 'raw': {'scoring': None, 'inference_seconds': None, 'image_count': 1, 'output_is_generated_json': None}, 'reason': 'uncalibrated observation (non-actioning)'}
+E   assert 'ok' in {'error', 'invalid_response', 'unknown', 'unsupported'}
+_______ test_original_strict_confidence_boundary_on_actual_http[value7] ________
+/tmp/visionflow-live-review-1-f5aeae3/test_teacher_tcp.py:70: in test_original_strict_confidence_boundary_on_actual_http
+    assert response.json()['status'] in {'error','unsupported','unknown','invalid_response'}, (
+E   AssertionError: invalid confidence dict classified ok: {'status': 'ok', 'label': '{"label": "opening", "confidence": {}}', 'confidence': None, 'uncertain': True, 'image_hash': '6c09e08a1b0b32f0fc1b09fbb2139301ac7f9e25ce3c4efce3b3919a9a66b109', 'model': 'QA_ONLY_MOCK', 'latency_ms': 6.7300420050742105, 'raw': {'scoring': None, 'inference_seconds': None, 'image_count': 1, 'output_is_generated_json': None}, 'reason': 'uncalibrated observation (non-actioning)'}
+E   assert 'ok' in {'error', 'invalid_response', 'unknown', 'unsupported'}
+_________ test_original_strict_confidence_boundary_on_actual_http[nan] _________
+/tmp/visionflow-live-review-1-f5aeae3/test_teacher_tcp.py:69: in test_original_strict_confidence_boundary_on_actual_http
+    assert response.status_code==200
+E   assert 500 == 200
+E    +  where 500 = <Response [500 Internal Server Error]>.status_code
+_________ test_original_strict_confidence_boundary_on_actual_http[inf] _________
+/tmp/visionflow-live-review-1-f5aeae3/test_teacher_tcp.py:69: in test_original_strict_confidence_boundary_on_actual_http
+    assert response.status_code==200
+E   assert 500 == 200
+E    +  where 500 = <Response [500 Internal Server Error]>.status_code
+________ test_original_strict_confidence_boundary_on_actual_http[-inf] _________
+/tmp/visionflow-live-review-1-f5aeae3/test_teacher_tcp.py:69: in test_original_strict_confidence_boundary_on_actual_http
+    assert response.status_code==200
+E   assert 500 == 200
+E    +  where 500 = <Response [500 Internal Server Error]>.status_code
+____________________ test_missing_confidence_on_actual_http ____________________
+/tmp/visionflow-live-review-1-f5aeae3/test_teacher_tcp.py:78: in test_missing_confidence_on_actual_http
+    assert response.json()['status']!='ok'
+E   AssertionError: assert 'ok' != 'ok'
+______ test_local_candidate_contract_outside_requested_labels_is_unknown _______
+/tmp/visionflow-live-review-1-f5aeae3/test_teacher_tcp.py:93: in test_local_candidate_contract_outside_requested_labels_is_unknown
+    assert response.json()['status'] in {'unsupported','unknown','error'}, 'occupancy score accepted as bottle-opening observation'
+E   AssertionError: occupancy score accepted as bottle-opening observation
+E   assert 'ok' in {'error', 'unknown', 'unsupported'}
+________________ test_teacher_slow_body_obeys_overall_deadline _________________
+/tmp/visionflow-live-review-1-f5aeae3/test_teacher_tcp.py:118: in test_teacher_slow_body_obeys_overall_deadline
+    assert response.json()['status']=='error', f'success after {elapsed:.3f}s for .06s timeout'
+E   AssertionError: success after 0.283s for .06s timeout
+E   assert 'ok' == 'error'
+E     
+E     - error
+E     + ok
+__________ test_teacher_admission_expiry_prevents_late_actual_request __________
+/tmp/visionflow-live-review-1-f5aeae3/test_teacher_tcp.py:129: in test_teacher_admission_expiry_prevents_late_actual_request
+    assert receipts==[], f'{len(receipts)} request started after admission wait for .04s deadline, elapsed={elapsed:.3f}s'
+E   AssertionError: 1 request started after admission wait for .04s deadline, elapsed=0.141s
+E   assert [{'time': 712...tokens': 96}}] == []
+E     
+E     Left contains one more item: {'time': 71266.792989781, 'path': '/v1/chat/completions', 'body': {'model': 'HuggingFaceTB/SmolVLM-500M-Instruct', 'me...: [{'type': 'text', 'text': 'Is the bottle opening?'}, {'type': 'image_url', 'image_url': {...}}]}], 'max_tokens': 96}}
+E     Use -v to get more diff
+________________ test_original_actual_write_revocation_boundary ________________
+/tmp/visionflow-live-review-1-f5aeae3/test_teacher_tcp.py:152: in test_original_actual_write_revocation_boundary
+    assert receipts==[], 'actual POST/image bytes sent after acknowledged disable'
+E   AssertionError: actual POST/image bytes sent after acknowledged disable
+E   assert [{'time': 712...tokens': 96}}] == []
+E     
+E     Left contains one more item: {'time': 71266.888432898, 'path': '/v1/chat/completions', 'body': {'model': 'HuggingFaceTB/SmolVLM-500M-Instruct', 'me... opened?'}, {'type': 'image_url', 'image_url': {...}}, {'type': 'image_url', 'image_url': {...}}]}], 'max_tokens': 96}}
+E     Use -v to get more diff
+_______________ test_cache_labels_model_and_room_are_in_identity _______________
+/tmp/visionflow-live-review-1-f5aeae3/test_teacher_tcp.py:161: in test_cache_labels_model_and_room_are_in_identity
+    assert len(receipts)==2, 'second room/model/label schema reused first room observation'
+E   AssertionError: second room/model/label schema reused first room observation
+E   assert 1 == 2
+E    +  where 1 = len([{'time': 71266.911862864, 'path': '/v1/chat/completions', 'body': {'model': 'HuggingFaceTB/SmolVLM-500M-Instruct', 'messages': [{'role': 'user', 'content': [{...}, {...}]}], 'max_tokens': 96}}])
+=============================== warnings summary ===============================
+services/api/.venv/lib/python3.14/site-packages/fastapi/testclient.py:1
+  /home/samanwirst/Desktop/hackathon_wiut_final_2026/.agents/runtime/ten-hour/worktrees/review-live-review-1/services/api/.venv/lib/python3.14/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+services/api/app/live/app.py:45
+  /home/samanwirst/Desktop/hackathon_wiut_final_2026/.agents/runtime/ten-hour/worktrees/review-live-review-1/services/api/app/live/app.py:45: DeprecationWarning: 
+          on_event is deprecated, use lifespan event handlers instead.
+  
+          Read more about it in the
+          [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+          
+    @app.on_event("startup")
+
+services/api/.venv/lib/python3.14/site-packages/fastapi/applications.py:4745
+  /home/samanwirst/Desktop/hackathon_wiut_final_2026/.agents/runtime/ten-hour/worktrees/review-live-review-1/services/api/.venv/lib/python3.14/site-packages/fastapi/applications.py:4745: DeprecationWarning: 
+          on_event is deprecated, use lifespan event handlers instead.
+  
+          Read more about it in the
+          [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+          
+    return self.router.on_event(event_type)  # ty: ignore[deprecated]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED ../../../../../../../../../tmp/visionflow-live-review-1-f5aeae3/test_teacher_tcp.py::test_original_strict_confidence_boundary_on_actual_http[True]
+FAILED ../../../../../../../../../tmp/visionflow-live-review-1-f5aeae3/test_teacher_tcp.py::test_original_strict_confidence_boundary_on_actual_http[False]
+FAILED ../../../../../../../../../tmp/visionflow-live-review-1-f5aeae3/test_teacher_tcp.py::test_original_strict_confidence_boundary_on_actual_http[None]
+FAILED ../../../../../../../../../tmp/visionflow-live-review-1-f5aeae3/test_teacher_tcp.py::test_original_strict_confidence_boundary_on_actual_http[0.9]
+FAILED ../../../../../../../../../tmp/visionflow-live-review-1-f5aeae3/test_teacher_tcp.py::test_original_strict_confidence_boundary_on_actual_http[-1]
+FAILED ../../../../../../../../../tmp/visionflow-live-review-1-f5aeae3/test_teacher_tcp.py::test_original_strict_confidence_boundary_on_actual_http[2]
+FAILED ../../../../../../../../../tmp/visionflow-live-review-1-f5aeae3/test_teacher_tcp.py::test_original_strict_confidence_boundary_on_actual_http[value6]
+FAILED ../../../../../../../../../tmp/visionflow-live-review-1-f5aeae3/test_teacher_tcp.py::test_original_strict_confidence_boundary_on_actual_http[value7]
+FAILED ../../../../../../../../../tmp/visionflow-live-review-1-f5aeae3/test_teacher_tcp.py::test_original_strict_confidence_boundary_on_actual_http[nan]
+FAILED ../../../../../../../../../tmp/visionflow-live-review-1-f5aeae3/test_teacher_tcp.py::test_original_strict_confidence_boundary_on_actual_http[inf]
+FAILED ../../../../../../../../../tmp/visionflow-live-review-1-f5aeae3/test_teacher_tcp.py::test_original_strict_confidence_boundary_on_actual_http[-inf]
+FAILED ../../../../../../../../../tmp/visionflow-live-review-1-f5aeae3/test_teacher_tcp.py::test_missing_confidence_on_actual_http
+FAILED ../../../../../../../../../tmp/visionflow-live-review-1-f5aeae3/test_teacher_tcp.py::test_local_candidate_contract_outside_requested_labels_is_unknown
+FAILED ../../../../../../../../../tmp/visionflow-live-review-1-f5aeae3/test_teacher_tcp.py::test_teacher_slow_body_obeys_overall_deadline
+FAILED ../../../../../../../../../tmp/visionflow-live-review-1-f5aeae3/test_teacher_tcp.py::test_teacher_admission_expiry_prevents_late_actual_request
+FAILED ../../../../../../../../../tmp/visionflow-live-review-1-f5aeae3/test_teacher_tcp.py::test_original_actual_write_revocation_boundary
+FAILED ../../../../../../../../../tmp/visionflow-live-review-1-f5aeae3/test_teacher_tcp.py::test_cache_labels_model_and_room_are_in_identity
+17 failed, 5 passed, 3 warnings in 1.97s

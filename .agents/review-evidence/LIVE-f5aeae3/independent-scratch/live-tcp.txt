@@ -1,0 +1,191 @@
+/home/samanwirst/Desktop/hackathon_wiut_final_2026/.agents/runtime/ten-hour/worktrees/review-live-review-1/services/api/.venv/lib/python3.14/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+  from starlette.testclient import TestClient as TestClient  # noqa
+{
+  "QA_ONLY": true,
+  "method": "actual uvicorn + TCP HTTP/WebSocket; generated JPEG, scripted CV, local insecure QA cookies",
+  "port": 34459,
+  "valid_control": {
+    "events": 1,
+    "notifications": 1,
+    "evidence_status": 200,
+    "evidence_bytes": 5070,
+    "decoded_sizes": [
+      [
+        320,
+        240
+      ],
+      [
+        320,
+        240
+      ]
+    ],
+    "worker_threads": 1,
+    "teacher_calls": 0
+  },
+  "camera_frames_after_logout": 1,
+  "judge_received_new_frame_after_logout": true,
+  "worker_fatal_error": {
+    "type": "error",
+    "message": "OpenCV(5.0.0) /io/opencv/modules/imgcodecs/src/loadsave.cpp:1291: error: (-215:Assertion failed) !buf.empty() in function 'imdecode_'\n"
+  },
+  "worker_alive_after_empty_binary": false,
+  "health_after_dead_worker": {
+    "status": "ok",
+    "service": "visionflow-live",
+    "pin_configured": true,
+    "planner_enabled": false,
+    "teacher_available": false,
+    "cookie_secure": false
+  },
+  "legacy_actual_tcp_inventory": [
+    {
+      "path": "/api/health",
+      "method": "GET",
+      "status": 404
+    },
+    {
+      "path": "/api/sources/upload",
+      "method": "POST",
+      "status": 404
+    },
+    {
+      "path": "/api/sources",
+      "method": "GET",
+      "status": 404
+    },
+    {
+      "path": "/api/sources/1",
+      "method": "GET",
+      "status": 404
+    },
+    {
+      "path": "/api/sources/1/snapshot",
+      "method": "GET",
+      "status": 404
+    },
+    {
+      "path": "/api/sources/1/process",
+      "method": "POST",
+      "status": 404
+    },
+    {
+      "path": "/api/zones",
+      "method": "POST",
+      "status": 404
+    },
+    {
+      "path": "/api/zones",
+      "method": "GET",
+      "status": 404
+    },
+    {
+      "path": "/api/workflows/compile",
+      "method": "POST",
+      "status": 404
+    },
+    {
+      "path": "/api/workflows",
+      "method": "POST",
+      "status": 404
+    },
+    {
+      "path": "/api/workflows",
+      "method": "GET",
+      "status": 404
+    },
+    {
+      "path": "/api/workflows/1/enable",
+      "method": "POST",
+      "status": 404
+    },
+    {
+      "path": "/api/workflows/1/disable",
+      "method": "POST",
+      "status": 404
+    },
+    {
+      "path": "/api/events",
+      "method": "GET",
+      "status": 404
+    },
+    {
+      "path": "/api/events/1",
+      "method": "GET",
+      "status": 404
+    },
+    {
+      "path": "/api/events/1/actions",
+      "method": "GET",
+      "status": 404
+    },
+    {
+      "path": "/api/notifications",
+      "method": "GET",
+      "status": 404
+    },
+    {
+      "path": "/api/metrics",
+      "method": "GET",
+      "status": 404
+    },
+    {
+      "path": "/api/vlm/stats",
+      "method": "GET",
+      "status": 404
+    },
+    {
+      "path": "/api/vlm/calls",
+      "method": "GET",
+      "status": 404
+    },
+    {
+      "path": "/media/evidence/qa.jpg",
+      "method": "GET",
+      "status": 404
+    },
+    {
+      "path": "/api/autolearn/jobs",
+      "method": "GET",
+      "status": 404
+    },
+    {
+      "path": "/api/autolearn/jobs",
+      "method": "POST",
+      "status": 404
+    },
+    {
+      "path": "/api/autolearn/jobs/1/train",
+      "method": "POST",
+      "status": 404
+    },
+    {
+      "path": "/api/autolearn/jobs/1/activate",
+      "method": "POST",
+      "status": 404
+    },
+    {
+      "path": "/api/autolearn/tasks",
+      "method": "GET",
+      "status": 404
+    },
+    {
+      "path": "/v1/chat/completions",
+      "method": "POST",
+      "status": 404
+    },
+    {
+      "path": "/v1/models",
+      "method": "GET",
+      "status": 404
+    }
+  ],
+  "same_peer_rotated_xff_login_statuses": [
+    401,
+    401,
+    401,
+    401,
+    401,
+    401,
+    401
+  ]
+}

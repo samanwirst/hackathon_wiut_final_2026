@@ -1,0 +1,11 @@
+{
+  "command": [
+    "make",
+    "smoke"
+  ],
+  "target_sha": "f5aeae3a9f0c04145671ffcdb51ab91f3a0fcc49",
+  "exit": 0,
+  "seconds": 6.482146190988715,
+  "head_after": "f5aeae3a9f0c04145671ffcdb51ab91f3a0fcc49",
+  "tracked_status_after": ""
+}

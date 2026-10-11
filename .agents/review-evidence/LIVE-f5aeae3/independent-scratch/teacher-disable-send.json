@@ -1,0 +1,9 @@
+{
+  "disable_ack": 71266.8878237,
+  "actual_request_times": [
+    71266.888432898
+  ],
+  "requests_after_ack": 1,
+  "notifications": 0,
+  "QA_ONLY": true
+}
