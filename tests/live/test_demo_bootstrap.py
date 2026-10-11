@@ -144,3 +144,21 @@ def test_evidence_requires_committed_registration_and_expiry_purges(client, monk
     assert client.get(endpoint).status_code == 401
     assert rooms.get_room(room.room_id) is None
     assert not path.exists()
+
+
+def test_busy_admission_is_explicit_and_never_leaves_task_enabled(client, monkeypatch, flow):
+    from app.live import video
+    b = bootstrap(client, monkeypatch)
+    room = rooms.get_room(b["room_id"])
+    room.video_path = Path("owned-fixture.mp4")
+    room.video_sha256 = "a" * 64
+    draft = flow.post(client, f"/api/live/rooms/{room.room_id}/task/validate", {"task": TASK})
+    assert draft.status_code == 200
+    def busy(_):
+        raise RuntimeError("capacity reached")
+    monkeypatch.setattr(video, "start_job", busy)
+    activation = flow.post(client, f"/api/live/rooms/{room.room_id}/task/activate", draft.json())
+    assert activation.status_code == 503 and not room.task_enabled
+    assert room.job_status == "busy"
+    enabled = flow.post(client, f"/api/live/rooms/{room.room_id}/task/state", {"enabled": True, "paused": False})
+    assert enabled.status_code == 503 and not room.task_enabled

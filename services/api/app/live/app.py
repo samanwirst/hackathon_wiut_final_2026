@@ -493,7 +493,7 @@ def _state_payload(room: rooms.RoomState) -> dict:
                 "observed_fps": room.observed_fps(),
                 "last_inference_ms": round(room.last_inference_ms, 1),
                 "last_recv_age_s": round(time.time() - room.last_recv_ts, 2) if room.last_recv_ts else None,
-                "has_frame": room.latest_jpeg is not None,
+                "has_frame": room.latest_jpeg is not None or room.annotated_jpeg is not None,
                 "judges": len(room.judges),
             },
             "events": [
@@ -941,7 +941,12 @@ def activate_task(room_id: str, sess: auth.Session = Depends(require_mutation),
             video.start_job(room)
             rerun = True
         except RuntimeError:
-            rerun = False
+            with room.lock:
+                if room.task_version == version:
+                    room.task_enabled = False
+                    room.job_status = "busy"
+                    room.job_error = "Inference capacity busy; enable after the previous worker exits."
+            raise HTTPException(503, "workflow approved but execution not admitted; task disabled, retry enable when idle")
     return {"ok": True, "task_version": version, "task": canonical, "rerun": rerun}
 
 
@@ -970,7 +975,12 @@ def task_state(room_id: str, sess: auth.Session = Depends(require_mutation),
         try:
             video.start_job(room)
         except RuntimeError:
-            pass
+            with room.lock:
+                if room.task_version == version:
+                    room.task_enabled = False
+                    room.job_status = "busy"
+                    room.job_error = "Inference capacity busy; enable after the previous worker exits."
+            raise HTTPException(503, "execution not admitted; task remains disabled, retry when idle")
     return {"ok": True, "task_version": version,
             "task_enabled": enabled, "task_paused": paused}
 
