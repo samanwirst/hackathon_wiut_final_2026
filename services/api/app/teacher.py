@@ -126,6 +126,66 @@ class _AttemptNotAdmitted(Exception):
     request (M2-007)."""
 
 
+def _connect_within_deadline(host, port, connect_timeout, deadline):
+    """Open a TCP connection, bounded by the overall wall-clock ``deadline`` (M2-003).
+
+    ``socket.create_connection`` performs synchronous name resolution whose duration
+    the ``timeout`` argument does NOT bound, so a slow resolver blocks in-thread past
+    the deadline. We run the connect in a daemon helper thread and wait at most until
+    the deadline: if it overruns we raise ``httpx.TimeoutException`` and ABANDON the
+    helper, closing whatever socket it eventually produces so nothing is leaked and no
+    request is ever written on a connection the caller gave up on. On success the live
+    socket is returned to the caller thread. ``socket.create_connection`` is still the
+    real connect, so fault injections that patch it (slow connect, paused connect for
+    the disable race) stay effective."""
+    import httpx
+
+    rem = deadline - time.perf_counter()
+    if rem <= 0:
+        raise httpx.TimeoutException("overall deadline exceeded before connect")
+
+    box: dict = {}
+    done = threading.Event()
+    abandoned = threading.Event()
+    lock = threading.Lock()
+
+    def _run():
+        try:
+            s = socket.create_connection((host, port), timeout=connect_timeout)
+        except BaseException as exc:  # noqa: BLE001 — surfaced to the caller below
+            with lock:
+                box["err"] = exc
+            done.set()
+            return
+        close_it = False
+        with lock:
+            if abandoned.is_set():
+                close_it = True
+            else:
+                box["sock"] = s
+        if close_it:
+            try:
+                s.close()
+            except OSError:
+                pass
+        done.set()
+
+    threading.Thread(target=_run, daemon=True).start()
+    if not done.wait(timeout=max(0.0, rem)):
+        with lock:
+            abandoned.set()
+            leaked = box.pop("sock", None)
+        if leaked is not None:  # race: thread stored it just before we abandoned
+            try:
+                leaked.close()
+            except OSError:
+                pass
+        raise httpx.TimeoutException("overall deadline exceeded during connect")
+    if "err" in box:
+        raise box["err"]
+    return box["sock"]
+
+
 class _ConcurrencySlot:
     """A single-owner handle on one bounded-semaphore permit (M2-003).
 
@@ -386,13 +446,21 @@ class OpenAICompatibleTeacher(TeacherAdapter):
                         error=str(exc)[:500],
                     )
                     break
-                except httpx.TimeoutException as exc:
+                except (httpx.TimeoutException, socket.timeout, TimeoutError) as exc:
+                    # Raw socket/SSL timeouts (connect, send, recv, TLS handshake)
+                    # become a non-confirming timeout result, not an uncaught raise
+                    # (M2-003). socket.timeout is TimeoutError on 3.10+, but both are
+                    # listed for clarity.
                     last = TeacherResult(
                         status="timeout", model=self.model,
                         prompt_version=self.prompt_version, latency_ms=_elapsed_ms(),
                         error=f"provider timeout (attempt {attempt + 1}): {exc}"[:500],
                     )
-                except httpx.HTTPError as exc:
+                except (httpx.HTTPError, ssl.SSLError, OSError) as exc:
+                    # Connection refusal/reset, TLS failures and malformed-framing
+                    # errors (M2-010) normalize to a non-confirming error result and
+                    # are eligible for the same bounded retry as any transient
+                    # transport failure (M2-003).
                     last = TeacherResult(
                         status="error", model=self.model,
                         prompt_version=self.prompt_version, latency_ms=_elapsed_ms(),
@@ -552,20 +620,42 @@ class OpenAICompatibleTeacher(TeacherAdapter):
         if remaining <= 0:
             raise httpx.TimeoutException("overall deadline exceeded before connect")
 
-        sock = socket.create_connection(
-            (host, port), timeout=min(self.connect_timeout, remaining)
+        # Connect bounded by the overall wall-clock deadline (M2-003). The connect
+        # — which includes any synchronous name resolution inside
+        # ``socket.create_connection`` — runs in a helper thread so a resolver/connect
+        # that outruns the deadline is ABANDONED (the socket it eventually produces is
+        # closed) and ``classify`` returns on time, instead of blocking in-thread past
+        # the deadline. ``socket.create_connection`` is still the actual connect call,
+        # so the reviewer's connect/disable fault injections remain effective.
+        sock = _connect_within_deadline(
+            host, port, min(self.connect_timeout, remaining), deadline
         )
         try:
             if parts.scheme == "https":
+                # Recompute the remaining budget and bound the TLS handshake by it
+                # (M2-003): a stalled handshake must not inherit a stale per-phase
+                # timeout and run past the overall deadline.
+                rem = deadline - time.perf_counter()
+                if rem <= 0:
+                    raise httpx.TimeoutException("overall deadline exceeded before TLS")
+                sock.settimeout(rem)
                 ctx = ssl.create_default_context()
                 sock = ctx.wrap_socket(sock, server_hostname=host)
 
-            def _send() -> None:
+            def _send(charge=None) -> None:
                 rem = deadline - time.perf_counter()
                 if rem <= 0:
+                    # Expired before any byte is written: nothing is charged (M2-004)
+                    # and no POST is emitted after the deadline (M2-003).
                     raise httpx.TimeoutException(
                         "overall deadline exceeded before sending request"
                     )
+                # The last expiry/disable checks have passed; account the admitted
+                # write NOW, immediately before the bytes hit the socket (M2-004). A
+                # partial write that fails afterwards is NOT refunded — the request
+                # and image bytes were disclosed to the provider.
+                if charge is not None:
+                    charge()
                 sock.settimeout(rem)
                 sock.sendall(raw_request)
 
@@ -596,9 +686,13 @@ class OpenAICompatibleTeacher(TeacherAdapter):
 
     def _recv_http_response(self, sock, deadline):
         """Read a full HTTP/1.1 response from ``sock`` under the wall-clock
-        ``deadline``, honouring Content-Length, chunked transfer-encoding and
-        connection-close framing, and the response-byte cap. Any recv that would
-        block past the deadline raises :class:`httpx.TimeoutException`."""
+        ``deadline``, with STRICT framing (M2-010): a valid status line, a single
+        unambiguous non-negative Content-Length or a chunked body (not both), exact
+        completion of the declared length / the terminating zero chunk, and the
+        response-byte cap. Premature EOF or malformed framing raises a non-confirming
+        transport error so an incomplete/garbled response can never authorize a local
+        action. Each recv is bounded by the configured read timeout AND the remaining
+        wall-clock deadline (M2-003)."""
         import httpx
 
         def _recv(max_bytes: int) -> bytes:
@@ -607,14 +701,17 @@ class OpenAICompatibleTeacher(TeacherAdapter):
                 raise httpx.TimeoutException(
                     "overall wall-clock deadline exceeded while reading response"
                 )
-            sock.settimeout(rem)
+            # Honour the configured per-read timeout as well as the overall deadline
+            # (M2-003): a provider that produces no bytes within ``read_timeout`` is
+            # cut off even when overall budget remains.
+            sock.settimeout(min(self.read_timeout, rem))
             try:
                 return sock.recv(max_bytes)
             except (socket.timeout, TimeoutError):
-                # The recv window equalled the remaining budget, so the deadline has
-                # now passed: surface it as a timeout rather than looping.
+                # Either the per-read window or the remaining budget elapsed with no
+                # data: surface it as a timeout rather than looping.
                 raise httpx.TimeoutException(
-                    "overall wall-clock deadline exceeded while reading response"
+                    "read timeout / overall deadline exceeded while reading response"
                 )
 
         buf = b""
@@ -642,23 +739,41 @@ class OpenAICompatibleTeacher(TeacherAdapter):
 
         body = rest
         te = resp_headers.get("transfer-encoding", "").lower()
-        if "chunked" in te:
+        has_te = "transfer-encoding" in resp_headers
+        has_cl = "content-length" in resp_headers
+        # Conflicting framing (both Transfer-Encoding and Content-Length) is a
+        # request-smuggling hazard and is rejected outright (M2-010).
+        if has_te and has_cl:
+            raise httpx.HTTPError(
+                "conflicting framing: both Transfer-Encoding and Content-Length present"
+            )
+        if has_te:
+            if "chunked" not in te:
+                raise httpx.HTTPError(f"unsupported Transfer-Encoding: {te!r}")
             body = self._read_chunked(sock, rest, deadline, _recv)
-        elif "content-length" in resp_headers:
-            try:
-                n = int(resp_headers["content-length"])
-            except ValueError:
-                n = 0
+        elif has_cl:
+            # A declared Content-Length must be a single, unambiguous, non-negative
+            # integer, and the body must reach it exactly. A garbage length and a
+            # premature EOF both raise rather than confirming a truncated body
+            # (M2-010).
+            raw_cl = resp_headers["content-length"]
+            if "," in raw_cl or not raw_cl.strip().isdigit():
+                raise httpx.HTTPError(f"invalid Content-Length: {raw_cl!r}")
+            n = int(raw_cl)
             while len(body) < n:
                 chunk = _recv(min(65536, n - len(body)))
                 if not chunk:
-                    break
+                    raise httpx.HTTPError(
+                        f"connection closed with {len(body)}/{n} body bytes "
+                        "(declared Content-Length not satisfied)"
+                    )
                 body += chunk
                 if len(body) > self.max_response_bytes:
                     raise httpx.HTTPError(
                         f"provider response exceeded max_response_bytes "
                         f"{self.max_response_bytes}"
                     )
+            body = body[:n]
         else:
             # Connection-close framing: read until EOF (bounded by the deadline).
             while True:
@@ -674,7 +789,11 @@ class OpenAICompatibleTeacher(TeacherAdapter):
         return status_code, resp_headers, body
 
     def _read_chunked(self, sock, initial, deadline, _recv):
-        """Decode a chunked transfer-encoding body under the wall-clock deadline."""
+        """Decode a chunked transfer-encoding body under the wall-clock deadline.
+
+        STRICT (M2-010): a premature EOF before the terminating zero-size chunk, or
+        a chunk not followed by its CRLF boundary, raises a non-confirming transport
+        error — an unterminated chunked stream is never treated as a complete body."""
         import httpx
 
         buf = initial
@@ -683,7 +802,10 @@ class OpenAICompatibleTeacher(TeacherAdapter):
             while b"\r\n" not in buf:
                 chunk = _recv(65536)
                 if not chunk:
-                    return out
+                    raise httpx.HTTPError(
+                        "connection closed before chunk size line (unterminated "
+                        "chunked body)"
+                    )
                 buf += chunk
                 if len(out) + len(buf) > self.max_response_bytes:
                     raise httpx.HTTPError(
@@ -696,17 +818,30 @@ class OpenAICompatibleTeacher(TeacherAdapter):
             except ValueError as exc:
                 raise httpx.HTTPError("malformed chunk size") from exc
             if size == 0:
+                # Terminating chunk: consume the final CRLF (and any trailers) up to
+                # the closing blank line before accepting the body as complete.
+                while b"\r\n" not in buf:
+                    chunk = _recv(65536)
+                    if not chunk:
+                        raise httpx.HTTPError(
+                            "connection closed before final chunk terminator"
+                        )
+                    buf += chunk
                 break
             while len(buf) < size + 2:
                 chunk = _recv(65536)
                 if not chunk:
-                    return out + buf[:size]
+                    raise httpx.HTTPError(
+                        "connection closed mid-chunk (declared chunk not received)"
+                    )
                 buf += chunk
                 if len(out) + len(buf) > self.max_response_bytes:
                     raise httpx.HTTPError(
                         f"provider response exceeded max_response_bytes "
                         f"{self.max_response_bytes}"
                     )
+            if buf[size : size + 2] != b"\r\n":
+                raise httpx.HTTPError("malformed chunk boundary (missing CRLF)")
             out += buf[:size]
             buf = buf[size + 2:]
         return out

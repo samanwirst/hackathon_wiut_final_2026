@@ -133,6 +133,36 @@ class Counters:
         }
 
 
+_TIMED_OUT = object()
+
+
+def _call_within(fn: Callable[[], bool], timeout: float | None):
+    """Run ``fn()`` in a daemon thread and return its result if it finishes within
+    ``timeout`` seconds, else ``_TIMED_OUT`` (the call is abandoned). This bounds a
+    slow *authoritative admission* (``admit``) by the caller's overall deadline
+    (M2-003): a synchronous approval lookup that outruns the budget cannot hold the
+    dispatch boundary open and emit a late POST. ``timeout is None`` runs inline."""
+    if timeout is None:
+        return fn()
+    box: dict = {}
+    done = threading.Event()
+
+    def _run() -> None:
+        try:
+            box["v"] = fn()
+        except BaseException as exc:  # noqa: BLE001 — re-raised to the caller below
+            box["e"] = exc
+        finally:
+            done.set()
+
+    threading.Thread(target=_run, daemon=True).start()
+    if not done.wait(max(0.0, timeout)):
+        return _TIMED_OUT
+    if "e" in box:
+        raise box["e"]
+    return box["v"]
+
+
 def roi_hash(image_bytes: bytes) -> str:
     return hashlib.sha256(image_bytes).hexdigest()[:32]
 
@@ -322,25 +352,48 @@ class VlmRouter:
                 guard_state["deadline"] = True
                 return False
             try:
-                if admit is not None and not admit():
-                    guard_state["invoked"] = True
-                    guard_state["revoked"] = True
-                    return False
+                # Authoritative approval recheck, bounded by the overall deadline
+                # (M2-003): a slow admit runs in a helper thread and, if it does not
+                # resolve within the remaining budget, the attempt is not admitted and
+                # nothing is sent (no late POST). A resolved False is a disable/revoke.
+                if admit is not None:
+                    admit_ok = _call_within(admit, remaining)
+                    if admit_ok is _TIMED_OUT:
+                        guard_state["invoked"] = True
+                        guard_state["deadline"] = True
+                        return False
+                    if not admit_ok:
+                        guard_state["invoked"] = True
+                        guard_state["revoked"] = True
+                        return False
                 with self._lock:
                     guard_state["invoked"] = True
                     used_now = self._budget_used.get(task_key, 0)
                     if used_now >= budget:
                         return False
+
+                def _charge() -> None:
+                    # Charge one outbound attempt at the EXACT sendall boundary
+                    # (M2-004): the real adapter calls this from inside ``send`` right
+                    # before the bytes hit the socket, after the final expiry check, so
+                    # a started write always consumes budget (no refund on a partial
+                    # failure) while a pre-write expiry/revoke consumes nothing.
+                    with self._lock:
+                        self._budget_used[task_key] = self._budget_used.get(task_key, 0) + 1
+                        self.counters.outbound_attempts += 1
+                        guard_state["granted"] += 1
+
                 # Perform the real send while still holding the admission lock
-                # (M2-007). If it raises (pre-send deadline / transport failure) no
-                # budget or attempt is accounted and the exception propagates to the
-                # adapter, which maps it to a non-confirming timeout/error.
+                # (M2-007). The adapter charges via ``_charge`` immediately before the
+                # write; if it raises (pre-send deadline -> no charge; partial write ->
+                # already charged) the exception propagates to the adapter, which maps
+                # it to a non-confirming timeout/error.
                 if send is not None:
-                    send()
-                with self._lock:
-                    self._budget_used[task_key] = self._budget_used.get(task_key, 0) + 1
-                    self.counters.outbound_attempts += 1
-                    guard_state["granted"] += 1
+                    send(charge=_charge)
+                else:
+                    # Injected/stub path with no coupled raw send: charge here so the
+                    # shared budget still bounds the attempt.
+                    _charge()
             finally:
                 dispatch_admission_lock.release()
             return True

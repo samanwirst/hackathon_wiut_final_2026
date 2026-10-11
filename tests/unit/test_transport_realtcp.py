@@ -323,3 +323,225 @@ def test_real_tcp_retry_consumes_budget_and_confirms():
     assert len(srv.records) == 2  # 503 then success, both actually sent
     assert router.counters.outbound_attempts == 2
     assert router.counters.completed == 1
+
+
+# -- M2-010: strict HTTP framing before label validity (emergency regression) --
+# Malformed/incomplete responses must become a non-confirming transport error, so
+# an incomplete body can never authorize a local action.
+
+class _FramingHandler(_Handler):
+    def handle(self):
+        sock = self.request
+        sock.settimeout(3)
+        raw = b""
+        try:
+            while b"\r\n\r\n" not in raw:
+                d = sock.recv(8192)
+                if not d:
+                    return
+                raw += d
+        except OSError:
+            return
+        head, _, body = raw.partition(b"\r\n\r\n")
+        n = 0
+        for line in head.split(b"\r\n"):
+            if line.lower().startswith(b"content-length:"):
+                n = int(line.split(b":", 1)[1])
+        while len(body) < n:
+            d = sock.recv(8192)
+            if not d:
+                break
+            body += d
+        payload = _envelope(0.9)
+        mode = self.server.mode
+        try:
+            if mode == "short_content_length":
+                # Declares 500 more bytes than it sends, then closes.
+                sock.sendall(
+                    b"HTTP/1.1 200 OK\r\nContent-Length: "
+                    + str(len(payload) + 500).encode() + b"\r\n\r\n" + payload
+                )
+            elif mode == "garbage_length":
+                sock.sendall(b"HTTP/1.1 200 OK\r\nContent-Length: garbage\r\n\r\n" + payload)
+            elif mode == "unterminated_chunked":
+                # A single chunk with the data but NO terminating zero chunk.
+                sock.sendall(
+                    b"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n"
+                    + hex(len(payload))[2:].encode() + b"\r\n" + payload + b"\r\n"
+                )
+            elif mode == "conflicting_framing":
+                sock.sendall(
+                    b"HTTP/1.1 200 OK\r\nContent-Length: " + str(len(payload)).encode()
+                    + b"\r\nTransfer-Encoding: chunked\r\n\r\n" + payload
+                )
+            else:  # "well_framed_chunked" positive control
+                sock.sendall(
+                    b"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n"
+                    + hex(len(payload))[2:].encode() + b"\r\n" + payload + b"\r\n0\r\n\r\n"
+                )
+        except OSError:
+            pass
+
+
+@contextlib.contextmanager
+def _framing_server(mode):
+    srv = _Server(("127.0.0.1", 0), _FramingHandler)
+    srv.records, srv.lock, srv.mode, srv.confidence = [], threading.Lock(), mode, 0.9
+    t = threading.Thread(target=srv.serve_forever, kwargs={"poll_interval": 0.02}, daemon=True)
+    t.start()
+    try:
+        yield srv, f"http://127.0.0.1:{srv.server_address[1]}/v1"
+    finally:
+        srv.shutdown()
+        srv.server_close()
+        t.join(1)
+
+
+def test_short_content_length_is_not_confirmed():
+    with _framing_server("short_content_length") as (srv, url):
+        r = _teacher(url, timeout=2).classify(b"owned", "q", ["yes", "no"])
+    assert r.status == "error", r
+    assert r.confirmed is False
+
+
+def test_garbage_content_length_is_not_confirmed():
+    with _framing_server("garbage_length") as (srv, url):
+        r = _teacher(url, timeout=2).classify(b"owned", "q", ["yes", "no"])
+    assert r.status == "error", r
+    assert r.confirmed is False
+
+
+def test_unterminated_chunked_is_not_confirmed():
+    with _framing_server("unterminated_chunked") as (srv, url):
+        r = _teacher(url, timeout=2).classify(b"owned", "q", ["yes", "no"])
+    assert r.status == "error", r
+    assert r.confirmed is False
+
+
+def test_conflicting_framing_is_rejected():
+    with _framing_server("conflicting_framing") as (srv, url):
+        r = _teacher(url, timeout=2).classify(b"owned", "q", ["yes", "no"])
+    assert r.status == "error", r
+    assert r.confirmed is False
+
+
+def test_well_framed_chunked_confirms():
+    # Positive control: a correctly terminated chunked response still confirms.
+    with _framing_server("well_framed_chunked") as (srv, url):
+        r = _teacher(url, timeout=2).classify(b"owned", "q", ["yes", "no"])
+    assert r.status == "ok", r
+    assert r.confirmed is True
+
+
+# -- M2-003: a stalled TLS handshake is bounded by the overall deadline --------
+
+def test_tls_handshake_stall_bounded_by_deadline():
+    # The owned server accepts TCP and then never completes the TLS handshake. The
+    # overall deadline must cut the handshake near 0.2s, not let it hang, and the
+    # failure must be a non-confirming result (not an uncaught raise).
+    class _TlsStallHandler(socketserver.BaseRequestHandler):
+        def handle(self):
+            try:
+                self.request.recv(8192)
+                time.sleep(1.0)
+            except OSError:
+                pass
+
+    srv = _Server(("127.0.0.1", 0), _TlsStallHandler)
+    srv.records, srv.lock, srv.mode, srv.confidence = [], threading.Lock(), "tls", 0.9
+    th = threading.Thread(target=srv.serve_forever, kwargs={"poll_interval": 0.02}, daemon=True)
+    th.start()
+    try:
+        url = f"https://127.0.0.1:{srv.server_address[1]}/v1"
+        t = _teacher(url, timeout=0.2)
+        start = time.monotonic()
+        r = t.classify(b"owned", "q", ["yes", "no"])
+        elapsed = time.monotonic() - start
+    finally:
+        srv.shutdown()
+        srv.server_close()
+        th.join(1)
+    assert r.status in ("timeout", "error"), r
+    assert r.confirmed is False
+    assert elapsed < 0.4, elapsed
+
+
+def test_connection_refused_normalized_to_error():
+    # A refused connection must normalize to a non-confirming error (not propagate
+    # ConnectionRefusedError), and bounded retries apply.
+    s = socket.socket()
+    s.bind(("127.0.0.1", 0))
+    port = s.getsockname()[1]
+    s.close()
+    r = _teacher(f"http://127.0.0.1:{port}/v1", timeout=0.5, max_retries=1).classify(
+        b"owned", "q", ["yes", "no"]
+    )
+    assert r.status == "error", r
+    assert r.confirmed is False
+
+
+# -- M2-004: a partial send still consumes one outbound attempt/budget ---------
+
+class _PartialSendHandler(socketserver.BaseRequestHandler):
+    def handle(self):
+        sock = self.request
+        sock.settimeout(3)
+        try:
+            data = sock.recv(8192)  # read only the first slice, then stall + close
+        except OSError:
+            return
+        with self.server.lock:
+            self.server.records.append({"bytes": len(data)})
+        time.sleep(0.5)
+
+
+def test_partial_send_consumes_budget_and_suppresses_next():
+    srv = _Server(("127.0.0.1", 0), _PartialSendHandler)
+    srv.records, srv.lock, srv.mode, srv.confidence = [], threading.Lock(), "partial", 0.9
+    th = threading.Thread(target=srv.serve_forever, kwargs={"poll_interval": 0.02}, daemon=True)
+    th.start()
+    try:
+        url = f"http://127.0.0.1:{srv.server_address[1]}/v1"
+        t = _teacher(url, timeout=0.15)
+        router = VlmRouter(
+            teacher_provider=lambda: t, sample_interval_s=0, cooldown_s=0, budget_per_task=1
+        )
+        statuses = []
+        for i in range(3):
+            d = router.route(
+                task_key="k", scope="k", prompt="q", labels=["yes", "no"],
+                image_bytes=bytes([65 + i]) * (4 * 1024 * 1024),
+            )
+            statuses.append(d.status)
+    finally:
+        srv.shutdown()
+        srv.server_close()
+        th.join(1)
+    # The first write partially succeeded (bytes disclosed) and MUST consume the
+    # only budget unit; the next two are suppressed before any connection opens.
+    assert len(srv.records) == 1, srv.records
+    assert router.counters.outbound_attempts == 1
+    assert statuses.count("suppressed_budget") == 2, statuses
+
+
+# -- M2-003: a slow authoritative admission is bounded by the deadline ---------
+
+def test_slow_admission_bounded_by_deadline():
+    with _server(mode="fast") as (srv, url):
+        t = _teacher(url, timeout=0.1)
+        router = VlmRouter(teacher_provider=lambda: t, sample_interval_s=0, cooldown_s=0)
+
+        def slow_admit():
+            time.sleep(0.25)
+            return True
+
+        start = time.monotonic()
+        d = router.route(
+            task_key="k", scope="k", prompt="q", labels=["yes", "no"],
+            image_bytes=b"owned", admit=slow_admit,
+        )
+        elapsed = time.monotonic() - start
+    assert elapsed < 0.2, elapsed          # returned at the deadline, not after admit
+    assert len(srv.records) == 0, srv.records
+    assert router.counters.outbound_attempts == 0
+    assert d.result.status != "ok"
