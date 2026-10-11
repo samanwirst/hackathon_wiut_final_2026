@@ -80,6 +80,15 @@ class RoomState:
     job_total: int = 0                      # total frames to process
     job_error: str | None = None
     job_version: int = 0                    # task_version the running job was started for
+    # The execution generation currently AUTHORIZED to publish frames/events/
+    # evidence for this room. ``video.start_job`` stamps each run with a unique
+    # monotonic id; any source/task/session transition resets it to 0, which
+    # atomically revokes a still-running (possibly blocked) worker so it can never
+    # publish or persist private media after an acknowledged control (LIVE-VIDEO-002).
+    active_generation: int = 0
+    # Set once when the room is retired (owner logout / expiry / idle). A retired
+    # room never recreates private media; its outputs are purged under the lock.
+    retired: bool = False
 
     # task state
     task: dict | None = None                             # validated LiveTask.model_dump()
@@ -164,7 +173,15 @@ def iter_rooms() -> list[RoomState]:
 
 
 def close_room(room_id: str) -> None:
-    # Stop any running video job first so it cannot write evidence after teardown.
+    # 1) Mark the room retired and revoke its execution generation FIRST, under the
+    #    room lock, so an in-flight (even blocked) video worker immediately loses
+    #    publish authority before any teardown and cannot recreate private media.
+    existing = get_room(room_id)
+    if existing is not None:
+        with existing.lock:
+            existing.retired = True
+            existing.active_generation = 0
+    # 2) Signal any running video job to stop and revoke its generation again.
     try:
         from app.live import video as _video
         _video.cancel_job(room_id)
@@ -175,7 +192,19 @@ def close_room(room_id: str) -> None:
         if room is not None:
             _by_join_code.pop(room.join_code, None)
     if room is not None:
-        for p in list(room._evidence_files):
+        with room.lock:
+            # Fail-closed purge: a retired room keeps no private outputs, so an
+            # already-committed event/notification/annotated frame cannot survive
+            # the owner's logout/expiry (LIVE-VIDEO-002).
+            room.retired = True
+            room.active_generation = 0
+            room.events.clear()
+            room.notifications.clear()
+            room.annotated_jpeg = None
+            room.latest_jpeg = None
+            evidence = list(room._evidence_files)
+            room._evidence_files.clear()
+        for p in evidence:
             try:
                 p.unlink(missing_ok=True)
             except OSError:
@@ -239,6 +268,11 @@ def build_engines(task: dict, frame_w: int, frame_h: int, version: int) -> list[
     from app.live.dsl import TRIGGER_TO_EVENT
 
     event_type = EventType(TRIGGER_TO_EVENT[task["trigger"]])
+    # Cooldown comes from the approved task when supplied (exact value), else the
+    # documented default of 10s. The DSL layer owns whether a supplied cooldown is
+    # accepted or rejected; here we faithfully apply whatever survived validation.
+    cooldown = task.get("cooldown_seconds")
+    cooldown = float(cooldown) if cooldown is not None else 10.0
     engine = ZoneEventEngine(
         zone=zone,
         object_class=task["object_class"],
@@ -247,7 +281,7 @@ def build_engines(task: dict, frame_w: int, frame_h: int, version: int) -> list[
         frame_h=frame_h or 1,
         dwell_seconds=task.get("duration_seconds") or 0.0,
         count_threshold=task.get("threshold") or 0,
-        cooldown_seconds=10.0,
+        cooldown_seconds=cooldown,
         rule_key=f"room-v{version}",
     )
     return [engine]
