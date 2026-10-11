@@ -29,14 +29,23 @@ export VISIONFLOW_LIVE_TRUSTED_PROXY_HOPS='0'
 export VISIONFLOW_LIVE_INSECURE_COOKIE='true'
 export VLM_BASE_URL=''
 export LIVE_TEACHER_BASE_URL=''
+export VISIONFLOW_LIVE_ENABLE_CAMERA='false'
+export VISIONFLOW_LIVE_PLANNER_PROVIDER='openai'
+export VISIONFLOW_LIVE_PLANNER_MODEL='gpt-4.1-mini-2025-04-14'
+# Set OPENAI_API_KEY privately in the server environment; never paste it into logs.
 .venv/bin/python -m app.live --host 127.0.0.1 --port 19102
 ```
 
 This command starts loopback HTTP QA only. The `INSECURE_COOKIE` opt-out must
 never be used publicly. Use separate browser profiles for operator and judge
-roles. The natural-language planner requires the real, authenticated local
-Claude CLI; credentials stay outside the release. Missing planner availability
-must remain an explicit error. The VIDEO pages are served by this backend;
+roles. The public natural-language planner uses the OpenAI API with pinned
+`gpt-4.1-mini-2025-04-14`; `OPENAI_API_KEY` stays in the private server
+environment. Provider errors and exhausted attempt budgets fail explicitly.
+There is no API-error fallback to a developer CLI subscription. The shared
+persistent attempt ledger is stored under `VISIONFLOW_DATA_DIR`;
+`VISIONFLOW_LIVE_OPENAI_MAX_CALLS` defaults to 50 (maximum 50).
+Optional `VISIONFLOW_DEMO_VIDEO_DIR` selects a private directory containing
+authenticated, owner-authorized demo inputs; these files are not source assets. The VIDEO pages are served by this backend;
 the Next.js build is a separate regression check. Stop the foreground process
 with Ctrl-C. Uploaded media, evidence and credentials are private runtime data.
 
@@ -59,8 +68,7 @@ The corresponding-source download for the final deployed version is:
 
 [https://github.com/samanwirst/visionflow-hackathon-2026-source/releases/download/hackathon-2026/visionflow-source.tar.gz](https://github.com/samanwirst/visionflow-hackathon-2026-source/releases/download/hackathon-2026/visionflow-source.tar.gz)
 
-This new public source repository/release is **not yet created**. Before public
-service launch the controller must publish and verify the exact accepted
+Before public service launch the controller must publish and anonymously verify the exact accepted
 snapshot at that URL, including build/run source, notices and dependency
 information, with a manifest identifying its frozen commit. The private origin
 and Git history remain private. No secrets, user uploads or private experiments
