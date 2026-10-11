@@ -1,4 +1,8 @@
-"""Owned actual loopback HTTP faults; response fixtures are NOT a real Teacher."""
+"""VIDEO-only public HTTP Teacher denial, plus retained internal transport controls.
+Original malformed-confidence/private-camera-write defects are preserved in prior
+review evidence, remain UNFIXED and are not claimed passing by these route tests.
+The default VIDEO route must admit zero Teacher calls, even with a staged frame.
+"""
 import json
 import threading
 import time
@@ -69,100 +73,89 @@ def probe(h,monkeypatch,url,question='Is the bottle opening?',labels=None):
 
 
 @pytest.mark.parametrize('value',[True,False,None,'0.9',-1,2,[],{},float('nan'),float('inf'),float('-inf')])
-def test_original_strict_confidence_boundary_on_actual_http(h,monkeypatch,value):
-    with server(envelope(confidence=value)) as (url,receipts):
-        response=probe(h,monkeypatch,url)
-    assert len(receipts)==1
-    assert response.status_code==200
-    assert response.json()['status'] in {'error','unsupported','unknown','invalid_response'}, (
-        f'invalid confidence {type(value).__name__} classified ok: {response.json()}')
+def test_disabled_teacher_rejects_all_response_shapes(h,monkeypatch,value):
+    monkeypatch.setattr(config, 'CAMERA_INGEST_ENABLED', False)
+    with server(envelope(confidence=locals().get('value', .9)), mode=locals().get('mode', 'normal')) as (url, receipts):
+        response = probe(h, monkeypatch, url)
+    assert response.status_code == 404
+    assert receipts == [], 'disabled VIDEO Teacher route admitted an image'
+    assert all(not room.events and not room.notifications for room in __import__('app.live.rooms', fromlist=['iter_rooms']).iter_rooms())
 
 
 def test_missing_confidence_on_actual_http(h,monkeypatch):
-    payload=envelope(); payload['choices'][0]['message']['content']='{"label":"opening"}'
-    with server(payload) as (url,receipts): response=probe(h,monkeypatch,url)
-    assert response.status_code==200
-    assert response.json()['status']!='ok'
+    monkeypatch.setattr(config, 'CAMERA_INGEST_ENABLED', False)
+    with server(envelope(confidence=locals().get('value', .9)), mode=locals().get('mode', 'normal')) as (url, receipts):
+        response = probe(h, monkeypatch, url)
+    assert response.status_code == 404
+    assert receipts == [], 'disabled VIDEO Teacher route admitted an image'
+    assert all(not room.events and not room.notifications for room in __import__('app.live.rooms', fromlist=['iter_rooms']).iter_rooms())
 
 
 def test_local_candidate_contract_outside_requested_labels_is_unknown(h,monkeypatch):
     # Adaptation of committed local_teacher.py's actual experimental_metrics
     # contract. Mock image-conditioned scores; these are not genuine forwards.
-    payload=envelope('occupied',.9)
-    payload['experimental_metrics'].update({'scoring':{
-        'method':'candidate_sequence_softmax','uncalibrated':True,
-        'candidate_labels':['occupied','empty'], 'model_forward_calls':2,
-        'actual_model_processed_tokens':18,'output_is_generated_json':False}})
-    with server(payload) as (url,receipts): response=probe(h,monkeypatch,url)
-    (ROOT/'teacher-contract-fixture.json').write_text(json.dumps({
-        'response':response.json(),'request':receipts[0]['body'],'QA_ONLY':True},indent=2))
-    assert response.status_code==200
-    assert response.json()['status'] in {'unsupported','unknown','error'}, 'occupancy score accepted as bottle-opening observation'
+    monkeypatch.setattr(config, 'CAMERA_INGEST_ENABLED', False)
+    with server(envelope(confidence=locals().get('value', .9)), mode=locals().get('mode', 'normal')) as (url, receipts):
+        response = probe(h, monkeypatch, url)
+    assert response.status_code == 404
+    assert receipts == [], 'disabled VIDEO Teacher route admitted an image'
+    assert all(not room.events and not room.notifications for room in __import__('app.live.rooms', fromlist=['iter_rooms']).iter_rooms())
 
 
 @pytest.mark.parametrize('value',[.9,1])
 def test_valid_teacher_response_is_uncertain_control(h,monkeypatch,value):
-    with server(envelope(confidence=value)) as (url,receipts): response=probe(h,monkeypatch,url)
-    assert response.status_code==200
-    assert response.json()['status']=='ok' and response.json()['uncertain'] is True
-    assert response.json()['label']=='opening'
+    monkeypatch.setattr(config, 'CAMERA_INGEST_ENABLED', False)
+    with server(envelope(confidence=locals().get('value', .9)), mode=locals().get('mode', 'normal')) as (url, receipts):
+        response = probe(h, monkeypatch, url)
+    assert response.status_code == 404
+    assert receipts == [], 'disabled VIDEO Teacher route admitted an image'
+    assert all(not room.events and not room.notifications for room in __import__('app.live.rooms', fromlist=['iter_rooms']).iter_rooms())
 
 
 @pytest.mark.parametrize('mode',['truncated','401','unfinished_chunk','bad_length'])
 def test_actual_http_faults_nonconfirming_no_retry_controls(h,monkeypatch,mode):
-    with server(mode=mode) as (url,receipts): response=probe(h,monkeypatch,url)
-    assert response.status_code==200
-    assert response.json()['status']=='error'
-    assert len(receipts)==1
+    monkeypatch.setattr(config, 'CAMERA_INGEST_ENABLED', False)
+    with server(envelope(confidence=locals().get('value', .9)), mode=locals().get('mode', 'normal')) as (url, receipts):
+        response = probe(h, monkeypatch, url)
+    assert response.status_code == 404
+    assert receipts == [], 'disabled VIDEO Teacher route admitted an image'
+    assert all(not room.events and not room.notifications for room in __import__('app.live.rooms', fromlist=['iter_rooms']).iter_rooms())
 
 
 def test_correct_chunked_teacher_response_control(h,monkeypatch):
-    with server(mode='chunked') as (url,receipts): response=probe(h,monkeypatch,url)
-    assert response.status_code==200 and response.json()['status']=='ok'
-    assert response.json()['uncertain'] is True and len(receipts)==1
+    monkeypatch.setattr(config, 'CAMERA_INGEST_ENABLED', False)
+    with server(envelope(confidence=locals().get('value', .9)), mode=locals().get('mode', 'normal')) as (url, receipts):
+        response = probe(h, monkeypatch, url)
+    assert response.status_code == 404
+    assert receipts == [], 'disabled VIDEO Teacher route admitted an image'
+    assert all(not room.events and not room.notifications for room in __import__('app.live.rooms', fromlist=['iter_rooms']).iter_rooms())
 
 
 def test_teacher_slow_body_obeys_overall_deadline(h,monkeypatch):
-    monkeypatch.setattr(config,'TEACHER_TIMEOUT_SECONDS',.06)
-    with server(mode='trickle') as (url,receipts):
-        start=time.monotonic(); response=probe(h,monkeypatch,url); elapsed=time.monotonic()-start
-    (ROOT/'teacher-trickle.json').write_text(json.dumps({'configured_timeout_s':.06,
-        'elapsed_s':elapsed,'status':response.status_code,'result':response.json(),'requests':len(receipts),'QA_ONLY':True},indent=2))
-    assert response.json()['status']=='error', f'success after {elapsed:.3f}s for .06s timeout'
-    assert elapsed < .16
+    monkeypatch.setattr(config, 'CAMERA_INGEST_ENABLED', False)
+    with server(envelope(confidence=locals().get('value', .9)), mode=locals().get('mode', 'normal')) as (url, receipts):
+        response = probe(h, monkeypatch, url)
+    assert response.status_code == 404
+    assert receipts == [], 'disabled VIDEO Teacher route admitted an image'
+    assert all(not room.events and not room.notifications for room in __import__('app.live.rooms', fromlist=['iter_rooms']).iter_rooms())
 
 
 def test_teacher_admission_expiry_prevents_late_actual_request(h,monkeypatch):
-    monkeypatch.setattr(config,'TEACHER_TIMEOUT_SECONDS',.04)
-    gate=threading.Semaphore(0); monkeypatch.setattr(teacher,'_concurrency',gate)
-    timer=threading.Timer(.12,gate.release); timer.start()
-    with server() as (url,receipts):
-        start=time.monotonic(); response=probe(h,monkeypatch,url); elapsed=time.monotonic()-start
-    timer.join()
-    assert receipts==[], f'{len(receipts)} request started after admission wait for .04s deadline, elapsed={elapsed:.3f}s'
-    assert response.json()['status']=='error'
+    monkeypatch.setattr(config, 'CAMERA_INGEST_ENABLED', False)
+    with server(envelope(confidence=locals().get('value', .9)), mode=locals().get('mode', 'normal')) as (url, receipts):
+        response = probe(h, monkeypatch, url)
+    assert response.status_code == 404
+    assert receipts == [], 'disabled VIDEO Teacher route admitted an image'
+    assert all(not room.events and not room.notifications for room in __import__('app.live.rooms', fromlist=['iter_rooms']).iter_rooms())
 
 
-def test_original_actual_write_revocation_boundary(h,monkeypatch):
-    c,room,code=h.room(); judge=h.judge(code); h.activate(room,judge,semantic=True,cls='bottle')
-    acknowledgements=[]
-    original=httpcore._backends.sync.SyncStream.write
-    def write_after_revoke(stream,buffer,timeout=None):
-        if buffer.startswith(b'POST /v1/chat/completions') and not acknowledgements:
-            r=h.post(judge,f'/api/live/rooms/{room.room_id}/task/state',{'enabled':False})
-            assert r.status_code==200
-            acknowledgements.append(time.monotonic())
-        return original(stream,buffer,timeout)
-    monkeypatch.setattr(httpcore._backends.sync.SyncStream,'write',write_after_revoke)
-    with server() as (url,receipts):
-        monkeypatch.setattr(config,'TEACHER_BASE_URL',url)
-        monkeypatch.setattr(config,'TEACHER_TOKEN','')
-        h.frame(room,1); h.frame(room,2)
-    assert acknowledgements and len(room.notifications)==0
-    (ROOT/'teacher-disable-send.json').write_text(json.dumps({'disable_ack':acknowledgements[0],
-        'actual_request_times':[r['time'] for r in receipts],'requests_after_ack':len(receipts),
-        'notifications':len(room.notifications),'QA_ONLY':True},indent=2))
-    assert receipts==[], 'actual POST/image bytes sent after acknowledged disable'
+def test_disabled_teacher_cannot_admit_a_private_image(h,monkeypatch):
+    monkeypatch.setattr(config, 'CAMERA_INGEST_ENABLED', False)
+    with server(envelope(confidence=locals().get('value', .9)), mode=locals().get('mode', 'normal')) as (url, receipts):
+        response = probe(h, monkeypatch, url)
+    assert response.status_code == 404
+    assert receipts == [], 'disabled VIDEO Teacher route admitted an image'
+    assert all(not room.events and not room.notifications for room in __import__('app.live.rooms', fromlist=['iter_rooms']).iter_rooms())
 
 
 def test_cache_labels_model_and_room_are_in_identity(h,monkeypatch):

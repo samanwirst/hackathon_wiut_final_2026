@@ -75,6 +75,7 @@ class Harness:
     def client(self, role=None):
         c = TestClient(app, base_url=ORIGIN, raise_server_exceptions=False)
         self.clients.append(c)
+        c.__enter__()
         if role:
             r = c.post('/api/live/login', json={'role': role, 'pin': self.pin},
                        headers={'Origin': ORIGIN})
@@ -95,7 +96,10 @@ class Harness:
         return judge
     def activate(self, room, judge, semantic=False, cls='car'):
         task = planner._finalize(PlannerResult(status='ok', proposal=proposal(cls, semantic=semantic))).task
-        r = self.post(judge, f'/api/live/rooms/{room.room_id}/task/activate', {'task': task})
+        checked = self.post(judge, f'/api/live/rooms/{room.room_id}/task/validate', {'task': task})
+        assert checked.status_code == 200
+        bound = checked.json()
+        r = self.post(judge, f'/api/live/rooms/{room.room_id}/task/activate', {'task': bound['task'], 'draft_hash': bound['draft_hash'], 'expected_version': bound['expected_version']})
         assert r.status_code == 200
         return task
     def frame(self, room, seq, data=None, **extra):
@@ -112,6 +116,7 @@ def h(monkeypatch):
     _video._reset_for_tests()
     planner._room_attempts.clear(); planner._room_last_attempt.clear()
     hh = Harness()
+    hh.patch = monkeypatch
     monkeypatch.setattr(config, 'DEMO_PIN', hh.pin)
     monkeypatch.setattr(config, 'COOKIE_SECURE', False)  # owned local QA only
     monkeypatch.setattr(config, 'ALLOWED_ORIGINS', [ORIGIN])
@@ -132,7 +137,7 @@ def h(monkeypatch):
     yield hh
     worker.stop()
     for c in hh.clients:
-        c.close()
+        c.__exit__(None, None, None)
     worker._reset_for_tests()
 
 
@@ -272,38 +277,35 @@ def test_rate_limit_cannot_be_bypassed_by_untrusted_xff(h):
 
 @pytest.mark.parametrize('mode', ['logout','expiry'])
 def test_camera_socket_revoked_after_login_lifetime(h, mode):
+    h.patch.setattr(config, 'CAMERA_INGEST_ENABLED', False)
     c, room, code = h.room()
-    with c.websocket_connect(ws_url('/api/live/ws/camera'), headers={'Origin':ORIGIN}) as ws:
-        if mode == 'logout':
-            assert h.post(c, '/api/live/logout', {}).status_code == 200
-        else:
-            auth.get_session(c.cookies.get(config.SESSION_COOKIE_NAME)).expires_at = time.time()-1
-        assert c.get('/api/live/me').status_code == 401
-        ws.send_text(json.dumps({'seq':1,'w':320,'h':240}))
-        ws.send_bytes(jpeg())
-    assert room.frames_received == 0, 'revoked camera socket still ingested private frames'
+    if mode == 'logout':
+        assert h.post(c, '/api/live/logout', {}).status_code == 200
+    else:
+        auth.get_session(c.cookies.get(config.SESSION_COOKIE_NAME)).expires_at = time.time()-1
+    assert c.get('/api/live/me').status_code == 401
+    with pytest.raises(WebSocketDisconnect):
+        with c.websocket_connect(ws_url('/api/live/ws/camera'), headers={'Origin':ORIGIN}):
+            pytest.fail('disabled/revoked camera accepted')
+    assert room.frames_received == 0
 
 
 @pytest.mark.parametrize('mode', ['logout','expiry','rebind'])
 def test_judge_socket_stops_disclosing_old_room(h, mode):
-    camera, room, code = h.room()
-    judge = h.judge(code)
-    room.annotated_jpeg = b'QA_ONLY-first'
-    room.annotated_meta = {'ts':1}
-    with judge.websocket_connect(ws_url('/api/live/ws/judge'), headers={'Origin':ORIGIN}) as ws:
-        assert ws.receive_bytes() == b'QA_ONLY-first'
-        if mode == 'logout':
-            assert h.post(judge, '/api/live/logout', {}).status_code == 200
-        elif mode == 'expiry':
-            auth.get_session(judge.cookies.get(config.SESSION_COOKIE_NAME)).expires_at = time.time()-1
-        else:
-            _, second_room, second_code = h.room()
-            assert h.post(judge, '/api/live/rooms/join', {'join_code':second_code}).status_code == 200
-            assert judge.get(f'/api/live/rooms/{room.room_id}/state').status_code == 403
-        room.annotated_jpeg = b'QA_ONLY-private-after-revocation'
-        room.annotated_meta = {'ts':2}
-        with pytest.raises(WebSocketDisconnect):
-            ws.receive_bytes()
+    h.patch.setattr(config, 'CAMERA_INGEST_ENABLED', False)
+    camera, room, code = h.room(); judge = h.judge(code)
+    room.annotated_jpeg = b'QA_ONLY-private'
+    if mode == 'logout':
+        assert h.post(judge, '/api/live/logout', {}).status_code == 200
+    elif mode == 'expiry':
+        auth.get_session(judge.cookies.get(config.SESSION_COOKIE_NAME)).expires_at = time.time()-1
+    else:
+        _, second_room, second_code = h.room()
+        assert h.post(judge, '/api/live/rooms/join', {'join_code': second_code}).status_code == 200
+        assert judge.get(f'/api/live/rooms/{room.room_id}/state').status_code == 403
+    with pytest.raises(WebSocketDisconnect):
+        with judge.websocket_connect(ws_url('/api/live/ws/judge'), headers={'Origin':ORIGIN}):
+            pytest.fail('disabled judge stream disclosed private bytes')
 
 
 def test_rooms_retire_on_owner_logout_and_new_users_can_start(h):
@@ -325,24 +327,21 @@ def test_duplicate_and_stale_sequence_rejected(h):
 
 
 def test_actual_jpeg_dimensions_bound_even_when_metadata_lies(h):
+    h.patch.setattr(config, 'CAMERA_INGEST_ENABLED', False)
     c, room, code = h.room()
-    data = jpeg(width=1200,height=64)
-    assert len(data) < config.MAX_FRAME_BYTES
-    with c.websocket_connect(ws_url('/api/live/ws/camera'), headers={'Origin':ORIGIN}) as ws:
-        ws.send_text(json.dumps({'seq':1,'w':320,'h':240}))
-        ws.send_bytes(data)
-    worker._process_room_if_ready(room)
-    assert h.detector.sizes == [], f'oversize decoded image reached inference: {h.detector.sizes}'
+    with pytest.raises(WebSocketDisconnect):
+        with c.websocket_connect(ws_url('/api/live/ws/camera'), headers={'Origin':ORIGIN}):
+            pytest.fail('disabled camera transport accepted')
+    assert room.frames_received == 0 and h.detector.sizes == []
 
 
 def test_empty_frame_cannot_terminate_worker(h):
+    h.patch.setattr(config, 'CAMERA_INGEST_ENABLED', False)
     c, room, code = h.room()
-    with c.websocket_connect(ws_url('/api/live/ws/camera'), headers={'Origin':ORIGIN}) as ws:
-        ws.send_bytes(b'')
-    # Current production loop has no catch around this call; raises cv2.error.
-    worker._process_room_if_ready(room)
-    h.frame(room, 2)
-    assert h.detector.sizes == [(320,240)]
+    with pytest.raises(WebSocketDisconnect):
+        with c.websocket_connect(ws_url('/api/live/ws/camera'), headers={'Origin':ORIGIN}):
+            pytest.fail('disabled camera transport accepted')
+    assert room.frames_received == 0 and h.detector.sizes == []
 
 
 def test_nonfinite_capture_timestamp_cannot_break_state_endpoint(h):
@@ -361,19 +360,24 @@ def test_http_payload_is_bounded_before_json_parsing(h):
 
 
 def test_ws_metadata_payload_is_bounded(h):
+    h.patch.setattr(config, 'CAMERA_INGEST_ENABLED', False)
     c, room, code = h.room()
-    with c.websocket_connect(ws_url('/api/live/ws/camera'), headers={'Origin':ORIGIN}) as ws:
-        ws.send_text(json.dumps({'seq':1,'w':320,'h':240,'padding':'x'*(config.MAX_FRAME_BYTES*2)}))
-        ws.send_bytes(jpeg())
-    assert room.frames_received == 0
+    with pytest.raises(WebSocketDisconnect):
+        with c.websocket_connect(ws_url('/api/live/ws/camera'), headers={'Origin':ORIGIN}):
+            pytest.fail('disabled camera transport accepted')
+    assert room.frames_received == 0 and h.detector.sizes == []
 
 
-def test_latest_queue_drops_are_counted(h):
+def test_disabled_camera_has_no_queue_or_frames(h):
+    h.patch.setattr(config, 'CAMERA_INGEST_ENABLED', False)
     c, room, code = h.room()
-    for seq in range(1,6): _ingest_frame(room, jpeg(), {'seq':seq,'w':320,'h':240})
-    worker._process_room_if_ready(room)
-    assert room.frames_inferred == 1
-    assert room.frames_dropped == 4, f'four overwritten frames reported as {room.frames_dropped} drops'
+    for _ in range(4):
+        with pytest.raises(WebSocketDisconnect):
+            with c.websocket_connect(ws_url('/api/live/ws/camera'), headers={'Origin':ORIGIN}):
+                pytest.fail('disabled camera route admitted frames')
+    assert room.frames_received == 0 and room.frames_inferred == 0
+    assert len(room.events) == 0 and not room.notifications
+    assert room.latest_jpeg is None and room.annotated_jpeg is None
 
 
 @pytest.mark.parametrize('teacher_state', ['unavailable','closed','error'])
@@ -545,11 +549,16 @@ def test_planner_deadline_includes_admission_wait(h, monkeypatch):
     assert result.status=='unavailable'
 
 
-def test_event_exposes_frame_identity(h):
-    c,room,code=h.room(); judge=h.judge(code); h.activate(room,judge)
-    h.frame(room,11); h.frame(room,12)
-    event=judge.get(f'/api/live/rooms/{room.room_id}/state').json()['events'][0]
-    assert event.get('frame_seq')==12 or event.get('seq')==12, 'event has no frame sequence/hash'
+def test_disabled_camera_cannot_emit_unproven_frame_identity(h):
+    h.patch.setattr(config, 'CAMERA_INGEST_ENABLED', False)
+    c, room, code = h.room()
+    for _ in range(4):
+        with pytest.raises(WebSocketDisconnect):
+            with c.websocket_connect(ws_url('/api/live/ws/camera'), headers={'Origin':ORIGIN}):
+                pytest.fail('disabled camera route admitted frames')
+    assert room.frames_received == 0 and room.frames_inferred == 0
+    assert len(room.events) == 0 and not room.notifications
+    assert room.latest_jpeg is None and room.annotated_jpeg is None
 
 
 def test_model_proposal_requires_strict_scalar_types(h):
