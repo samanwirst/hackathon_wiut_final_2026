@@ -196,7 +196,7 @@ def _validate_observation(value: dict, frame_ids: set[int]) -> dict:
     return value
 
 
-def _infer(question: str, frames: list[dict]) -> dict:
+def _infer(question: str, frames: list[dict], *, admit=lambda: True, room=None) -> dict:
     key = os.environ.get("OPENAI_API_KEY", "").strip()
     if not key:
         raise ValueError("OpenAI scene credential missing")
@@ -207,7 +207,17 @@ def _infer(question: str, frames: list[dict]) -> dict:
     deadline = time.monotonic() + INFERENCE_TIMEOUT
     if not planner._planner_lock.acquire(timeout=INFERENCE_TIMEOUT):
         raise ValueError("scene provider busy")
+    held_room = False
     try:
+        # Serialize actual provider admission with source/disable/room teardown.
+        # A revocation acknowledgment cannot overtake an image-bearing request.
+        if room is not None:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0 or not room.lock.acquire(timeout=remaining):
+                raise ValueError("scene authority admission deadline")
+            held_room = True
+        if not admit():
+            raise ValueError("scene authority revoked before provider admission")
         reserve = getattr(planner, "_reserve_api_attempt", None)
         if reserve is None or not reserve():
             raise ValueError("shared OpenAI budget unavailable or exhausted")
@@ -227,8 +237,10 @@ def _infer(question: str, frames: list[dict]) -> dict:
                 env={"PATH": "/usr/bin:/bin", "OPENAI_API_KEY": key,
                      "VISIONFLOW_LIVE_API_TIMEOUT": str(remaining)})
             try:
+                payload = json.dumps(request, allow_nan=False)
+                remaining = deadline - time.monotonic()
                 rc, output, _error, timed_out = planner._communicate_bounded(
-                    proc, json.dumps(request, allow_nan=False), remaining, 64 * 1024)
+                    proc, payload, max(0, remaining), 64 * 1024)
             except BaseException:
                 try:
                     os.killpg(proc.pid, signal.SIGKILL)
@@ -245,6 +257,8 @@ def _infer(question: str, frames: list[dict]) -> dict:
         return envelope
     finally:
         # communicate kills/reaps the entire request group before this release.
+        if held_room:
+            room.lock.release()
         planner._planner_lock.release()
 
 
@@ -274,7 +288,8 @@ def inspect_scene(room: rooms.RoomState, question: str, expected_source_sha: str
         frames = _sample(source)
         if not _current(room, source, session_is_current):
             return _failure("stale", "source/workflow/session changed")
-        envelope = _infer(question.strip(), frames)
+        envelope = _infer(question.strip(), frames, room=room,
+                          admit=lambda: _current(room, source, session_is_current))
         observation = _validate_observation(envelope["structured_output"], {f["frame_id"] for f in frames})
         if not _current(room, source, session_is_current):
             return _failure("stale", "source/workflow/session changed")

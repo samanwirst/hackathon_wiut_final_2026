@@ -409,34 +409,82 @@ def _drain(stream, cap: int, box: list) -> None:
 
 
 def _communicate_bounded(proc, input_text: str, timeout: float, cap: int):
-    """Feed STDIN, drain STDOUT/STDERR with a hard size cap via reader threads, and
-    enforce ``timeout`` by SIGKILLing the whole process group and reaping it. Returns
-    (returncode, stdout, stderr, timed_out). No unbounded ``communicate`` pipe is
-    used (LIVE-VIDEO-008)."""
-    out_box: list[str] = []
-    err_box: list[str] = []
-    to = threading.Thread(target=_drain, args=(proc.stdout, cap, out_box), daemon=True)
-    te = threading.Thread(target=_drain, args=(proc.stderr, cap, err_box), daemon=True)
-    to.start()
-    te.start()
-    try:
-        if proc.stdin is not None:
-            proc.stdin.write(input_text)
-            proc.stdin.close()
-    except (BrokenPipeError, OSError):
-        pass
+    """Bound every pipe phase by one deadline; kill/reap before freeing capacity."""
+    import selectors
+    deadline = time.monotonic() + max(0.0, timeout)
+    data = input_text.encode("utf-8")
+    offset = 0
+    outputs = {"stdout": bytearray(), "stderr": bytearray()}
     timed_out = False
+    selector = selectors.DefaultSelector()
     try:
-        proc.wait(timeout=timeout)
-    except subprocess.TimeoutExpired:
-        timed_out = True
+        for label in ("stdout", "stderr"):
+            pipe = getattr(proc, label)
+            if pipe is not None:
+                os.set_blocking(pipe.fileno(), False)
+                selector.register(pipe, selectors.EVENT_READ, label)
+        if proc.stdin is not None:
+            if data:
+                os.set_blocking(proc.stdin.fileno(), False)
+                selector.register(proc.stdin, selectors.EVENT_WRITE, "stdin")
+            else:
+                proc.stdin.close()
+        while selector.get_map():
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                timed_out = True
+                _terminate_group(proc)
+                break
+            for key, _ in selector.select(remaining):
+                pipe, label = key.fileobj, key.data
+                try:
+                    if label == "stdin":
+                        written = os.write(pipe.fileno(), data[offset:offset + 16384])
+                        offset += written
+                        if offset == len(data):
+                            selector.unregister(pipe)
+                            pipe.close()
+                    else:
+                        chunk = os.read(pipe.fileno(), min(16384, cap + 1))
+                        if not chunk:
+                            selector.unregister(pipe)
+                            pipe.close()
+                        else:
+                            outputs[label].extend(chunk)
+                            if len(outputs[label]) > cap:
+                                timed_out = True
+                                _terminate_group(proc)
+                                break
+                except BlockingIOError:
+                    continue
+                except (BrokenPipeError, OSError):
+                    selector.unregister(pipe)
+                    pipe.close()
+            if timed_out:
+                break
+        if not timed_out:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                timed_out = True
+                _terminate_group(proc)
+            else:
+                try:
+                    proc.wait(timeout=remaining)
+                except subprocess.TimeoutExpired:
+                    timed_out = True
+                    _terminate_group(proc)
+    except BaseException:
         _terminate_group(proc)
-    # Reader threads end once the pipes hit EOF (the process group is dead by now).
-    to.join(3)
-    te.join(3)
-    out = out_box[0] if out_box else ""
-    err = err_box[0] if err_box else ""
-    return proc.returncode, out, err, timed_out
+        raise
+    finally:
+        selector.close()
+        for label in ("stdin", "stdout", "stderr"):
+            pipe = getattr(proc, label)
+            if pipe is not None and not pipe.closed:
+                pipe.close()
+    return (proc.returncode,
+            bytes(outputs["stdout"][:cap]).decode("utf-8", "replace"),
+            bytes(outputs["stderr"][:cap]).decode("utf-8", "replace"), timed_out)
 
 
 def _run_cli(text: str) -> PlannerResult:

@@ -49,7 +49,7 @@ from pathlib import Path
 
 import cv2
 
-from app.live import config, rooms, worker
+from app.live import auth, config, rooms, worker
 
 logger = logging.getLogger("visionflow.live.video")
 
@@ -297,16 +297,21 @@ def _make_detector():
     from visionflow_vision.detector import YoloByteTrackDetector
     import app.config as app_config
 
-    return YoloByteTrackDetector(
+    detector = YoloByteTrackDetector(
         model_name=app_config.DETECTOR_MODEL,
         confidence=app_config.DETECTOR_CONFIDENCE,
         device=app_config.DETECTOR_DEVICE,
     )
+    detector.model_name = str(app_config.DETECTOR_MODEL)
+    model_path = Path(app_config.DETECTOR_MODEL)
+    detector.weights_sha256 = sha256_file(model_path) if model_path.is_file() else None
+    return detector
 
 
 def _model_identity(detector) -> str:
     name = getattr(detector, "model_name", None) or type(detector).__name__
-    return str(name)
+    digest = getattr(detector, "weights_sha256", None)
+    return str(name) + ("@sha256:" + digest if digest else "")
 
 
 # -------------------------------------------------------- immutable source snapshot
@@ -326,6 +331,7 @@ class _SourceSnapshot:
     w: int
     h: int
     task: dict
+    workflow_hash: str = ""
 
 
 def _snapshot_source(room: rooms.RoomState) -> _SourceSnapshot | None:
@@ -343,6 +349,8 @@ def _snapshot_source(room: rooms.RoomState) -> _SourceSnapshot | None:
             w=int(meta.get("w") or 1),
             h=int(meta.get("h") or 1),
             task=copy.deepcopy(room.task),
+            workflow_hash=getattr(room, "approved_hash", None) or hashlib.sha256(
+                json.dumps(room.task, sort_keys=True, separators=(",", ":")).encode()).hexdigest(),
         )
 
 
@@ -354,6 +362,8 @@ class VideoJob:
         self.generation = generation
         self.snapshot = snapshot
         self.stop = threading.Event()
+        self.last_notification_ts = None
+        self._seen_outside: set[int] = set()
         self.thread = threading.Thread(target=self._run, name=f"video-{room.room_id}", daemon=True)
 
     def start(self) -> None:
@@ -373,6 +383,7 @@ class VideoJob:
         with room.lock:
             return (
                 not room.retired
+                and auth.peek_session(room.owner_token) is not None
                 and room.active_generation == self.generation
                 and room.task_enabled
                 and not room.task_paused
@@ -452,15 +463,15 @@ class VideoJob:
 
     def _finish(self, final: str, error_msg: str | None) -> None:
         room = self.room
-        with room.lock:
-            # Only the authorized generation may set the terminal status, so a
-            # superseded/revoked job never clobbers a newer run or a retired room.
-            if room.active_generation == self.generation:
-                room.job_status = final
-                if error_msg is not None:
-                    room.job_error = error_msg
         global _active_permits
         with _jobs_lock:
+            with room.lock:
+                # Revocation clears authority, but this worker still owns its
+                # terminal state until a genuinely newer worker replaces it.
+                if _jobs.get(room.room_id) is self and room.job_version == self.version:
+                    room.job_status = final
+                    if error_msg is not None:
+                        room.job_error = error_msg
             _active_permits = max(0, _active_permits - 1)
             if _jobs.get(room.room_id) is self:
                 _jobs.pop(room.room_id, None)
@@ -478,18 +489,28 @@ class VideoJob:
         # Authority #1 (post-inference, pre-engine): a revoked run publishes nothing
         # further and recreates no private annotated frame.
         if not self._authoritative():
+            self.stop.set()
             return
 
         emitted = []
         for engine in engines:
             engine.frame_w = frame_w
             engine.frame_h = frame_h
-            emitted.extend(engine.update(objects, video_ts))
+            # Initial presence is not an observed crossing. Entry requires this
+            # same tracked identity to have been visibly outside the polygon.
+            for obj in objects:
+                if obj.class_name == snap.task["object_class"] and not engine.zone.contains(
+                        obj.anchor, frame_w, frame_h):
+                    self._seen_outside.add(obj.track_id)
+            candidates = engine.update(objects, video_ts)
+            if snap.task["trigger"] == "entered_zone":
+                candidates = [ev for ev in candidates if ev.track_id in self._seen_outside]
+            emitted.extend(candidates)
 
         annotated = worker._annotate(frame, objects, snap.task, emitted, None)
         ok, buf = cv2.imencode(".jpg", annotated, [cv2.IMWRITE_JPEG_QUALITY, 70])
         with room.lock:
-            if room.active_generation == self.generation and not room.retired:
+            if self._authoritative():
                 room.frames_inferred += 1
                 room.last_inference_ms = inference_ms
                 room.latest_meta = {"w": frame_w, "h": frame_h}
@@ -512,13 +533,17 @@ class VideoJob:
         # Authority #2 (pre evidence I/O).
         if not self._authoritative():
             return
+        cooldown = snap.task.get("cooldown_seconds")
+        cooldown = float(cooldown) if cooldown is not None else 10.0
+        if self.last_notification_ts is not None and video_ts - self.last_notification_ts < cooldown:
+            return
         ok, raw = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 90])
         frame_hash = hashlib.sha256(bytes(raw)).hexdigest() if ok else None
         # Write the evidence artifact but DO NOT register it until the final
         # authority check passes; if the run was revoked while the (possibly
         # blocked) write ran, delete it so no private media survives an ACK.
         fname = self._save_evidence(frame, objects, snap.task, ev, idx)
-        evidence_path = (rooms.LIVE_EVIDENCE_DIR / fname) if fname else None
+        evidence_path = (rooms.LIVE_EVIDENCE_DIR / ".pending" / fname) if fname else None
         now = time.time()
         provenance = {
             "source_sha256": snap.sha256,
@@ -531,13 +556,17 @@ class VideoJob:
             "frame_sha256": frame_hash,
             "detector_model": model_id,
             "workflow_version": self.version,
+            "workflow_hash": snap.workflow_hash,
+            "execution_generation": self.generation,
         }
         committed = False
         with room.lock:
             # Authority #3: atomic with the commit under the room lock.
-            if (not room.retired
-                    and room.active_generation == self.generation
-                    and room.task_enabled and not room.task_paused):
+            if self._authoritative():
+                if evidence_path is not None:
+                    committed_path = rooms.LIVE_EVIDENCE_DIR / evidence_path.name
+                    os.replace(evidence_path, committed_path)
+                    evidence_path = committed_path
                 eid = room.next_event_id()
                 live_ev = rooms.LiveEvent(
                     id=eid, type=ev.type.value, class_name=ev.class_name, track_id=ev.track_id,
@@ -557,6 +586,7 @@ class VideoJob:
                 if evidence_path is not None:
                     room.record_evidence(evidence_path)
                 committed = True
+                self.last_notification_ts = video_ts
         if not committed:
             if evidence_path is not None:
                 evidence_path.unlink(missing_ok=True)
@@ -568,7 +598,11 @@ class VideoJob:
         annotated = worker._annotate(frame, objects, task, [ev], ev.track_id)
         rooms.LIVE_EVIDENCE_DIR.mkdir(parents=True, exist_ok=True)
         fname = f"room_{self.room.room_id}_ev{self.version}_f{idx}_{int(time.time() * 1000)}.jpg"
-        path = rooms.LIVE_EVIDENCE_DIR / fname
+        # Writes remain outside the served directory until publication is
+        # authorized and the artifact is atomically committed under room.lock.
+        staging = rooms.LIVE_EVIDENCE_DIR / ".pending"
+        staging.mkdir(mode=0o700, exist_ok=True)
+        path = staging / fname
         if not cv2.imwrite(str(path), annotated):
             logger.warning("failed to write live evidence %s", path)
             return None
@@ -661,6 +695,21 @@ def replace_source(room: rooms.RoomState, path: Path, sha256: str, meta: dict,
                 room.video_path = path
                 room.video_sha256 = sha256
                 room.video_meta = dict(meta)
+                # Approval is source-bound. A new source requires a fresh exact
+                # draft and approval; an older enabled task cannot be re-enabled.
+                room.task = None
+                room.task_enabled = False
+                room.task_paused = False
+                room.approved_hash = None
+                room.task_version += 1
+                room.engines = []
+                room.events.clear()
+                room.notifications.clear()
+                room.annotated_jpeg = None
+                room.annotated_meta = {}
+                for evidence in tuple(room._evidence_files):
+                    evidence.unlink(missing_ok=True)
+                room._evidence_files.clear()
                 room.job_status = "idle"
                 room.job_processed = 0
                 room.job_total = int(meta.get("frame_count") or 0)
