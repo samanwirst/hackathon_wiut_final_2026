@@ -3,7 +3,7 @@
 **Milestone:** LIVE video product (owner input-source pivot)
 **Branch:** `experiment/live-judges` (worktree L)
 **Base (pass start) HEAD:** `f5aeae3a9f0c04145671ffcdb51ab91f3a0fcc49`
-**Implementation SHA:** see the commit created by this pass (recorded below after commit)
+**Implementation SHA:** `a3696ad` (branch `experiment/live-judges`; not pushed)
 **Date:** 2026-10-11, before the 05:45 UTC correction deadline.
 
 This pass executed the **owner input-source pivot**: the primary public demo is now
