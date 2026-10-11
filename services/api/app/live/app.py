@@ -19,6 +19,8 @@ import hmac
 import json
 import logging
 import math
+import os
+import stat
 import threading
 import time
 from pathlib import Path
@@ -615,6 +617,69 @@ async def upload_video(room_id: str, request: Request):
                 tmp.unlink(missing_ok=True)
             finally:
                 _release_upload(sess.token)
+
+
+_DEMO_VIDEO_FILES = {f"Camera{i}": f"Camera{i}-960x540-cfr24.mp4" for i in range(1, 6)}
+_DEMO_VIDEO_LABEL = "owner-provided recorded video; visual interpretation requires validated inference"
+
+
+def _demo_video_path(input_id: str) -> Path | None:
+    directory = os.environ.get("VISIONFLOW_DEMO_VIDEO_DIR", "").strip()
+    if not directory or input_id not in _DEMO_VIDEO_FILES:
+        return None
+    root = Path(directory).resolve()
+    path = root / _DEMO_VIDEO_FILES[input_id]
+    if path.is_symlink() or not path.is_file() or path.resolve().parent != root:
+        return None
+    return path
+
+
+@app.get("/api/live/video-catalog")
+def video_catalog(sess: auth.Session = Depends(require_session)):
+    if sess.role != "camera" or not sess.owns_room or not sess.room_id:
+        raise HTTPException(403, "only a room owner can select prepared videos")
+    _require_room_member(sess, sess.room_id)
+    inputs = [{"id": key, "label": _DEMO_VIDEO_LABEL}
+              for key in _DEMO_VIDEO_FILES if _demo_video_path(key) is not None]
+    return JSONResponse({"available": bool(inputs), "inputs": inputs},
+                        headers={"Cache-Control": "private, no-store", "Vary": "Cookie"})
+
+
+@app.post("/api/live/rooms/{room_id}/video/select")
+async def select_video(room_id: str, request: Request, body: dict = Body(...),
+                       sess: auth.Session = Depends(require_mutation)):
+    if sess.role != "camera" or not sess.owns_room:
+        raise HTTPException(403, "only the room owner can select a video")
+    _require_room_member(sess, room_id)
+    if set(body) != {"id"} or not isinstance(body.get("id"), str) or body["id"] not in _DEMO_VIDEO_FILES:
+        raise HTTPException(422, "select one fixed Camera1–Camera5 ID; other fields forbidden")
+    path = _demo_video_path(body["id"])
+    if path is None:
+        raise HTTPException(404, "prepared video unavailable")
+    try:
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    except OSError:
+        raise HTTPException(404, "prepared video unavailable")
+    try:
+        info = os.fstat(fd)
+        if not stat.S_ISREG(info.st_mode) or not 0 < info.st_size <= config.MAX_VIDEO_BYTES:
+            raise HTTPException(422, "prepared video is not a supported bounded file")
+
+        class PreparedVideoRequest:
+            headers = request.headers
+            cookies = request.cookies
+
+            async def stream(self):
+                # Fixed private file -> same opaque upload path. No precomputed
+                # labels/events: reuse actual decoder, admission and authority checks.
+                while chunk := os.read(fd, 64 * 1024):
+                    yield chunk
+                    await asyncio.sleep(0)
+
+        result = await upload_video(room_id, PreparedVideoRequest())
+        return {**result, "id": body["id"], "label": _DEMO_VIDEO_LABEL}
+    finally:
+        os.close(fd)
 
 
 @app.post("/api/live/rooms/{room_id}/video/process")

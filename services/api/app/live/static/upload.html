@@ -31,6 +31,11 @@
     <p class="muted">Share this one-time join code with the judge (it is never shown in any URL):</p>
     <p><code class="inline" id="joinCode" style="font-size:1.2em"></code></p>
 
+    <h3>Select a prepared input</h3>
+    <p class="muted">Owner-provided recorded videos. Selecting an input validates its actual video;
+      visual interpretation, detections and events depend on validated inference and the approved task.</p>
+    <select id="catalogInput" disabled><option value="">Prepared inputs unavailable</option></select>
+    <button id="selectInput" disabled>Use selected video</button>
     <h3>Upload a video</h3>
     <p class="muted">Supported: a single MP4 of a service bay or road scene. Film only consenting
       participants. The clip is bounded (size, duration, resolution) and validated before any
@@ -87,7 +92,45 @@ document.getElementById("signin").onclick = async () => {
     document.getElementById("main").classList.remove("hidden");
     setBanner("banner","info","Room created. Upload a video, then ask the judge to approve a task.");
     startPolling();
+    loadCatalog();
   } catch(e){ setBanner("banner","err",e.message); }
+};
+
+async function loadCatalog(){
+  const requestedRoom=roomId;
+  try {
+    const r=await api("/api/live/video-catalog");
+    if(roomId!==requestedRoom) return;
+    const select=document.getElementById("catalogInput"); select.textContent="";
+    for(const input of r.inputs || []){
+      const option=document.createElement("option"); option.value=input.id;
+      option.textContent=`${input.id} · ${input.label}`; select.appendChild(option);
+    }
+    select.disabled=!(r.inputs || []).length;
+    document.getElementById("selectInput").disabled=select.disabled;
+    if(select.disabled){ const option=document.createElement("option"); option.textContent="Prepared inputs unavailable"; select.appendChild(option); }
+  } catch(e){ if(isAuthError(e)) requireLogin(); else setBanner("banner","err",e.message); }
+}
+
+function showValidatedSource(r){
+  pollGeneration++;
+  if(Number.isInteger(r.task_version)) renderedTaskVersion=Math.max(renderedTaskVersion,r.task_version);
+  const m=r.meta;
+  document.getElementById("videoInfo").textContent=
+    `Validated: ${m.w}x${m.h}, ${m.fps} fps, ${m.frame_count} frames, ${m.duration_seconds}s · sha256 ${r.sha256.slice(0,12)}…`;
+  updateSourceVideo({sha256:r.sha256}); document.getElementById("feed").src="";
+  setBanner("banner","info","Video validated. Ask the judge to approve a task to start processing.");
+}
+
+document.getElementById("selectInput").onclick=async()=>{
+  const requestedRoom=roomId, button=document.getElementById("selectInput");
+  button.disabled=true;
+  try {
+    const r=await api(`/api/live/rooms/${requestedRoom}/video/select`,{
+      method:"POST",body:{id:document.getElementById("catalogInput").value}});
+    if(roomId===requestedRoom) showValidatedSource(r);
+  } catch(e){ if(isAuthError(e)) requireLogin(); else setBanner("banner","err",e.message); }
+  finally { if(roomId===requestedRoom) button.disabled=false; }
 };
 
 document.getElementById("upload").onclick = async () => {
@@ -111,14 +154,7 @@ document.getElementById("upload").onclick = async () => {
     const r = await done;
     if (roomId!==requestedRoom) return;
     // An upload ACK replaces the source and invalidates pending old-source polls.
-    pollGeneration++;
-    if (Number.isInteger(r.task_version)) renderedTaskVersion=Math.max(renderedTaskVersion,r.task_version);
-    const m = r.meta;
-    document.getElementById("videoInfo").textContent =
-      `Validated: ${m.w}x${m.h}, ${m.fps} fps, ${m.frame_count} frames, ${m.duration_seconds}s · sha256 ${r.sha256.slice(0,12)}…`;
-    updateSourceVideo({sha256:r.sha256});
-    document.getElementById("feed").src="";
-    setBanner("banner","info","Video uploaded & validated. Ask the judge to approve a task to start processing.");
+    showValidatedSource(r);
   } catch(e){ if(isAuthError(e)) requireLogin(); else setBanner("banner","err",e.message); }
 };
 
