@@ -77,7 +77,7 @@ _STILL_IMAGE_CODECS = {
 }
 # A clip is treated as truncated/incomplete when it decodes fewer than this
 # fraction of the frames its reliable container metadata advertises.
-_COMPLETE_RATIO = 0.95
+_COMPLETE_RATIO = 1.0
 
 
 class VideoError(ValueError):
@@ -113,8 +113,11 @@ def _ffprobe(path: Path) -> dict | None:
     try:
         proc = subprocess.run(
             [
-                FFPROBE_BIN, "-v", "error", "-print_format", "json",
-                "-show_format", "-show_streams", str(path),
+                FFPROBE_BIN, "-v", "error", "-threads", "2",
+                "-max_pixels", str(config.MAX_VIDEO_LONG_EDGE ** 2),
+                "-select_streams", "v:0", "-count_frames", "-print_format", "json",
+                "-show_entries", "format=format_name,duration:stream=codec_type,codec_name,width,height,r_frame_rate,avg_frame_rate,duration,nb_frames,nb_read_frames",
+                str(path),
             ],
             capture_output=True, text=True, timeout=_FFPROBE_TIMEOUT_SECONDS,
         )
@@ -124,8 +127,8 @@ def _ffprobe(path: Path) -> dict | None:
         raise VideoError("video probe timed out")
     except OSError as exc:  # pragma: no cover - defensive
         raise VideoError(f"could not probe video: {exc}")
-    if proc.returncode != 0:
-        raise VideoError("unreadable or unsupported container")
+    if proc.returncode != 0 or proc.stderr.strip():
+        raise VideoError("unreadable, corrupt or incomplete video")
     try:
         return json.loads(proc.stdout or "{}")
     except (ValueError, TypeError):
@@ -141,7 +144,7 @@ def probe(path: Path) -> dict:
     authoritative container metadata (used later for a truncation check)."""
     info = _ffprobe(path)
     if info is None:
-        return _probe_cv2_fallback(path)
+        raise VideoError("ffprobe is required for bounded complete video validation")
 
     fmt = str((info.get("format") or {}).get("format_name") or "")
     container_names = {n.strip() for n in fmt.split(",") if n.strip()}
@@ -164,7 +167,9 @@ def probe(path: Path) -> dict:
     if max(width, height) > config.MAX_VIDEO_LONG_EDGE or min(width, height) < config.MIN_VIDEO_LONG_EDGE:
         raise VideoError(f"frame dimensions {width}x{height} out of bounds")
 
-    fps = _parse_fps(stream.get("r_frame_rate")) or _parse_fps(stream.get("avg_frame_rate"))
+    nominal_fps = _parse_fps(stream.get("r_frame_rate"))
+    average_fps = _parse_fps(stream.get("avg_frame_rate"))
+    fps = nominal_fps or average_fps
     if fps is None:
         raise VideoError("could not determine a finite source frame rate")
     if not (config.MIN_VIDEO_FPS <= fps <= config.MAX_VIDEO_FPS):
@@ -172,6 +177,8 @@ def probe(path: Path) -> dict:
             f"frame rate {fps:g} fps outside supported "
             f"{config.MIN_VIDEO_FPS:g}-{config.MAX_VIDEO_FPS:g} fps"
         )
+    if nominal_fps and average_fps and not math.isclose(nominal_fps, average_fps, rel_tol=0.00001):
+        raise VideoError("variable frame rate is unsupported; supply a constant-frame-rate MP4")
 
     duration = _coerce_float((info.get("format") or {}).get("duration")) or _coerce_float(stream.get("duration"))
 
@@ -186,6 +193,16 @@ def probe(path: Path) -> dict:
             frame_count = 0
     if not reliable:
         frame_count = max(1, round(duration * fps)) if duration else 1
+    try:
+        decoded_count = int(stream.get("nb_read_frames") or 0)
+    except (ValueError, TypeError):
+        raise VideoError("could not verify the complete decoded frame count")
+    if decoded_count <= 0:
+        raise VideoError("no decodable frames in video")
+    if reliable and decoded_count != frame_count:
+        raise VideoError(f"incomplete/truncated decode ({decoded_count}/{frame_count} frames)")
+    frame_count = decoded_count
+    reliable = True
     if frame_count > config.MAX_VIDEO_FRAMES:
         raise VideoError(f"too many frames ({frame_count} > {config.MAX_VIDEO_FRAMES})")
 
@@ -194,23 +211,10 @@ def probe(path: Path) -> dict:
     if duration > config.MAX_VIDEO_DURATION_SECONDS:
         raise VideoError(f"duration {duration:.1f}s exceeds limit")
 
-    # Actual-decode sanity: at least one frame must genuinely decode, and its real
-    # dimensions (not just the container claim) must satisfy the bounds.
-    cap = cv2.VideoCapture(str(path))
-    try:
-        if not cap.isOpened():
-            raise VideoError("file is not a decodable video")
-        ok, frame = cap.read()
-        if not ok or frame is None:
-            raise VideoError("no decodable frames in video")
-        fh, fw = frame.shape[:2]
-        if max(fw, fh) > config.MAX_VIDEO_LONG_EDGE or min(fw, fh) < config.MIN_VIDEO_LONG_EDGE:
-            raise VideoError(f"decoded frame dimensions {fw}x{fh} out of bounds")
-    finally:
-        cap.release()
-
+    # Actual full decoding ran in a subprocess with a kill/reap deadline, decoder
+    # pixel limit and two threads. No unbounded native decoder runs on the ASGI loop.
     return {
-        "fps": round(fps, 4),
+        "fps": fps,
         "frame_count": int(frame_count),
         "frame_count_reliable": bool(reliable),
         "w": width, "h": height,
@@ -417,6 +421,8 @@ class VideoJob:
                 ok, frame = cap.read()
                 if not ok or frame is None:
                     break
+                if idx >= config.MAX_VIDEO_FRAMES:
+                    raise VideoError("decoded frame limit exceeded")
                 video_ts = idx / fps if fps else float(idx)
                 self._process_frame(frame, idx, video_ts, snap, model_id, detector, engines)
                 idx += 1
@@ -632,7 +638,8 @@ def cancel_job(room_id: str) -> None:
                 room.active_generation = 0
 
 
-def replace_source(room: rooms.RoomState, path: Path, sha256: str, meta: dict) -> None:
+def replace_source(room: rooms.RoomState, path: Path, sha256: str, meta: dict,
+                   *, authorize=None) -> None:
     """Atomically swap a room's uploaded source and revoke any in-flight run.
 
     This is the central API SEC's upload endpoint should call: under the job + room
@@ -641,19 +648,24 @@ def replace_source(room: rooms.RoomState, path: Path, sha256: str, meta: dict) -
     clip is accepted), swaps the source metadata and deletes the previous file."""
     old_path = None
     with _jobs_lock:
-        job = _jobs.get(room.room_id)
-        if job is not None:
-            job.cancel()
-        with room.lock:
-            old_path = room.video_path
-            room.video_path = path
-            room.video_sha256 = sha256
-            room.video_meta = dict(meta)
-            room.job_status = "idle"
-            room.job_processed = 0
-            room.job_total = int(meta.get("frame_count") or 0)
-            room.job_error = None
-            room.active_generation = 0
+        with rooms._rooms_lock:
+            with room.lock:
+                if room.retired or rooms._rooms.get(room.room_id) is not room:
+                    raise VideoError("room retired during upload")
+                if authorize is not None and not authorize():
+                    raise VideoError("upload authority revoked")
+                job = _jobs.get(room.room_id)
+                if job is not None:
+                    job.cancel()
+                old_path = room.video_path
+                room.video_path = path
+                room.video_sha256 = sha256
+                room.video_meta = dict(meta)
+                room.job_status = "idle"
+                room.job_processed = 0
+                room.job_total = int(meta.get("frame_count") or 0)
+                room.job_error = None
+                room.active_generation = 0
     if old_path is not None and old_path != path:
         try:
             old_path.unlink(missing_ok=True)

@@ -171,8 +171,11 @@ def test_owner_final_video_truncated_clip_reports_error(env):
     # the run must fail closed rather than silently report done.
     cut = complete[: int(len(complete) * 0.65)]
     room.video_path.write_bytes(cut)
-    room.video_meta = video.probe(room.video_path)  # container still advertises 60
-    assert room.video_meta["frame_count_reliable"] is True
+    # Stronger upload gate: bounded full decoding rejects the corrupt source
+    # before it can be attached. Retain the previously validated snapshot here
+    # to also reproduce a source corrupted after validation.
+    with pytest.raises(video.VideoError):
+        video.probe(room.video_path)
     video.start_job(room)
     assert _wait_terminal(room) == "error"
     assert room.job_processed < 60
