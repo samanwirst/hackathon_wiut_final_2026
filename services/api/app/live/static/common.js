@@ -35,7 +35,11 @@ async function login(role, pin) {
 
 function wsUrl(path) {
   const proto = location.protocol === "https:" ? "wss:" : "ws:";
-  return `${proto}//${location.host}${path}`;
+  // WebSocket upgrades cannot send custom headers, so the double-submit CSRF token
+  // is carried as a query parameter and validated server-side against the cookie.
+  const csrf = encodeURIComponent(getCookie(CSRF_COOKIE));
+  const sep = path.includes("?") ? "&" : "?";
+  return `${proto}//${location.host}${path}${sep}csrf=${csrf}`;
 }
 
 function setBanner(id, kind, msg) {

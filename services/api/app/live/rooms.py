@@ -29,6 +29,10 @@ from visionflow_vision.zones import Zone
 logger = logging.getLogger("visionflow.live.rooms")
 
 LIVE_EVIDENCE_DIR = app_config.DATA_DIR / "live_evidence"
+LIVE_VIDEO_DIR = (
+    Path(config.VIDEO_UPLOAD_DIR) if config.VIDEO_UPLOAD_DIR
+    else app_config.DATA_DIR / "live_uploads"
+)
 
 
 @dataclass
@@ -46,6 +50,7 @@ class LiveEvent:
     evidence_file: str | None = None
     visual_observation: dict | None = None
     action_status: str = "pending"
+    provenance: dict | None = None   # source sha / frame index / video ts / model id
 
 
 @dataclass
@@ -64,6 +69,17 @@ class RoomState:
     annotated_meta: dict = field(default_factory=dict)
     temporal: deque = field(default_factory=lambda: deque(maxlen=config.TEMPORAL_DEQUE_LEN))
     frame_dirty: bool = False                            # worker has a new frame to process
+    last_seq: int = -1                                   # highest accepted sequence number
+
+    # video source (OWNER PIVOT: pre-recorded video inference, not camera stream)
+    video_path: Path | None = None          # opaque stored upload path (owner-only)
+    video_sha256: str | None = None         # sha256 of the uploaded source bytes
+    video_meta: dict = field(default_factory=dict)   # fps, frame_count, w, h, duration
+    job_status: str = "idle"                # idle|running|done|cancelled|error
+    job_processed: int = 0                  # frames processed so far
+    job_total: int = 0                      # total frames to process
+    job_error: str | None = None
+    job_version: int = 0                    # task_version the running job was started for
 
     # task state
     task: dict | None = None                             # validated LiveTask.model_dump()
@@ -148,6 +164,12 @@ def iter_rooms() -> list[RoomState]:
 
 
 def close_room(room_id: str) -> None:
+    # Stop any running video job first so it cannot write evidence after teardown.
+    try:
+        from app.live import video as _video
+        _video.cancel_job(room_id)
+    except Exception:  # noqa: BLE001
+        pass
     with _rooms_lock:
         room = _rooms.pop(room_id, None)
         if room is not None:
@@ -158,6 +180,46 @@ def close_room(room_id: str) -> None:
                 p.unlink(missing_ok=True)
             except OSError:
                 pass
+        # Delete the opaque uploaded source so no private media outlives the room.
+        if room.video_path is not None:
+            try:
+                room.video_path.unlink(missing_ok=True)
+            except OSError:
+                pass
+
+
+def evict_session(token: str, room_id: str, owns: bool) -> None:
+    """Tear down a session's room membership (logout / expiry / rebind). The
+    room owner leaving retires the whole room; a judge leaving is just removed."""
+    if owns:
+        close_room(room_id)
+        return
+    room = get_room(room_id)
+    if room is None:
+        return
+    with room.lock:
+        room.judges.discard(token)
+
+
+def retire_idle_and_orphaned(active: set[str], idle_seconds: float) -> list[str]:
+    """Retire rooms whose owner session is gone, or that have had no frames and
+    no judges past the idle TTL. Also prune dead judge memberships. Returns the
+    retired room ids. Called periodically by the worker (LIVE-006)."""
+    now = time.time()
+    retire: list[str] = []
+    for room in iter_rooms():
+        with room.lock:
+            room.judges = {t for t in room.judges if t in active}
+            owner_gone = room.owner_token not in active
+            last = room.last_recv_ts or room.created_at
+            idle = (now - last) >= idle_seconds
+            orphaned = owner_gone and not room.judges
+            stale_idle = idle and not room.judges
+        if owner_gone or orphaned or stale_idle:
+            retire.append(room.room_id)
+    for rid in retire:
+        close_room(rid)
+    return retire
 
 
 def _reset_for_tests() -> None:
@@ -212,17 +274,44 @@ def activate_task(room: RoomState, task: dict, frame_w: int, frame_h: int) -> in
     return room.task_version
 
 
-def set_task_state(room: RoomState, *, enabled: bool | None = None, paused: bool | None = None) -> None:
-    """Pause/disable the active task WITHOUT touching the camera. Disabling bumps
-    the version so any in-flight inference/action for the old version is dropped."""
-    if enabled is not None:
-        room.task_enabled = enabled
-        if not enabled:
-            room.task_version += 1  # version guard: invalidate in-flight work
+def _rebuild_engines_locked(room: RoomState) -> None:
+    """Bump the version (invalidating any in-flight inference) and rebuild fresh
+    engines when the task is ACTIVE (enabled and not paused), else clear them.
+    Caller holds room.lock. Every enable/disable/pause/resume transition flows
+    through here so no stale generation can publish an event after the control
+    is acknowledged."""
+    room.task_version += 1
+    if room.task is not None and room.task_enabled and not room.task_paused:
+        fw = room.latest_meta.get("w") or 1
+        fh = room.latest_meta.get("h") or 1
+        try:
+            room.engines = build_engines(room.task, fw, fh, room.task_version)
+        except Exception as exc:  # noqa: BLE001
             room.engines = []
+            logger.warning("failed to rebuild engines for room %s: %s", room.room_id, exc)
+    else:
+        room.engines = []
+
+
+def set_task_state(room: RoomState, *, enabled: bool | None = None, paused: bool | None = None) -> None:
+    """Pause/disable/re-enable the active task WITHOUT touching the camera.
+
+    Any transition bumps the version so in-flight inference/actions for the old
+    generation are dropped; re-enabling or resuming rebuilds fresh engines with
+    explicit timing (new monotonic baseline), so an old inference held across the
+    control cannot notify after the acknowledgment (LIVE-007)."""
+    if room.task is None:
+        return
+    changed = False
+    if enabled is not None and enabled != room.task_enabled:
+        room.task_enabled = enabled
         room.history.append({"ts": time.time(), "action": "enabled" if enabled else "disabled",
-                             "version": room.task_version})
-    if paused is not None:
+                             "version": room.task_version + 1})
+        changed = True
+    if paused is not None and paused != room.task_paused:
         room.task_paused = paused
         room.history.append({"ts": time.time(), "action": "paused" if paused else "resumed",
-                             "version": room.task_version})
+                             "version": room.task_version + 1})
+        changed = True
+    if changed:
+        _rebuild_engines_locked(room)

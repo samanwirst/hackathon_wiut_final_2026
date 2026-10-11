@@ -37,7 +37,7 @@ def _join_judge(app, flow, pin, code):
 
 def test_ws_camera_ingest_and_bounds(client, test_pin, flow, jpeg_frame):
     room_id, _ = _camera_room(client, flow, test_pin)
-    with client.websocket_connect("/api/live/ws/camera") as ws:
+    with client.websocket_connect(flow.ws_path(client, "/api/live/ws/camera")) as ws:
         ws.send_text('{"seq":1,"w":320,"h":240,"capture_ts":1.0}')
         ws.send_bytes(jpeg_frame)
         # oversize frame is dropped
@@ -53,7 +53,7 @@ def test_ws_camera_ingest_and_bounds(client, test_pin, flow, jpeg_frame):
 def test_latest_frame_only(client, test_pin, flow, jpeg_frame):
     room_id, _ = _camera_room(client, flow, test_pin)
     other = cv2.imencode(".jpg", np.full((240, 320, 3), 10, np.uint8))[1].tobytes()
-    with client.websocket_connect("/api/live/ws/camera") as ws:
+    with client.websocket_connect(flow.ws_path(client, "/api/live/ws/camera")) as ws:
         ws.send_text('{"seq":1,"w":320,"h":240}')
         ws.send_bytes(jpeg_frame)
         ws.send_text('{"seq":2,"w":320,"h":240}')
@@ -76,7 +76,7 @@ def test_event_evidence_notification_pipeline(client, test_pin, flow, jpeg_frame
 
     # Camera streams a frame; the worker processes several so the debounced
     # presence/enter rule can fire (needs >= 2 consecutive inside frames).
-    with client.websocket_connect("/api/live/ws/camera") as ws:
+    with client.websocket_connect(flow.ws_path(client, "/api/live/ws/camera")) as ws:
         ws.send_text('{"seq":1,"w":320,"h":240,"capture_ts":5.0}')
         ws.send_bytes(jpeg_frame)
     room = rooms.get_room(room_id)
@@ -106,7 +106,7 @@ def test_disable_while_camera_persists(client, test_pin, flow, jpeg_frame):
     r = flow.post(judge, f"/api/live/rooms/{room_id}/task/state", {"enabled": False}).json()
     assert r["task_enabled"] is False
     room = rooms.get_room(room_id)
-    with client.websocket_connect("/api/live/ws/camera") as ws:
+    with client.websocket_connect(flow.ws_path(client, "/api/live/ws/camera")) as ws:
         ws.send_text('{"seq":1,"w":320,"h":240}')
         ws.send_bytes(jpeg_frame)
     worker._process_room_if_ready(room)

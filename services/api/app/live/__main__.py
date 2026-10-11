@@ -13,19 +13,23 @@ import argparse
 
 import uvicorn
 
+from app.live import config
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="VisionFlow Live app")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8001)
     args = parser.parse_args()
-    # proxy-headers lets uvicorn honor X-Forwarded-* from the cloudflared tunnel.
+    # Honor X-Forwarded-* ONLY from the explicitly trusted proxy peers (default
+    # loopback) — never "*", so an arbitrary peer cannot spoof forwarding headers
+    # (LIVE-004). Pair with VISIONFLOW_LIVE_TRUSTED_PROXY_HOPS for client identity.
     uvicorn.run(
         "app.live.app:app",
         host=args.host,
         port=args.port,
         proxy_headers=True,
-        forwarded_allow_ips="*",
+        forwarded_allow_ips=config.FORWARDED_ALLOW_IPS,
         workers=1,
     )
 

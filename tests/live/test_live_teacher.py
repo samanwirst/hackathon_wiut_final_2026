@@ -47,6 +47,6 @@ def test_result_cached_by_image_hash():
 def test_budget_exhausted(monkeypatch):
     monkeypatch.setattr(config, "TEACHER_ROOM_BUDGET", 1)
     monkeypatch.setattr(config, "TEACHER_COOLDOWN_SECONDS", 0.0)
-    teacher.transport = lambda q, labels, imgs: Observation(status="ok", uncertain=True)
+    teacher.transport = lambda q, labels, imgs: Observation(status="ok", label="a", uncertain=True)
     assert teacher.observe("room1", "q", ["a", "b"], [b"one"]).status == "ok"
     assert teacher.observe("room1", "q", ["a", "b"], [b"two"]).status == "budget"

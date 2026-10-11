@@ -16,6 +16,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import math
 import time
 from pathlib import Path
 
@@ -32,8 +33,10 @@ from fastapi import (
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.live import auth, config, planner, rooms, teacher, worker
-from app.live.dsl import LiveTask
+import secrets
+
+from app.live import auth, config, planner, rooms, teacher, video, worker
+from app.live.dsl import LiveTask, TaskStateRequest
 
 logger = logging.getLogger("visionflow.live.app")
 
@@ -45,21 +48,50 @@ app = FastAPI(title="VisionFlow Live", version="1.0.0")
 @app.on_event("startup")
 def _startup() -> None:
     rooms.LIVE_EVIDENCE_DIR.mkdir(parents=True, exist_ok=True)
+    rooms.LIVE_VIDEO_DIR.mkdir(parents=True, exist_ok=True)
+    # Wire session teardown to room cleanup (logout / expiry) — LIVE-006.
+    auth.on_session_dropped = rooms.evict_session
     worker.start()
 
 
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
+# ---------------------------------------------------------------- middleware
+
+
+@app.middleware("http")
+async def _limit_body(request: Request, call_next):
+    """Pre-parse body bound: reject oversize requests by Content-Length before any
+    JSON parsing so a huge body cannot be buffered (LIVE-005)."""
+    # The video upload route streams a large binary body under its OWN byte cap
+    # (enforced byte-by-byte); the small JSON cap must not apply to it.
+    is_video_upload = request.method == "POST" and request.url.path.endswith("/video")
+    if request.method in ("POST", "PUT", "PATCH") and not is_video_upload:
+        cl = request.headers.get("content-length")
+        if cl is not None:
+            try:
+                if int(cl) > config.MAX_JSON_BODY_BYTES:
+                    return JSONResponse({"detail": "request body too large"}, status_code=413)
+            except ValueError:
+                return JSONResponse({"detail": "invalid content-length"}, status_code=400)
+    elif is_video_upload:
+        cl = request.headers.get("content-length")
+        if cl is not None:
+            try:
+                if int(cl) > config.MAX_VIDEO_BYTES:
+                    return JSONResponse({"detail": "video exceeds size limit"}, status_code=413)
+            except ValueError:
+                return JSONResponse({"detail": "invalid content-length"}, status_code=400)
+    return await call_next(request)
+
+
 # ---------------------------------------------------------------- helpers
 
 
 def _client_ip(request: Request) -> str:
-    # Honor a single proxy hop (cloudflared) via X-Forwarded-For, else peer.
-    fwd = request.headers.get("x-forwarded-for")
-    if fwd:
-        return fwd.split(",")[0].strip()
-    return request.client.host if request.client else "unknown"
+    peer = request.client.host if request.client else None
+    return auth.client_identity(peer, request.headers.get("x-forwarded-for"))
 
 
 def _set_session_cookies(resp: Response, sess: auth.Session) -> None:
@@ -112,8 +144,18 @@ def landing() -> HTMLResponse:
     return HTMLResponse((STATIC_DIR / "landing.html").read_text())
 
 
+@app.get("/upload", response_class=HTMLResponse)
+def upload_page() -> HTMLResponse:
+    return HTMLResponse((STATIC_DIR / "upload.html").read_text())
+
+
 @app.get("/camera", response_class=HTMLResponse)
 def camera_page() -> HTMLResponse:
+    # OWNER PIVOT: the physical-camera path is unfinished and disabled on the
+    # public surface. The page is only reachable when camera ingest is explicitly
+    # enabled (local QA); publicly it is a plain 404.
+    if not config.CAMERA_INGEST_ENABLED:
+        raise HTTPException(404, "not found")
     return HTMLResponse((STATIC_DIR / "camera.html").read_text())
 
 
@@ -131,6 +173,9 @@ def health():
         "planner_enabled": config.PLANNER_ENABLED,
         "teacher_available": teacher.available(),
         "cookie_secure": config.COOKIE_SECURE,
+        "camera_ingest_enabled": config.CAMERA_INGEST_ENABLED,
+        "primary_source": "video_upload",
+        "worker": worker.liveness(),
     }
 
 
@@ -162,7 +207,16 @@ def login(request: Request, response: Response, body: dict = Body(...)):
 
 @app.post("/api/live/logout")
 def logout(request: Request, response: Response):
+    # Logout is a state-changing mutation: guard it with the Origin allowlist and
+    # (for a live session) the CSRF token, so it cannot be forced cross-site.
+    if not auth.origin_allowed(request.headers.get("origin"), request.headers.get("host")):
+        raise HTTPException(403, "origin not allowed")
     token = request.cookies.get(config.SESSION_COOKIE_NAME)
+    sess = auth.get_session(token)
+    if sess is not None and not auth.csrf_valid(sess, request.headers.get("x-csrf-token")):
+        raise HTTPException(403, "invalid CSRF token")
+    # destroy_session fires the membership teardown hook (room retirement / judge
+    # eviction), which also closes the associated sockets' room (LIVE-002/006).
     auth.destroy_session(token)
     response.delete_cookie(config.SESSION_COOKIE_NAME, path="/")
     response.delete_cookie(config.CSRF_COOKIE_NAME, path="/")
@@ -209,7 +263,11 @@ def join_room(request: Request, sess: auth.Session = Depends(require_mutation),
         if sess.token not in room.judges and len(room.judges) >= config.MAX_JUDGES_PER_ROOM:
             raise HTTPException(503, "room is full")
         room.judges.add(sess.token)
-    auth.bind_room(sess.token, room.room_id, owns=False)
+    prev = auth.bind_room(sess.token, room.room_id, owns=False)
+    if prev and prev != room.room_id:
+        # Rebinding to a new room evicts the judge from the old room so its open
+        # socket stops receiving private bytes (LIVE-002).
+        rooms.evict_session(sess.token, prev, owns=False)
     return {"room_id": room.room_id}
 
 
@@ -222,6 +280,15 @@ def _state_payload(room: rooms.RoomState) -> dict:
             "task_enabled": room.task_enabled,
             "task_paused": room.task_paused,
             "history": list(room.history),
+            "video": {
+                "ready": room.video_path is not None,
+                "sha256": room.video_sha256,
+                "meta": dict(room.video_meta),
+                "job_status": room.job_status,
+                "job_processed": room.job_processed,
+                "job_total": room.job_total,
+                "job_error": room.job_error,
+            },
             "metrics": {
                 "frames_received": room.frames_received,
                 "frames_dropped": room.frames_dropped,
@@ -245,6 +312,7 @@ def _state_payload(room: rooms.RoomState) -> dict:
                     ),
                     "visual_observation": e.visual_observation,
                     "action_status": e.action_status,
+                    "provenance": e.provenance,
                 }
                 for e in list(room.events)[-80:]
             ],
@@ -284,6 +352,90 @@ def room_evidence(room_id: str, filename: str, sess: auth.Session = Depends(requ
     if not path.exists():
         raise HTTPException(404, "evidence not found")
     return FileResponse(path, media_type="image/jpeg", headers={"Cache-Control": "no-store"})
+
+
+# ---------------------------------------------------------------- video source (owner)
+
+
+@app.post("/api/live/rooms/{room_id}/video")
+async def upload_video(room_id: str, request: Request):
+    """Authenticated, bounded, decode-validated video upload (room owner only).
+
+    The body is streamed to an opaque per-room path and the hard byte cap is
+    enforced BYTE-BY-BYTE while streaming, so a lying or absent Content-Length can
+    never bypass it. Invalid / oversize / undecodable input is rejected cleanly
+    and the partial file removed; the worker/thread never dies."""
+    # Mutation guards: Origin allowlist + session + CSRF, then role/ownership.
+    if not auth.origin_allowed(request.headers.get("origin"), request.headers.get("host")):
+        raise HTTPException(403, "origin not allowed")
+    sess = require_session(request)
+    if not auth.csrf_valid(sess, request.headers.get("x-csrf-token")):
+        raise HTTPException(403, "invalid CSRF token")
+    if sess.role != "camera":
+        raise HTTPException(403, "only the room owner can upload a video")
+    room = _require_room_member(sess, room_id)
+    if not sess.owns_room:
+        raise HTTPException(403, "only the room owner can upload a video")
+
+    rooms.LIVE_VIDEO_DIR.mkdir(parents=True, exist_ok=True)
+    # Opaque, non-guessable, room-scoped filename. No client-supplied path/name is
+    # ever used, so there is no arbitrary filesystem write.
+    tmp = rooms.LIVE_VIDEO_DIR / f"room_{room_id}_{secrets.token_urlsafe(10)}.mp4"
+    total = 0
+    try:
+        with tmp.open("wb") as fh:
+            async for chunk in request.stream():
+                total += len(chunk)
+                if total > config.MAX_VIDEO_BYTES:
+                    raise HTTPException(413, "video exceeds size limit")
+                fh.write(chunk)
+        if total == 0:
+            raise HTTPException(400, "empty upload")
+        meta = video.probe(tmp)
+        sha = video.sha256_file(tmp)
+    except HTTPException:
+        tmp.unlink(missing_ok=True)
+        raise
+    except video.VideoError as exc:
+        tmp.unlink(missing_ok=True)
+        raise HTTPException(422, f"invalid video: {exc}")
+    except Exception as exc:  # noqa: BLE001
+        tmp.unlink(missing_ok=True)
+        logger.warning("video upload failed room=%s: %s", room_id, exc)
+        raise HTTPException(400, "could not process upload")
+
+    with room.lock:
+        # Replace any prior source; stop any running job first (below) and delete
+        # the old file so private media never accumulates.
+        old = room.video_path
+        room.video_path = tmp
+        room.video_sha256 = sha
+        room.video_meta = meta
+        room.job_status = "idle"
+        room.job_processed = 0
+        room.job_total = meta["frame_count"]
+        room.job_error = None
+    video.cancel_job(room_id)
+    if old is not None and old != tmp:
+        old.unlink(missing_ok=True)
+    return {"ok": True, "sha256": sha, "meta": meta}
+
+
+@app.post("/api/live/rooms/{room_id}/video/process")
+def process_video(room_id: str, sess: auth.Session = Depends(require_mutation)):
+    """Start (or restart from frame 0) processing the uploaded video with the
+    room's currently approved task. Requires an approved/active task."""
+    room = _require_room_member(sess, room_id)
+    with room.lock:
+        if room.video_path is None:
+            raise HTTPException(409, "no video uploaded")
+        if room.task is None or not room.task_enabled:
+            raise HTTPException(409, "approve and enable a task first")
+    try:
+        video.start_job(room)
+    except RuntimeError as exc:
+        raise HTTPException(503, str(exc))
+    return {"ok": True, "job_status": "running"}
 
 
 # ---------------------------------------------------------------- task control (judges)
@@ -331,7 +483,19 @@ def activate_task(room_id: str, sess: auth.Session = Depends(require_mutation),
         fw = room.latest_meta.get("w") or 1
         fh = room.latest_meta.get("h") or 1
         version = rooms.activate_task(room, task.model_dump(), fw, fh)
-    return {"ok": True, "task_version": version, "task": task.model_dump()}
+        has_video = room.video_path is not None
+    # A new approved request on the SAME video reruns the analysis from frame 0
+    # with fresh detector/tracker/engine state. Any in-flight job is superseded;
+    # its stale events are already dropped by the version guard.
+    video.cancel_job(room_id)
+    rerun = False
+    if has_video:
+        try:
+            video.start_job(room)
+            rerun = True
+        except RuntimeError:
+            rerun = False
+    return {"ok": True, "task_version": version, "task": task.model_dump(), "rerun": rerun}
 
 
 @app.post("/api/live/rooms/{room_id}/task/state")
@@ -340,16 +504,28 @@ def task_state(room_id: str, sess: auth.Session = Depends(require_mutation),
     if sess.role != "judge":
         raise HTTPException(403, "only a judge can control the task")
     room = _require_room_member(sess, room_id)
-    enabled = body.get("enabled")
-    paused = body.get("paused")
+    try:
+        req = TaskStateRequest.model_validate(body)
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(422, f"invalid task state request: {exc}")
     with room.lock:
-        rooms.set_task_state(
-            room,
-            enabled=bool(enabled) if enabled is not None else None,
-            paused=bool(paused) if paused is not None else None,
-        )
-        return {"ok": True, "task_version": room.task_version,
-                "task_enabled": room.task_enabled, "task_paused": room.task_paused}
+        rooms.set_task_state(room, enabled=req.enabled, paused=req.paused)
+        active = room.task_enabled and not room.task_paused
+        has_video = room.video_path is not None
+        version = room.task_version
+        enabled = room.task_enabled
+        paused = room.task_paused
+    # Any state transition bumped the version, so a running job's events are now
+    # dropped by the guard. Cancel it so stale work stops immediately; a re-enable
+    # /resume on a video rebuilds engines and reruns from frame 0 with reset timing.
+    video.cancel_job(room_id)
+    if has_video and active:
+        try:
+            video.start_job(room)
+        except RuntimeError:
+            pass
+    return {"ok": True, "task_version": version,
+            "task_enabled": enabled, "task_paused": paused}
 
 
 @app.post("/api/live/rooms/{room_id}/probe")
@@ -377,25 +553,42 @@ def probe_teacher(room_id: str, sess: auth.Session = Depends(require_mutation),
 # ---------------------------------------------------------------- websockets
 
 
-def _ws_session(ws: WebSocket) -> auth.Session | None:
-    token = ws.cookies.get(config.SESSION_COOKIE_NAME)
-    return auth.get_session(token)
+def _ws_token(ws: WebSocket) -> str | None:
+    return ws.cookies.get(config.SESSION_COOKIE_NAME)
 
 
 def _ws_origin_ok(ws: WebSocket) -> bool:
     return auth.origin_allowed(ws.headers.get("origin"), ws.headers.get("host"))
 
 
+def _ws_csrf_ok(ws: WebSocket, sess: auth.Session) -> bool:
+    """WebSocket upgrades cannot carry custom headers, so the double-submit CSRF
+    token is supplied as a query parameter and must match the session's CSRF
+    cookie (LIVE-003)."""
+    return auth.csrf_valid(sess, ws.query_params.get("csrf"))
+
+
 @app.websocket("/api/live/ws/camera")
 async def ws_camera(ws: WebSocket):
+    # OWNER PIVOT: the physical-camera WebSocket ingest path is unfinished and
+    # DISABLED on the public surface. Deny the upgrade (fail-closed) unless camera
+    # ingest is explicitly enabled for local QA.
+    if not config.CAMERA_INGEST_ENABLED:
+        await ws.close(code=4404)
+        return
     if not _ws_origin_ok(ws):
         await ws.close(code=4403)
         return
-    sess = _ws_session(ws)
+    token = _ws_token(ws)
+    sess = auth.get_session(token)
     if sess is None or sess.role != "camera" or not sess.owns_room or not sess.room_id:
         await ws.close(code=4401)
         return
-    room = rooms.get_room(sess.room_id)
+    if not _ws_csrf_ok(ws, sess):
+        await ws.close(code=4403)
+        return
+    room_id = sess.room_id
+    room = rooms.get_room(room_id)
     if room is None:
         await ws.close(code=4404)
         return
@@ -406,9 +599,23 @@ async def ws_camera(ws: WebSocket):
             msg = await ws.receive()
             if msg.get("type") == "websocket.disconnect":
                 break
+            # Re-validate the session/role/room membership on EVERY message so a
+            # logged-out, expired or rebound camera cannot keep ingesting (LIVE-002).
+            cur = auth.get_session(token)
+            if cur is None or cur.role != "camera" or not cur.owns_room or cur.room_id != room_id:
+                await ws.close(code=4401)
+                return
+            room = rooms.get_room(room_id)
+            if room is None:
+                await ws.close(code=4404)
+                return
             if msg.get("text") is not None:
+                text = msg["text"]
+                if len(text) > config.MAX_WS_TEXT_BYTES:
+                    pending_meta = {}
+                    continue
                 try:
-                    pending_meta = json.loads(msg["text"])
+                    pending_meta = json.loads(text)
                     if not isinstance(pending_meta, dict):
                         pending_meta = {}
                 except (ValueError, TypeError):
@@ -417,7 +624,8 @@ async def ws_camera(ws: WebSocket):
             data = msg.get("bytes")
             if data is None:
                 continue
-            if len(data) > config.MAX_FRAME_BYTES:
+            if len(data) > config.MAX_FRAME_BYTES or len(data) < 100 or data[:2] != b"\xff\xd8":
+                # Too big, empty, or not a JPEG (SOI marker). Dropped before ingest.
                 with room.lock:
                     room.frames_dropped += 1
                 pending_meta = {}
@@ -427,7 +635,14 @@ async def ws_camera(ws: WebSocket):
     except WebSocketDisconnect:
         pass
     except Exception as exc:  # noqa: BLE001
-        logger.warning("camera ws error room=%s: %s", room.room_id, exc)
+        logger.warning("camera ws error room=%s: %s", room_id, exc)
+
+
+def _finite_number(v) -> float | None:
+    if isinstance(v, bool) or not isinstance(v, (int, float)):
+        return None
+    f = float(v)
+    return f if math.isfinite(f) else None
 
 
 def _ingest_frame(room: rooms.RoomState, data: bytes, meta: dict) -> None:
@@ -438,9 +653,18 @@ def _ingest_frame(room: rooms.RoomState, data: bytes, meta: dict) -> None:
         with room.lock:
             room.frames_dropped += 1
         return
+    # Sequence must strictly increase; duplicate/stale frames are dropped. A
+    # non-finite capture_ts is discarded (stored as None) so it can never poison
+    # the JSON state payload (LIVE-005).
     seq = meta.get("seq")
-    capture_ts = meta.get("capture_ts")
+    seq = seq if isinstance(seq, int) and not isinstance(seq, bool) else None
+    capture_ts = _finite_number(meta.get("capture_ts"))
     with room.lock:
+        if seq is not None and seq <= room.last_seq:
+            room.frames_dropped += 1
+            return
+        if seq is not None:
+            room.last_seq = seq
         room.frames_received += 1
         room.last_recv_ts = now
         room.recv_times.append(now)
@@ -455,15 +679,26 @@ def _ingest_frame(room: rooms.RoomState, data: bytes, meta: dict) -> None:
 
 @app.websocket("/api/live/ws/judge")
 async def ws_judge(ws: WebSocket):
+    # OWNER PIVOT: the WebSocket push channel belongs to the disabled two-device
+    # camera path. Judges watch via authenticated HTTP polling of the annotated
+    # frame + state endpoints instead. Deny the upgrade unless explicitly enabled.
+    if not config.CAMERA_INGEST_ENABLED:
+        await ws.close(code=4404)
+        return
     if not _ws_origin_ok(ws):
         await ws.close(code=4403)
         return
-    sess = _ws_session(ws)
+    token = _ws_token(ws)
+    sess = auth.get_session(token)
     if sess is None or sess.role != "judge" or not sess.room_id:
         await ws.close(code=4401)
         return
-    room = rooms.get_room(sess.room_id)
-    if room is None or sess.token not in room.judges:
+    if not _ws_csrf_ok(ws, sess):
+        await ws.close(code=4403)
+        return
+    room_id = sess.room_id
+    room = rooms.get_room(room_id)
+    if room is None or token not in room.judges:
         await ws.close(code=4404)
         return
     await ws.accept()
@@ -471,6 +706,16 @@ async def ws_judge(ws: WebSocket):
     interval = 1.0 / max(1.0, config.TARGET_PROCESS_FPS)
     try:
         while True:
+            # Re-validate authority before EACH private send: a logged-out, expired
+            # or rebound judge must stop receiving private bytes (LIVE-002).
+            cur = auth.get_session(token)
+            if cur is None or cur.role != "judge" or cur.room_id != room_id:
+                await ws.close(code=4401)
+                return
+            room = rooms.get_room(room_id)
+            if room is None or token not in room.judges:
+                await ws.close(code=4404)
+                return
             with room.lock:
                 jpeg = room.annotated_jpeg
                 ts = room.annotated_meta.get("ts")
@@ -481,4 +726,4 @@ async def ws_judge(ws: WebSocket):
     except WebSocketDisconnect:
         pass
     except Exception as exc:  # noqa: BLE001
-        logger.info("judge ws closed room=%s: %s", room.room_id, exc)
+        logger.info("judge ws closed room=%s: %s", room_id, exc)

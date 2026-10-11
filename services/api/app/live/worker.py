@@ -20,10 +20,25 @@ import time
 import cv2
 import numpy as np
 
-from app.live import config, rooms, teacher
+from app.live import auth, config, rooms, teacher
 from visionflow_vision.detector import BaseDetectorTracker
 
 logger = logging.getLogger("visionflow.live.worker")
+
+# Worker liveness, surfaced in /health so a dead loop cannot masquerade as ok.
+_last_loop_ts: float = 0.0
+_loop_errors: int = 0
+_last_sweep_ts: float = 0.0
+
+
+def liveness() -> dict:
+    alive = _worker_thread is not None and _worker_thread.is_alive()
+    age = (time.time() - _last_loop_ts) if _last_loop_ts else None
+    return {
+        "alive": alive,
+        "last_loop_age_s": round(age, 2) if age is not None else None,
+        "loop_errors": _loop_errors,
+    }
 
 try:  # keep CPU inference sequential on the limited-RAM host
     cv2.setNumThreads(config.THREAD_COUNT)
@@ -78,14 +93,31 @@ def stop() -> None:
 
 
 def _loop() -> None:
+    global _last_loop_ts, _loop_errors, _last_sweep_ts
     interval = 1.0 / max(0.5, config.TARGET_PROCESS_FPS)
     while not _stop.is_set():
+        _last_loop_ts = time.time()
         did_work = False
         for room in rooms.iter_rooms():
             if _stop.is_set():
                 break
-            if _process_room_if_ready(room):
-                did_work = True
+            try:
+                if _process_room_if_ready(room):
+                    did_work = True
+            except Exception as exc:  # noqa: BLE001 — one bad frame must never kill the worker
+                _loop_errors += 1
+                logger.warning("room %s: frame processing error (worker survives): %s",
+                               getattr(room, "room_id", "?"), exc)
+        # Periodically retire expired sessions' rooms and idle/orphaned rooms so
+        # capacity is released for later users (LIVE-006).
+        now = time.time()
+        if now - _last_sweep_ts > 5.0:
+            _last_sweep_ts = now
+            try:
+                active = auth.sweep_expired()
+                rooms.retire_idle_and_orphaned(active, config.ROOM_IDLE_TTL_SECONDS)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("room sweep error: %s", exc)
         # If nothing to do, back off; otherwise pace to the target FPS.
         time.sleep(0.01 if did_work else 0.05)
         if did_work:
@@ -111,11 +143,28 @@ def process_frame(room, jpeg, meta, version, enabled, task, engines) -> None:
     """Decode + infer + evaluate one frame. Separated out so tests can drive it
     directly with a stub detector."""
     global _last_room
-    frame = cv2.imdecode(np.frombuffer(jpeg, dtype=np.uint8), cv2.IMREAD_COLOR)
+    if not jpeg or len(jpeg) < 100 or jpeg[:2] != b"\xff\xd8":
+        # Empty / too small / not a JPEG (SOI marker FF D8). Never reaches cv2.
+        logger.warning("room %s: non-JPEG or empty frame dropped", room.room_id)
+        return
+    try:
+        frame = cv2.imdecode(np.frombuffer(jpeg, dtype=np.uint8), cv2.IMREAD_COLOR)
+    except cv2.error as exc:
+        logger.warning("room %s: cv2 decode error dropped: %s", room.room_id, exc)
+        return
     if frame is None:
         logger.warning("room %s: undecodable frame dropped", room.room_id)
         return
     frame_h, frame_w = frame.shape[:2]
+    # Inspect the ACTUAL decoded dimensions (declared metadata is untrusted): a
+    # frame whose real long edge exceeds the bound never reaches inference.
+    if (max(frame_h, frame_w) > config.MAX_FRAME_LONG_EDGE
+            or min(frame_h, frame_w) < config.MIN_FRAME_LONG_EDGE):
+        logger.warning("room %s: decoded dims %dx%d out of bounds, dropped",
+                       room.room_id, frame_w, frame_h)
+        with room.lock:
+            room.frames_dropped += 1
+        return
     now = time.time()
 
     detector = _get_detector()
@@ -184,20 +233,41 @@ def _handle_event(room, ev, frame, objects, task, version, meta, now, inference_
 
     evidence_file = _save_evidence(room, frame, objects, task, ev, version)
 
+    # A generation guard carried into Teacher admission: no new provider request
+    # may start once this task version has been replaced/disabled/paused.
+    def _still_current() -> bool:
+        with room.lock:
+            return room.task_version == version and room.task_enabled and not room.task_paused
+
     observation = None
     vo = task.get("visual_observation") if task else None
-    if vo and teacher.available():
-        try:
-            images = _collect_images(room, frame, vo.get("temporal"))
-            obs = teacher.observe(room.room_id, vo["question"], vo["labels"], images)
-            observation = {
-                "status": obs.status, "label": obs.label, "confidence": obs.confidence,
-                "uncertain": obs.uncertain, "image_hash": obs.image_hash,
-                "image_count": obs.image_count, "model": obs.model,
-                "latency_ms": obs.latency_ms, "reason": obs.reason,
-            }
-        except Exception as exc:  # noqa: BLE001
-            observation = {"status": "error", "reason": str(exc)[:150], "uncertain": True}
+    if vo:
+        if teacher.available():
+            try:
+                images = _collect_images(room, frame, vo.get("temporal"))
+                obs = teacher.observe(room.room_id, vo["question"], vo["labels"], images,
+                                      should_proceed=_still_current)
+                observation = {
+                    "status": obs.status, "label": obs.label, "confidence": obs.confidence,
+                    "uncertain": obs.uncertain, "in_schema": obs.in_schema,
+                    "image_hash": obs.image_hash, "image_count": obs.image_count,
+                    "model": obs.model, "revision": obs.revision,
+                    "latency_ms": obs.latency_ms, "reason": obs.reason,
+                }
+            except Exception as exc:  # noqa: BLE001
+                observation = {"status": "error", "reason": str(exc)[:150], "uncertain": True}
+        else:
+            observation = {"status": "unavailable", "uncertain": True,
+                           "reason": "Teacher endpoint not configured"}
+
+    # Semantic gate: a task carrying a visual_observation is a SEMANTIC-CONDITIONAL
+    # task. The geometric candidate alone (presence/entry) is only ADMISSION to
+    # verification — it must NOT authorize the action. Only a CONFIRMED in-schema
+    # match of the requested condition dispatches the local notification. Unknown,
+    # unavailable, uncertain, out-of-schema, timeout or stale => the event is
+    # recorded as an informational observation only, with NO notification.
+    confirmed = _semantic_confirmed(vo, observation) if vo else True
+    action_status = "done" if confirmed else "observation_only"
 
     with room.lock:
         # Re-check version under lock before committing the event/action.
@@ -212,16 +282,34 @@ def _handle_event(room, ev, frame, objects, task, version, meta, now, inference_
             capture_ts=capture_ts if isinstance(capture_ts, (int, float)) else recv_ts,
             recv_ts=recv_ts, event_ts=now, task_version=version,
             evidence_file=evidence_file, visual_observation=observation,
-            action_status="done",
+            action_status=action_status,
         )
         room.events.append(live_ev)
-        # Local notification action (side-effect-free, no outbound delivery).
-        title = (task.get("name") or "VisionFlow") if task else "VisionFlow"
-        room.notifications.append({
-            "id": eid, "event_id": eid, "title": title[:120],
-            "message": ev.detail, "created_at": now,
-        })
-    logger.info("room %s event %s: %s", room.room_id, eid, ev.detail)
+        if confirmed:
+            # Local notification action (side-effect-free, no outbound delivery).
+            title = (task.get("name") or "VisionFlow") if task else "VisionFlow"
+            room.notifications.append({
+                "id": eid, "event_id": eid, "title": title[:120],
+                "message": ev.detail, "created_at": now,
+            })
+    logger.info("room %s event %s (%s): %s", room.room_id, eid, action_status, ev.detail)
+
+
+def _semantic_confirmed(vo: dict | None, observation: dict | None) -> bool:
+    """A semantic condition is confirmed ONLY when the provider returned a valid,
+    in-schema answer whose label matches the requested target state. The target is
+    the first requested label by convention. Uncertain/unavailable/out-of-schema/
+    unknown/timeout/stale never confirms (fail-closed). A self-reported confidence
+    score alone never confirms — the geometric candidate is the corroboration."""
+    if not vo:
+        return True
+    if not observation or observation.get("status") != "ok":
+        return False
+    if not observation.get("in_schema"):
+        return False
+    labels = [str(x).strip().lower() for x in (vo.get("labels") or [])]
+    target = labels[0] if labels else None
+    return bool(target) and (observation.get("label") == target)
 
 
 def _collect_images(room, frame, temporal) -> list[bytes]:
@@ -262,8 +350,12 @@ def _annotate(frame, objects, task, events, focus_track):
         pts = np.array([[int(x * w), int(y * h)] for x, y in task["zone"]["polygon"]],
                        dtype=np.int32)
         cv2.polylines(img, [pts], True, (0, 200, 255), 2)
+    # A persistent "focus" highlight is a FULFILLED focus action; for a semantic-
+    # conditional task (one carrying a visual_observation) it must NOT be applied
+    # by mere class/ROI selection — only confirmed event tracks are highlighted.
+    persistent_focus = bool(task and task.get("focus") and not task.get("visual_observation"))
     for obj in objects:
-        focus = (task and task.get("focus") and obj.class_name == task.get("object_class")) \
+        focus = (persistent_focus and obj.class_name == task.get("object_class")) \
             or obj.track_id in event_tracks
         color = (0, 0, 255) if focus else (0, 255, 0)
         thickness = 3 if focus else 2

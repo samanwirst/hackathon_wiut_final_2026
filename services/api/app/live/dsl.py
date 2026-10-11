@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, StrictBool, field_validator, model_validator
 
 # COCO classes the YOLO detector genuinely produces and that are useful for the
 # automotive + general demo. These are REAL detectable classes, not canned
@@ -134,6 +134,16 @@ class LiveTask(BaseModel):
         if self.action == "focus_notify":
             object.__setattr__(self, "focus", True)
         return self
+
+
+class TaskStateRequest(BaseModel):
+    """Strictly-typed pause/disable/re-enable control. Only real JSON booleans are
+    accepted; the string "false" (or any non-bool) is rejected, not coerced, so a
+    control request can never silently flip to the wrong state (LIVE-007)."""
+
+    model_config = {"extra": "forbid"}
+    enabled: StrictBool | None = None
+    paused: StrictBool | None = None
 
 
 def capabilities_doc() -> dict:

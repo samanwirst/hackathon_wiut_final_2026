@@ -80,7 +80,11 @@
 
 <script src="/static/common.js"></script>
 <script>
-let roomId=null, feedWs=null, pollTimer=null, currentDraft=null, planProvenance=null;
+let roomId=null, feedTimer=null, pollTimer=null, currentDraft=null, planProvenance=null;
+// Monotonic generation for plan requests: any edit/discard/new-plan invalidates
+// an earlier in-flight planning response so a late reply cannot install an
+// obsolete task or reveal Approve (LIVE-011).
+let planGen=0;
 
 fetch("/api/live/health").then(r=>r.json()).then(h=>{
   const p=document.getElementById("teacherPill");
@@ -102,15 +106,15 @@ document.getElementById("joinBtn").onclick = async () => {
 };
 
 function openFeed() {
-  feedWs = new WebSocket(wsUrl("/api/live/ws/judge"));
-  feedWs.binaryType = "blob";
-  feedWs.onmessage = (ev) => {
-    const url = URL.createObjectURL(ev.data);
-    const img = document.getElementById("feed");
-    const old = img.src; img.src = url;
-    if (old && old.startsWith("blob:")) URL.revokeObjectURL(old);
-  };
-  feedWs.onclose = () => { if (roomId) setTimeout(openFeed, 1500); };
+  // OWNER PIVOT: the WebSocket push channel is disabled. The judge watches the
+  // annotated video via authenticated HTTP polling of the frame endpoint (the
+  // session cookie is sent same-origin). A changing query defeats caching.
+  if (feedTimer) clearInterval(feedTimer);
+  const img = document.getElementById("feed");
+  feedTimer = setInterval(() => {
+    if (!roomId) { clearInterval(feedTimer); return; }
+    img.src = `/api/live/rooms/${roomId}/frame?t=${Date.now()}`;
+  }, 400);
 }
 
 function startPolling() {
@@ -142,6 +146,9 @@ function renderState(s) {
     if (s.task_enabled) {
       ctrls.appendChild(btn(s.task_paused?"Resume":"Pause","secondary",()=>setState({paused:!s.task_paused})));
       ctrls.appendChild(btn("Disable","danger",()=>setState({enabled:false})));
+    } else {
+      // A disabled task exposes an explicit re-enable control (LIVE-007).
+      ctrls.appendChild(btn("Re-enable","ok",()=>setState({enabled:true})));
     }
   } else { at.textContent = "No task yet."; ctrls.innerHTML=""; }
 
@@ -166,14 +173,19 @@ function renderState(s) {
 document.getElementById("planBtn").onclick = async () => {
   const text = document.getElementById("prompt").value.trim();
   if (text.length < 3) { setBanner("banner","err","Describe the task first."); return; }
+  // Starting a new plan invalidates any pending/in-flight approval.
+  const gen = ++planGen;
+  currentDraft = null;
+  document.getElementById("activateBtn").classList.add("hidden");
   setBanner("banner","info","Planning with the AI agent…");
   try {
     const r = await api(`/api/live/rooms/${roomId}/task/plan`, { method:"POST", body:{ text } });
-    showDraft(r);
-  } catch(e){ setBanner("banner","err",e.message); }
+    if (gen !== planGen) return;           // a later edit/plan superseded this one
+    showDraft(r, text);
+  } catch(e){ if (gen === planGen) setBanner("banner","err",e.message); }
 };
 
-function showDraft(r) {
+function showDraft(r, plannedText) {
   setBanner("banner","info","");
   const draft = document.getElementById("draft");
   const note = document.getElementById("draftNote");
@@ -210,12 +222,18 @@ document.getElementById("activateBtn").onclick = async () => {
   } catch(e){ setBanner("banner","err",e.message); }
 };
 document.getElementById("discardBtn").onclick = () => {
+  planGen++;  // invalidate any in-flight planning response
   document.getElementById("draft").classList.add("hidden"); currentDraft=null;
+  document.getElementById("activateBtn").classList.add("hidden");
 };
-// Editing the prompt invalidates a pending approval.
+// Editing the prompt invalidates ANY pending approval, including an in-flight plan
+// that has not yet returned (LIVE-011).
 document.getElementById("prompt").addEventListener("input", ()=>{
-  if(currentDraft){ currentDraft=null; document.getElementById("activateBtn").classList.add("hidden");
-    document.getElementById("draftNote").innerHTML="<em>Prompt edited — re-plan to approve.</em>"; }
+  planGen++;
+  currentDraft=null;
+  document.getElementById("activateBtn").classList.add("hidden");
+  const note=document.getElementById("draftNote");
+  if(note) note.innerHTML="<em>Prompt edited — re-plan to approve.</em>";
 });
 
 async function setState(patch){

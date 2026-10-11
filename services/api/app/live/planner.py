@@ -36,6 +36,14 @@ logger = logging.getLogger("visionflow.live.planner")
 # Global planner concurrency: exactly one real CLI call at a time.
 _planner_lock = threading.Semaphore(1)
 
+# The ONLY proposal keys the backend will accept. Anything else (an injected
+# ``code``/``tool``/``url``/``command`` side channel) is rejected in ``_finalize``.
+_ALLOWED_PROPOSAL_KEYS = {
+    "supported", "name", "explanation", "object_class", "zone", "trigger",
+    "duration_seconds", "threshold", "action", "focus", "visual_observation",
+    "clarification_needed", "unsupported_reason",
+}
+
 # Per-room attempt accounting (process lifetime): budget + cooldown.
 _room_attempts: dict[str, int] = {}
 _room_last_attempt: dict[str, float] = {}
@@ -207,23 +215,43 @@ def _finalize(result: PlannerResult) -> PlannerResult:
     if result.status != "ok" or not result.proposal:
         return result
     p = result.proposal
-    if not p.get("supported"):
+    # Strict: an unknown proposal key (e.g. an injected ``code`` / ``tool`` / ``url``
+    # / ``command`` field) is rejected outright — never silently ignored — so a
+    # prompt-injected side channel can never ride along in a "valid" task.
+    extra = set(p.keys()) - _ALLOWED_PROPOSAL_KEYS
+    if extra:
+        result.status = "unsupported"
+        result.unsupported_reason = f"proposal contains unknown field(s): {sorted(extra)}"
+        result.clarification = p.get("clarification_needed")
+        return result
+    # Strict boolean: the JSON string "false" (or any non-True value) must NOT be
+    # read as truthy. ``supported`` must be a real JSON ``true``.
+    if p.get("supported") is not True:
         result.status = "unsupported"
         result.clarification = p.get("clarification_needed")
         result.unsupported_reason = p.get("unsupported_reason") or "request not expressible"
+        return result
+    # Strict scalar types: a JSON boolean is never a valid count or duration.
+    if isinstance(p.get("threshold"), bool) or isinstance(p.get("duration_seconds"), bool):
+        result.status = "unsupported"
+        result.unsupported_reason = "threshold/duration_seconds must be numeric, not boolean"
+        result.clarification = p.get("clarification_needed")
         return result
     # Interpret the strict-mode sentinels (0 / "" / [] mean "not applicable").
     vo_in = p.get("visual_observation") or {}
     vo_question = str(vo_in.get("question") or "").strip()
     vo_labels = [str(x) for x in (vo_in.get("labels") or []) if str(x).strip()]
-    visual_observation = None
-    if vo_question and len(set(l.lower() for l in vo_labels)) >= 2:
-        visual_observation = dsl.VisualObservation(
-            question=vo_question, labels=vo_labels, temporal=bool(vo_in.get("temporal")))
     zone_in = p.get("zone") or {"type": "full_frame"}
     if not zone_in.get("type"):
         zone_in = {"type": "full_frame"}
     try:
+        # A malformed visual_observation (e.g. an over-length question) must surface
+        # as an honest ``unsupported`` result, never a 500 — build it inside the
+        # same guarded validation as the task.
+        visual_observation = None
+        if vo_question and len(set(l.lower() for l in vo_labels)) >= 2:
+            visual_observation = dsl.VisualObservation(
+                question=vo_question, labels=vo_labels, temporal=bool(vo_in.get("temporal")))
         task = dsl.LiveTask(
             name=p.get("name") or "Live task",
             object_class=(p.get("object_class") or "").strip().lower(),
@@ -272,8 +300,18 @@ def _run_cli(text: str) -> PlannerResult:
         "HOME": os.environ.get("HOME", "/root"),
         "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
     }
-    if not _planner_lock.acquire(timeout=config.PLANNER_TIMEOUT_SECONDS + 5):
+    # The planner deadline is AUTHORITATIVE and includes the admission wait for the
+    # shared capacity lock: a request that cannot be admitted within the deadline is
+    # never allowed to spawn the subprocess afterwards (the subprocess only gets the
+    # REMAINING budget). This bounds the real subscription from a queue of prompts.
+    deadline = config.PLANNER_TIMEOUT_SECONDS
+    t_wait = time.monotonic()
+    if not _planner_lock.acquire(timeout=deadline):
         return PlannerResult(status="unavailable", error="planner busy")
+    remaining = deadline - (time.monotonic() - t_wait)
+    if remaining <= 0:
+        _planner_lock.release()
+        return PlannerResult(status="unavailable", error="planner deadline exhausted on admission")
     tmpdir = tempfile.mkdtemp(prefix="vf-live-planner-")
     try:
         proc = subprocess.run(
@@ -283,7 +321,7 @@ def _run_cli(text: str) -> PlannerResult:
             capture_output=True,
             cwd=tmpdir,
             env=env,
-            timeout=config.PLANNER_TIMEOUT_SECONDS,
+            timeout=remaining,
             shell=False,
             start_new_session=True,  # isolated process group
         )

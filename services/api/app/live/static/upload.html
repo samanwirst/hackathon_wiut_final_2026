@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>VisionFlow — Upload Video</title>
+<link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+<div class="topbar">
+  <h1>VisionFlow</h1>
+  <span class="tag">Operator · pre-recorded video inference</span>
+  <span class="spacer"></span>
+  <a href="/" class="pill muted">← home</a>
+</div>
+<div class="wrap">
+  <div id="banner" class="banner hidden"></div>
+
+  <div class="card" id="authCard">
+    <h2>Operator sign-in</h2>
+    <p class="muted">Enter the demo PIN to create a private room. You will receive a one-time
+      join code to share with the judge.</p>
+    <label>Demo PIN <input id="pin" type="password" autocomplete="off" /></label>
+    <button id="signin" class="ok">Sign in &amp; create room</button>
+  </div>
+
+  <div class="card hidden" id="main">
+    <h2>Private room</h2>
+    <p class="muted">Share this one-time join code with the judge (it is never shown in any URL):</p>
+    <p><code class="inline" id="joinCode" style="font-size:1.2em"></code></p>
+
+    <h3>Upload a video</h3>
+    <p class="muted">Supported: a single MP4 of a service bay or road scene. Film only consenting
+      participants. The clip is bounded (size, duration, resolution) and validated before any
+      processing; it is stored privately and deleted when the room closes.</p>
+    <input id="file" type="file" accept="video/mp4,video/*" />
+    <button id="upload" class="ok">Upload</button>
+    <div id="videoInfo" class="muted" style="margin-top:8px"></div>
+    <progress id="prog" class="hidden" max="100" value="0" style="width:100%"></progress>
+
+    <h3 style="margin-top:18px">Processing</h3>
+    <p class="muted">The judge approves a task; processing then runs here with the source video clock.
+      Progress:</p>
+    <div id="jobInfo" class="muted">idle</div>
+    <img id="feed" class="feed" alt="annotated frame" style="max-width:100%;margin-top:10px;border-radius:8px" />
+  </div>
+</div>
+
+<script src="/static/common.js"></script>
+<script>
+let roomId=null, pollTimer=null;
+
+document.getElementById("signin").onclick = async () => {
+  try {
+    await login("camera", document.getElementById("pin").value);
+    const r = await api("/api/live/rooms", { method:"POST" });
+    roomId = r.room_id;
+    document.getElementById("joinCode").textContent = r.join_code;
+    document.getElementById("authCard").classList.add("hidden");
+    document.getElementById("main").classList.remove("hidden");
+    setBanner("banner","info","Room created. Upload a video, then ask the judge to approve a task.");
+    startPolling();
+  } catch(e){ setBanner("banner","err",e.message); }
+};
+
+document.getElementById("upload").onclick = async () => {
+  const f = document.getElementById("file").files[0];
+  if (!f) { setBanner("banner","err","Choose a video file first."); return; }
+  const prog = document.getElementById("prog");
+  prog.classList.remove("hidden"); prog.value = 0;
+  try {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", `/api/live/rooms/${roomId}/video`);
+    xhr.setRequestHeader("X-CSRF-Token", getCookie(CSRF_COOKIE));
+    xhr.withCredentials = true;
+    xhr.upload.onprogress = (e) => { if (e.lengthComputable) prog.value = (e.loaded/e.total)*100; };
+    const done = new Promise((res,rej)=>{
+      xhr.onload = () => xhr.status<300 ? res(JSON.parse(xhr.responseText||"{}"))
+                                        : rej(new Error((JSON.parse(xhr.responseText||"{}").detail)||("upload failed "+xhr.status)));
+      xhr.onerror = () => rej(new Error("network error"));
+    });
+    xhr.send(f);
+    const r = await done;
+    const m = r.meta;
+    document.getElementById("videoInfo").textContent =
+      `Validated: ${m.w}x${m.h}, ${m.fps} fps, ${m.frame_count} frames, ${m.duration_seconds}s · sha256 ${r.sha256.slice(0,12)}…`;
+    setBanner("banner","info","Video uploaded & validated. Ask the judge to approve a task to start processing.");
+  } catch(e){ setBanner("banner","err",e.message); }
+};
+
+function startPolling() {
+  const img = document.getElementById("feed");
+  const tick = async () => {
+    if (!roomId) return;
+    try {
+      const s = await api(`/api/live/rooms/${roomId}/state`);
+      const v = s.video || {};
+      document.getElementById("jobInfo").textContent =
+        `status: ${v.job_status} · ${v.job_processed}/${v.job_total} frames` + (v.job_error?` · error: ${v.job_error}`:"");
+      if (v.job_status === "running" || v.job_status === "done") {
+        img.src = `/api/live/rooms/${roomId}/frame?t=${Date.now()}`;
+      }
+    } catch(e){ /* keep last */ }
+  };
+  tick(); pollTimer = setInterval(tick, 800);
+}
+</script>
+</body>
+</html>

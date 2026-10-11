@@ -121,10 +121,18 @@ function openSocket() {
   ws = new WebSocket(wsUrl("/api/live/ws/camera"));
   ws.binaryType = "arraybuffer";
   ws.onopen = () => { timer = setInterval(captureAndSend, 1000/TARGET_FPS); };
-  ws.onclose = () => {
+  ws.onclose = (ev) => {
     clearInterval(timer); timer=null;
+    // Auth closes (expired/revoked session, bad origin/CSRF) must NOT reconnect in
+    // a loop — stop streaming and ask the user to re-authenticate (LIVE-002).
+    if (ev && (ev.code === 4401 || ev.code === 4403 || ev.code === 4404)) {
+      stopStreaming();
+      document.getElementById("mStatus").textContent = "session ended";
+      setBanner("banner","err","Session ended or revoked. Please sign in again.");
+      return;
+    }
     document.getElementById("mStatus").textContent = "disconnected";
-    if (stream) { // auto-reconnect while still streaming
+    if (stream) { // auto-reconnect only on transient closes while still streaming
       setTimeout(()=>{ if(stream){ document.getElementById("mStatus").textContent="reconnecting"; openSocket(); } }, 1500);
     }
   };

@@ -62,7 +62,15 @@ def verify_pin(pin: str) -> bool:
 def _prune_failures(ip: str, now: float) -> list[float]:
     window = config.LOGIN_WINDOW_SECONDS
     fails = [t for t in _failures.get(ip, []) if now - t < window]
-    _failures[ip] = fails
+    if fails:
+        _failures[ip] = fails
+    else:
+        _failures.pop(ip, None)
+    # Bound total distinct keys: drop the oldest-touched keys if the map grows
+    # past the cap (an attacker rotating identities cannot exhaust memory).
+    if len(_failures) > config.MAX_RATE_LIMIT_KEYS:
+        for k in list(_failures.keys())[: len(_failures) - config.MAX_RATE_LIMIT_KEYS]:
+            _failures.pop(k, None)
     return fails
 
 
@@ -127,25 +135,89 @@ def get_session(token: str | None) -> Session | None:
         return sess
 
 
-def destroy_session(token: str | None) -> None:
-    if not token:
+# Optional hook (set by the app layer) invoked when a session's membership must
+# be torn down: on logout and on expiry sweep. Receives (token, room_id, owns).
+# Kept as a callback to avoid an auth -> rooms import cycle.
+on_session_dropped = None
+
+
+def _notify_dropped(dropped: list[Session]) -> None:
+    cb = on_session_dropped
+    if cb is None:
         return
+    for s in dropped:
+        if s.room_id:
+            try:
+                cb(s.token, s.room_id, s.owns_room)
+            except Exception:  # noqa: BLE001 — cleanup must never crash auth
+                pass
+
+
+def destroy_session(token: str | None) -> Session | None:
+    """Remove a session and return it (so the caller can tear down memberships)."""
+    if not token:
+        return None
     with _sessions_lock:
-        _sessions.pop(token, None)
+        sess = _sessions.pop(token, None)
+    if sess is not None:
+        _notify_dropped([sess])
+    return sess
 
 
-def bind_room(token: str, room_id: str, owns: bool) -> None:
+def bind_room(token: str, room_id: str, owns: bool) -> str | None:
+    """Bind a session to a room; returns the PREVIOUS room_id if the session was
+    re-bound (so the caller can evict it from the old room)."""
     with _sessions_lock:
         sess = _sessions.get(token)
-        if sess is not None:
-            sess.room_id = room_id
-            sess.owns_room = owns
+        if sess is None:
+            return None
+        prev = sess.room_id if sess.room_id and sess.room_id != room_id else None
+        sess.room_id = room_id
+        sess.owns_room = owns
+        return prev
+
+
+def active_tokens() -> set[str]:
+    now = time.time()
+    with _sessions_lock:
+        return {t for t, s in _sessions.items() if not s.expired(now)}
 
 
 def active_session_count() -> int:
     with _sessions_lock:
+        dropped = [s for t, s in _sessions.items() if s.expired(time.time())]
         _sweep(time.time())
+    _notify_dropped(dropped)
+    with _sessions_lock:
         return len(_sessions)
+
+
+def sweep_expired() -> set[str]:
+    """Drop expired sessions, firing membership teardown, and return the tokens
+    that remain active. Called periodically by the worker (LIVE-006)."""
+    now = time.time()
+    with _sessions_lock:
+        dropped = [s for t, s in list(_sessions.items()) if s.expired(now)]
+        for s in dropped:
+            _sessions.pop(s.token, None)
+        alive = set(_sessions.keys())
+    _notify_dropped(dropped)
+    return alive
+
+
+def client_identity(peer: str | None, forwarded_for: str | None) -> str:
+    """Resolve a trustworthy client identity for rate limiting.
+
+    Untrusted forwarding headers are IGNORED unless ``TRUSTED_PROXY_HOPS`` > 0, in
+    which case the identity is the (hops)-th address from the RIGHT of the XFF
+    chain — the entry inserted by the closest trusted proxy — so a client cannot
+    spoof it by prepending addresses."""
+    hops = config.TRUSTED_PROXY_HOPS
+    if hops > 0 and forwarded_for:
+        chain = [a.strip() for a in forwarded_for.split(",") if a.strip()]
+        if len(chain) >= hops:
+            return chain[-hops]
+    return peer or "unknown"
 
 
 def _reset_for_tests() -> None:
@@ -159,23 +231,34 @@ def _reset_for_tests() -> None:
 # --- origin / CSRF ---------------------------------------------------------
 
 
+def host_trusted(host: str | None) -> bool:
+    """A ``Host`` value is trusted only when it matches the configured deployment
+    host allowlist. When no allowlist is configured (local dev) any Host is
+    accepted, but it can never be used to widen a configured origin allowlist."""
+    if not config.ALLOWED_HOSTS:
+        return True
+    return bool(host) and host in config.ALLOWED_HOSTS
+
+
 def origin_allowed(origin: str | None, host: str | None) -> bool:
-    """Allow same-origin (no Origin header or Origin host == request Host) and
-    any explicitly allowlisted origin. Everything else is refused — never ``*``."""
+    """Authoritative Origin policy for mutations and WebSocket upgrades.
+
+    When an origin allowlist is configured it is the ONLY authority: the request
+    must carry an ``Origin`` in that list. The caller-controlled ``Host`` can
+    never bypass the allowlist. Only in unconfigured local dev do we fall back to
+    same-origin matching (Origin netloc == a trusted Host)."""
+    if config.ALLOWED_ORIGINS:
+        # Strict: a configured deployment demands an explicit, allowlisted Origin.
+        return bool(origin) and origin in config.ALLOWED_ORIGINS
+    # Unconfigured (dev): accept a missing Origin (non-browser / same-origin
+    # navigation) or an Origin whose netloc matches a trusted Host.
     if not origin:
-        # Non-browser or same-origin navigation without an Origin header.
         return True
-    if config.ALLOWED_ORIGINS and origin in config.ALLOWED_ORIGINS:
-        return True
-    if host:
-        try:
-            oh = urlparse(origin).netloc
-        except ValueError:
-            return False
-        if oh and oh == host:
-            return True
-    # If an allowlist is configured, anything not in it is refused.
-    return False
+    try:
+        oh = urlparse(origin).netloc
+    except ValueError:
+        return False
+    return bool(oh) and host_trusted(host) and oh == host
 
 
 def csrf_valid(sess: Session, header_token: str | None) -> bool:

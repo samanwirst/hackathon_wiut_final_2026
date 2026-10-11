@@ -69,11 +69,53 @@ EVIDENCE_MAX_PER_ROOM = int(os.environ.get("VISIONFLOW_LIVE_EVIDENCE_MAX", "60")
 # --- origin / CSRF ---------------------------------------------------------
 # Comma-separated allowlist of exact origins permitted for state-changing HTTP
 # and WebSocket upgrades. NO wildcard. When empty, same-origin requests (no
-# Origin header, or Origin matching Host) are still allowed; cross-origin is
-# refused. Populate this for the deployed HTTPS origin.
+# Origin header, or Origin matching an allowlisted Host) are allowed; cross-origin
+# is refused. Populate this for the deployed HTTPS origin.
 ALLOWED_ORIGINS = [
     o.strip() for o in os.environ.get("VISIONFLOW_LIVE_ALLOWED_ORIGINS", "").split(",") if o.strip()
 ]
+# Trusted deployment host[:port] values. The ``Host`` header is CALLER-controlled,
+# so same-origin matching is only honored when the request Host is one of these
+# trusted values. Derived from the origins' netlocs by default; override with
+# VISIONFLOW_LIVE_ALLOWED_HOSTS. Empty + no origins => dev same-origin (Host used
+# only to compare against Origin, never to widen a configured allowlist).
+_derived_hosts = []
+for _o in ALLOWED_ORIGINS:
+    try:
+        from urllib.parse import urlparse as _up
+        _nl = _up(_o).netloc
+        if _nl:
+            _derived_hosts.append(_nl)
+    except ValueError:
+        pass
+ALLOWED_HOSTS = [
+    h.strip() for h in os.environ.get("VISIONFLOW_LIVE_ALLOWED_HOSTS", "").split(",") if h.strip()
+] or _derived_hosts
+
+# --- trusted proxy / client identity ---------------------------------------
+# Number of trusted reverse-proxy hops in front of the app (e.g. 1 for a single
+# cloudflared tunnel). X-Forwarded-For is only honored when > 0, and the client
+# identity is taken as the (count)-th address from the RIGHT, so an attacker
+# cannot spoof it by prepending addresses. 0 => ignore XFF, use the peer address.
+TRUSTED_PROXY_HOPS = int(os.environ.get("VISIONFLOW_LIVE_TRUSTED_PROXY_HOPS", "0"))
+# Comma-separated peer IPs allowed to supply forwarding headers (passed to
+# uvicorn's forwarded_allow_ips). Default loopback only — never "*".
+FORWARDED_ALLOW_IPS = os.environ.get(
+    "VISIONFLOW_LIVE_FORWARDED_ALLOW_IPS", "127.0.0.1,::1"
+).strip()
+# Hard cap on distinct rate-limit keys retained (prevents unbounded growth).
+MAX_RATE_LIMIT_KEYS = int(os.environ.get("VISIONFLOW_LIVE_MAX_RL_KEYS", "4096"))
+
+# --- request body bounds (pre-parse) ---------------------------------------
+# Maximum JSON body for any live HTTP endpoint and maximum WebSocket text-frame
+# (metadata) size. Bounded well below the frame byte cap.
+MAX_JSON_BODY_BYTES = int(os.environ.get("VISIONFLOW_LIVE_MAX_JSON_BYTES", str(16 * 1024)))
+MAX_WS_TEXT_BYTES = int(os.environ.get("VISIONFLOW_LIVE_MAX_WS_TEXT_BYTES", str(2 * 1024)))
+
+# --- room lifecycle --------------------------------------------------------
+# A room with no received frames and no judges for this many seconds is retired
+# (pairing code invalidated, evidence deleted, capacity released).
+ROOM_IDLE_TTL_SECONDS = float(os.environ.get("VISIONFLOW_LIVE_ROOM_IDLE_TTL", "900"))
 
 # --- Claude CLI planner ----------------------------------------------------
 PLANNER_ENABLED = _flag("VISIONFLOW_LIVE_PLANNER", True)
@@ -93,7 +135,34 @@ TEACHER_TOKEN = os.environ.get("LIVE_TEACHER_TOKEN", "").strip()
 TEACHER_TIMEOUT_SECONDS = float(os.environ.get("LIVE_TEACHER_TIMEOUT", "60"))
 TEACHER_ROOM_BUDGET = int(os.environ.get("LIVE_TEACHER_ROOM_BUDGET", "20"))
 TEACHER_COOLDOWN_SECONDS = float(os.environ.get("LIVE_TEACHER_COOLDOWN", "4"))
+# Maximum confidence treated as a usable signal (still uncalibrated). Values
+# outside [0,1], non-finite, or boolean are rejected as malformed, never coerced.
+# Semantic confirmation requires corroboration, never a score alone.
 
 # --- worker ----------------------------------------------------------------
 THREAD_COUNT = int(os.environ.get("VISIONFLOW_THREADS", "2"))
 TARGET_PROCESS_FPS = float(os.environ.get("VISIONFLOW_LIVE_PROCESS_FPS", "4"))
+
+# --- input source mode (OWNER PIVOT) ---------------------------------------
+# The primary public demo is PRE-RECORDED VIDEO inference. The physical-camera /
+# two-device WebSocket ingest path is UNFINISHED and DISABLED on the public
+# surface by default (fail-closed): its routes deny upgrades / return 404 and the
+# landing page hides its links. Local QA that still wants to exercise the legacy
+# (non-public) WebSocket hardening flips this flag explicitly. Never enable it on
+# the public tunnel.
+CAMERA_INGEST_ENABLED = _flag("VISIONFLOW_LIVE_ENABLE_CAMERA", False)
+
+# --- video upload bounds (fail-closed resource limits) ---------------------
+# Hard cap on the streamed upload size, enforced byte-by-byte during the stream
+# (a lying/absent Content-Length can never bypass it). Plus bounds on the decoded
+# clip so a crafted container cannot exhaust CPU/RAM.
+MAX_VIDEO_BYTES = int(os.environ.get("VISIONFLOW_LIVE_MAX_VIDEO_BYTES", str(64 * 1024 * 1024)))
+MAX_VIDEO_DURATION_SECONDS = float(os.environ.get("VISIONFLOW_LIVE_MAX_VIDEO_SECONDS", "120"))
+MAX_VIDEO_FRAMES = int(os.environ.get("VISIONFLOW_LIVE_MAX_VIDEO_FRAMES", "5000"))
+MAX_VIDEO_FPS = float(os.environ.get("VISIONFLOW_LIVE_MAX_VIDEO_FPS", "60"))
+MIN_VIDEO_FPS = float(os.environ.get("VISIONFLOW_LIVE_MIN_VIDEO_FPS", "1"))
+MAX_VIDEO_LONG_EDGE = int(os.environ.get("VISIONFLOW_LIVE_MAX_VIDEO_LONG_EDGE", "1920"))
+MIN_VIDEO_LONG_EDGE = int(os.environ.get("VISIONFLOW_LIVE_MIN_VIDEO_LONG_EDGE", "64"))
+# Only one processing job per room at a time; total concurrent jobs bounded.
+MAX_CONCURRENT_VIDEO_JOBS = int(os.environ.get("VISIONFLOW_LIVE_MAX_VIDEO_JOBS", "2"))
+VIDEO_UPLOAD_DIR = app_env_dir = os.environ.get("VISIONFLOW_LIVE_VIDEO_DIR", "").strip()
