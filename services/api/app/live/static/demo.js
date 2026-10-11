@@ -26,6 +26,12 @@
   const validSha = (v) => typeof v === "string" && /^[a-f0-9]{64}$/.test(v);
   const owned = (suffix) => "/api/live/rooms/" + encodeURIComponent(room) + suffix;
   function message(s) { el("banner").textContent = s; el("banner").classList.remove("hidden"); }
+  function setPlanningBusy(busy) {
+    el("planTask").disabled = busy || !room || !source || !capabilities?.workflow;
+    el("planTask").textContent = busy ? "Generating workflow…" : "Generate workflow";
+    if (busy) el("planningStatus").classList.remove("hidden");
+    else el("planningStatus").classList.add("hidden");
+  }
   function clearDraft() {
     draft = null;
     el("approveTask").disabled = true;
@@ -43,6 +49,7 @@
   }
   function unavailable(reason) {
     invalidate(); latestPoll++; room = null; source = null; version = -1; csrf = null; capabilities = null;
+    setPlanningBusy(false);
     el("prompt").value = ""; el("editJson").value = ""; el("draftJson").textContent = "";
     el("sceneQuestion").value = ""; el("sourceIdentity").textContent = "No source selected.";
     el("activeWorkflow").textContent = "No approved workflow.";
@@ -75,7 +82,7 @@
     el("sourceVideo").src = owned("/video/source?sha=" + source);
     el("sourceIdentity").textContent = JSON.stringify({source_sha256: source, metadata}, null, 2);
     el("inspectScene").disabled = !capabilities?.scene;
-    el("planTask").disabled = !capabilities?.workflow;
+    el("planTask").disabled = !capabilities?.workflow || pending.has("planTask");
   }
   function listText(target, items, empty) {
     const container = el(target); container.textContent = "";
@@ -163,10 +170,15 @@
   handler("planTask", async () => {
     if (!capabilities?.workflow || !source || !validVersion(version)) return;
     clearDraft(); const requestEpoch = ++epoch;
-    const r = await api(owned("/task/plan"), {method:"POST", body:{text:el("prompt").value}});
-    if (requestEpoch !== epoch) return;
-    if (r.status !== "ok") { message(r.unsupported_reason || r.clarification || r.error || r.explanation || "This request is unsupported or needs clarification."); return; }
-    showDraft(r, requestEpoch);
+    setPlanningBusy(true);
+    try {
+      const r = await api(owned("/task/plan"), {method:"POST", body:{text:el("prompt").value}});
+      if (requestEpoch !== epoch) return;
+      if (r.status !== "ok") { message(r.unsupported_reason || r.clarification || r.error || r.explanation || "This request is unsupported or needs clarification."); return; }
+      showDraft(r, requestEpoch);
+    } finally {
+      setPlanningBusy(false);
+    }
   });
   el("prompt").addEventListener("input", () => { epoch++; clearDraft(); el("draft").classList.add("hidden"); });
   el("inputVideo").addEventListener("change", () => { epoch++; clearDraft(); el("draft").classList.add("hidden"); });

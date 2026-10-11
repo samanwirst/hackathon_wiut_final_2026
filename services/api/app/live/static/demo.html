@@ -45,6 +45,7 @@
     <p class="muted">Every requested condition must be implemented or rejected. No workflow runs before your approval.</p>
     <textarea id="prompt" maxlength="2000" placeholder="Describe an entry, exit or dwell condition with an explicit region and duration."></textarea>
     <button id="planTask" disabled style="margin-top:10px">Generate workflow</button>
+    <div id="planningStatus" class="banner info hidden" role="status" aria-live="polite" style="margin-top:12px">Generating a validated workflow… This may take a few seconds. Video analysis starts only after your approval.</div>
     <div id="draft" class="hidden" style="margin-top:14px">
       <p class="muted">Exact validated JSON for approval:</p>
       <pre id="draftJson" class="code"></pre>
@@ -77,7 +78,7 @@
     <div id="notificationList" class="muted">No notifications.</div>
   </div>
 </div>
-<footer class="muted" style="padding:16px">Copyright &copy; 2026 Argus contributors. Licensed under AGPL-3.0-only. <a href="https://github.com/samanwirst/visionflow-hackathon-2026-source/releases/download/hackathon-2026/visionflow-source.tar.gz">Argus corresponding source</a>.</footer>
+<footer class="muted" style="padding:16px">Copyright &copy; 2026 Argus contributors. Licensed under AGPL-3.0-only. <a href="https://github.com/samanwirst/visionflow-hackathon-2026-source/releases/download/hackathon-2026-ui1/visionflow-source.tar.gz">Argus corresponding source</a>.</footer>
 <script src="/static/demo.js"></script>
 </body>
 </html>
