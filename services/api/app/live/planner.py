@@ -23,6 +23,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import signal
 import subprocess
 import tempfile
 import threading
@@ -121,10 +122,12 @@ def _system_prompt() -> str:
         "camera is already aimed at that area. Only use zone.type=polygon if the user "
         "actually supplies coordinates. Never invent polygon coordinates and never ask the "
         "user to draw one.\n"
-        "3. Semantic/temporal conditions (opening, unattended, loitering intent, damage) "
-        "are NOT directly detectable. Preserve the user's intent: set a visual_observation "
-        "(with two or more plausible labels, temporal=true if it needs before/after) AND the "
-        "closest geometric trigger. Never silently drop the condition.\n"
+        "3. Semantic/temporal/state-change conditions (opening, unattended, loitering intent, "
+        "damage, 'when somebody opens it') are UNSUPPORTED in video mode. There is no "
+        "visual_observation, no Teacher verification and NO closest-geometry fallback. If the "
+        "request depends on such a condition, set supported=false and explain in "
+        "unsupported_reason. Never approximate a semantic condition with a presence/dwell rule, "
+        "and leave visual_observation empty.\n"
         "4. If the request cannot be faithfully expressed at all, set supported=false and "
         "put a question in clarification_needed. Do NOT invent capabilities (no camera "
         "pan/tilt, no audio, no face recognition).\n"
@@ -241,6 +244,18 @@ def _finalize(result: PlannerResult) -> PlannerResult:
     vo_in = p.get("visual_observation") or {}
     vo_question = str(vo_in.get("question") or "").strip()
     vo_labels = [str(x) for x in (vo_in.get("labels") or []) if str(x).strip()]
+    # Fail-closed: a semantic/state-change observation is UNSUPPORTED on the enabled
+    # VIDEO surface — never approximated by a geometric presence rule (LIVE-VIDEO-001).
+    # The legacy camera path (local QA only) still supports it.
+    semantic_requested = bool(vo_question) or len(vo_labels) >= 2
+    if semantic_requested and not config.CAMERA_INGEST_ENABLED:
+        result.status = "unsupported"
+        result.unsupported_reason = (
+            "semantic/state-change conditions (opening, unattended, intent) are not supported "
+            "in video mode; only geometric zone rules are available"
+        )
+        result.clarification = p.get("clarification_needed")
+        return result
     zone_in = p.get("zone") or {"type": "full_frame"}
     if not zone_in.get("type"):
         zone_in = {"type": "full_frame"}
@@ -274,6 +289,79 @@ def _finalize(result: PlannerResult) -> PlannerResult:
     result.task = task.model_dump()
     result.clarification = p.get("clarification_needed")
     return result
+
+
+def _terminate_group(proc: "subprocess.Popen") -> None:
+    """SIGKILL the subprocess's whole process group, then reap it, so no descendant
+    outlives a planner timeout (LIVE-VIDEO-008)."""
+    try:
+        pgid = os.getpgid(proc.pid)
+    except (ProcessLookupError, OSError):
+        pgid = None
+    if pgid is not None:
+        try:
+            os.killpg(pgid, signal.SIGKILL)
+        except (ProcessLookupError, OSError):
+            pass
+    try:
+        proc.kill()
+    except (ProcessLookupError, OSError):
+        pass
+    try:
+        proc.wait(timeout=3)
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def _drain(stream, cap: int, box: list) -> None:
+    """Read a pipe to EOF, retaining at most ``cap`` chars. Always draining to EOF
+    prevents the child from blocking on a full pipe; the cap bounds our memory."""
+    kept: list[str] = []
+    total = 0
+    try:
+        while True:
+            chunk = stream.read(65536)
+            if not chunk:
+                break
+            if total < cap:
+                take = chunk[: cap - total]
+                kept.append(take)
+                total += len(take)
+    except (ValueError, OSError):
+        pass
+    finally:
+        box.append("".join(kept))
+
+
+def _communicate_bounded(proc, input_text: str, timeout: float, cap: int):
+    """Feed STDIN, drain STDOUT/STDERR with a hard size cap via reader threads, and
+    enforce ``timeout`` by SIGKILLing the whole process group and reaping it. Returns
+    (returncode, stdout, stderr, timed_out). No unbounded ``communicate`` pipe is
+    used (LIVE-VIDEO-008)."""
+    out_box: list[str] = []
+    err_box: list[str] = []
+    to = threading.Thread(target=_drain, args=(proc.stdout, cap, out_box), daemon=True)
+    te = threading.Thread(target=_drain, args=(proc.stderr, cap, err_box), daemon=True)
+    to.start()
+    te.start()
+    try:
+        if proc.stdin is not None:
+            proc.stdin.write(input_text)
+            proc.stdin.close()
+    except (BrokenPipeError, OSError):
+        pass
+    timed_out = False
+    try:
+        proc.wait(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        timed_out = True
+        _terminate_group(proc)
+    # Reader threads end once the pipes hit EOF (the process group is dead by now).
+    to.join(3)
+    te.join(3)
+    out = out_box[0] if out_box else ""
+    err = err_box[0] if err_box else ""
+    return proc.returncode, out, err, timed_out
 
 
 def _run_cli(text: str) -> PlannerResult:
@@ -314,39 +402,48 @@ def _run_cli(text: str) -> PlannerResult:
         return PlannerResult(status="unavailable", error="planner deadline exhausted on admission")
     tmpdir = tempfile.mkdtemp(prefix="vf-live-planner-")
     try:
-        proc = subprocess.run(
-            argv,
-            input=text,
-            text=True,
-            capture_output=True,
-            cwd=tmpdir,
-            env=env,
-            timeout=remaining,
-            shell=False,
-            start_new_session=True,  # isolated process group
+        try:
+            # Own PROCESS GROUP (start_new_session) so that on timeout the whole
+            # tree — not just the immediate child — can be terminated/reaped BEFORE
+            # the capacity permit is released (LIVE-VIDEO-008).
+            proc = subprocess.Popen(
+                argv,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                cwd=tmpdir,
+                env=env,
+                shell=False,
+                start_new_session=True,
+            )
+        except FileNotFoundError:
+            return PlannerResult(status="unavailable", error="claude CLI not found")
+        except Exception as exc:  # noqa: BLE001
+            return PlannerResult(status="unavailable", error=f"planner spawn failed: {exc}")
+        rc, out, err, timed_out = _communicate_bounded(
+            proc, text, remaining, config.PLANNER_MAX_OUTPUT_BYTES
         )
-    except subprocess.TimeoutExpired:
-        logger.warning("planner CLI timed out")
-        return PlannerResult(status="unavailable", error="planner timeout")
-    except FileNotFoundError:
-        return PlannerResult(status="unavailable", error="claude CLI not found")
-    except Exception as exc:  # noqa: BLE001
-        return PlannerResult(status="unavailable", error=f"planner spawn failed: {exc}")
+        if timed_out:
+            logger.warning("planner CLI timed out")
+            return PlannerResult(status="unavailable", error="planner timeout")
     finally:
+        # The process group has fully exited (reaped) by here, so releasing the
+        # permit cannot leave live descendants behind.
         _planner_lock.release()
         try:
             os.rmdir(tmpdir)
         except OSError:
             pass
 
-    if proc.returncode != 0:
+    if rc != 0:
         # Redact stderr: keep only a bounded, non-secret tail.
-        tail = (proc.stderr or "").strip().splitlines()[-1:] or ["non-zero exit"]
-        logger.warning("planner CLI exit %s: %s", proc.returncode, tail[0][:200])
+        tail = (err or "").strip().splitlines()[-1:] or ["non-zero exit"]
+        logger.warning("planner CLI exit %s: %s", rc, tail[0][:200])
         return PlannerResult(status="unavailable",
-                             error=f"planner exit {proc.returncode}")
+                             error=f"planner exit {rc}")
     try:
-        envelope = json.loads(proc.stdout)
+        envelope = json.loads(out)
     except (ValueError, TypeError):
         return PlannerResult(status="unavailable", error="planner returned invalid JSON")
     if envelope.get("is_error") or envelope.get("subtype") != "success":

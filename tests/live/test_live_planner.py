@@ -33,11 +33,8 @@ def test_supported_proposal_validates_to_task(monkeypatch):
     assert r.task["trigger"] == "entered_zone"
 
 
-def test_temporal_semantic_preserves_intent(monkeypatch):
-    """The bottle-opening request travels the same path and keeps the semantic
-    condition as an (uncertain) visual_observation instead of being dropped."""
-    monkeypatch.setattr(config, "PLANNER_COOLDOWN_SECONDS", 0.0)
-    planner.transport = lambda text, rid: PlannerResult(status="ok", proposal={
+def _semantic_proposal():
+    return PlannerResult(status="ok", proposal={
         "supported": True, "name": "Bottle opening watch", "object_class": "bottle",
         "zone": {"type": "full_frame"}, "trigger": "presence_in_zone",
         "action": "focus_notify", "focus": True,
@@ -48,6 +45,27 @@ def test_temporal_semantic_preserves_intent(monkeypatch):
         "explanation": "focus the bottle; opening is a temporal check",
         "clarification_needed": "Opening is detected by a weak VLM and may be uncertain.",
     })
+
+
+def test_semantic_request_is_unsupported_in_video_mode(monkeypatch):
+    """LIVE-VIDEO-001: on the enabled VIDEO surface (camera ingest disabled) a
+    semantic/state-change request is rejected fail-closed — never downgraded to a
+    presence rule or a visual_observation."""
+    monkeypatch.setattr(config, "PLANNER_COOLDOWN_SECONDS", 0.0)
+    monkeypatch.setattr(config, "CAMERA_INGEST_ENABLED", False)
+    planner.transport = lambda text, rid: _semantic_proposal()
+    r = planner.plan("focus on the bottle if anybody opens it", "room1")
+    assert r.status == "unsupported"
+    assert r.task is None
+    assert "video mode" in (r.unsupported_reason or "")
+
+
+def test_temporal_semantic_preserves_intent_on_legacy_camera(monkeypatch):
+    """Legacy camera path (local QA only, camera ingest enabled) still carries the
+    semantic condition as an (uncertain) visual_observation."""
+    monkeypatch.setattr(config, "PLANNER_COOLDOWN_SECONDS", 0.0)
+    monkeypatch.setattr(config, "CAMERA_INGEST_ENABLED", True)
+    planner.transport = lambda text, rid: _semantic_proposal()
     r = planner.plan("focus on the bottle if anybody opens it", "room1")
     assert r.status == "ok"
     assert r.task["object_class"] == "bottle"

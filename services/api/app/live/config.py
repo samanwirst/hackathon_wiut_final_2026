@@ -111,6 +111,12 @@ MAX_RATE_LIMIT_KEYS = int(os.environ.get("VISIONFLOW_LIVE_MAX_RL_KEYS", "4096"))
 # (metadata) size. Bounded well below the frame byte cap.
 MAX_JSON_BODY_BYTES = int(os.environ.get("VISIONFLOW_LIVE_MAX_JSON_BYTES", str(16 * 1024)))
 MAX_WS_TEXT_BYTES = int(os.environ.get("VISIONFLOW_LIVE_MAX_WS_TEXT_BYTES", str(2 * 1024)))
+# Hard wall-clock bound on how long the server will spend RECEIVING a JSON body
+# in the pre-parse ASGI guard. A trickle/slowloris body cannot hold a worker
+# indefinitely (LIVE-VIDEO-007).
+REQUEST_RECEIVE_DEADLINE_SECONDS = float(
+    os.environ.get("VISIONFLOW_LIVE_RECEIVE_DEADLINE", "30")
+)
 
 # --- room lifecycle --------------------------------------------------------
 # A room with no received frames and no judges for this many seconds is retired
@@ -126,6 +132,12 @@ PLANNER_MODEL = os.environ.get("VISIONFLOW_LIVE_PLANNER_MODEL", "").strip()  # "
 # attempts. Protects the real subscription from a flood of judge prompts.
 PLANNER_ROOM_BUDGET = int(os.environ.get("VISIONFLOW_LIVE_PLANNER_BUDGET", "10"))
 PLANNER_COOLDOWN_SECONDS = float(os.environ.get("VISIONFLOW_LIVE_PLANNER_COOLDOWN", "3"))
+# Hard cap on bytes captured from the planner subprocess stdout/stderr. A flooding
+# CLI cannot exhaust memory; excess output is dropped while the pipe keeps draining
+# so the process can never deadlock (LIVE-VIDEO-008).
+PLANNER_MAX_OUTPUT_BYTES = int(
+    os.environ.get("VISIONFLOW_LIVE_PLANNER_MAX_OUTPUT", str(4 * 1024 * 1024))
+)
 
 # --- Teacher (non-actioning observation adapter) ---------------------------
 # Reuses the existing private loopback SmolVLM endpoint. Unset -> unavailable.
@@ -165,4 +177,8 @@ MAX_VIDEO_LONG_EDGE = int(os.environ.get("VISIONFLOW_LIVE_MAX_VIDEO_LONG_EDGE", 
 MIN_VIDEO_LONG_EDGE = int(os.environ.get("VISIONFLOW_LIVE_MIN_VIDEO_LONG_EDGE", "64"))
 # Only one processing job per room at a time; total concurrent jobs bounded.
 MAX_CONCURRENT_VIDEO_JOBS = int(os.environ.get("VISIONFLOW_LIVE_MAX_VIDEO_JOBS", "2"))
+# Supported event cooldown (debounce) for a geometric rule, in SOURCE-video
+# seconds. A task may carry an explicit ``cooldown_seconds``; when absent the VIDEO
+# engine uses this default (LIVE-VIDEO-005). Consumed by rooms.build_engines.
+DEFAULT_COOLDOWN_SECONDS = float(os.environ.get("VISIONFLOW_LIVE_DEFAULT_COOLDOWN", "10"))
 VIDEO_UPLOAD_DIR = app_env_dir = os.environ.get("VISIONFLOW_LIVE_VIDEO_DIR", "").strip()

@@ -14,6 +14,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, StrictBool, field_validator, model_validator
 
+from app.live import config
+
 # COCO classes the YOLO detector genuinely produces and that are useful for the
 # automotive + general demo. These are REAL detectable classes, not canned
 # phrases. "bottle" is included because YOLO11n (COCO) detects it — the bottle
@@ -57,9 +59,16 @@ TRIGGER_TO_EVENT = {
 }
 
 
+# Canonical full-frame polygon (unit square). Kept as a module constant so the
+# zone validator is idempotent across re-validation.
+_FULL_FRAME_SQUARE = [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)]
+
+
 class ZoneSpec(BaseModel):
     """Canonical zone geometry. ``full_frame`` expands to the unit square so the
     planner can say "watch the bottle" without drawing a polygon."""
+
+    model_config = {"extra": "forbid"}
 
     type: Literal["full_frame", "polygon"] = "full_frame"
     polygon: list[tuple[float, float]] = Field(default_factory=list, max_length=50)
@@ -67,10 +76,16 @@ class ZoneSpec(BaseModel):
     @model_validator(mode="after")
     def _canonicalize(self) -> "ZoneSpec":
         if self.type == "full_frame":
-            # Canonical unit square; ignore any supplied polygon.
-            object.__setattr__(
-                self, "polygon", [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)]
-            )
+            # A full_frame zone and an explicit DIFFERENT polygon are CONFLICTING
+            # intents. Rejecting (instead of silently discarding the polygon) means a
+            # drawn region can never be silently lost (LIVE-VIDEO-005). The canonical
+            # unit square is allowed so re-validating an already-canonical zone is
+            # idempotent.
+            if self.polygon and [tuple(p) for p in self.polygon] != _FULL_FRAME_SQUARE:
+                raise ValueError(
+                    "full_frame zone must not carry a polygon; use type='polygon' to draw a region"
+                )
+            object.__setattr__(self, "polygon", list(_FULL_FRAME_SQUARE))
             return self
         if len(self.polygon) < 3:
             raise ValueError("polygon zone needs at least 3 vertices")
@@ -102,7 +117,14 @@ class VisualObservation(BaseModel):
 
 
 class LiveTask(BaseModel):
-    """The authoritative, validated live monitoring task."""
+    """The authoritative, validated live monitoring task.
+
+    Strict and extra-forbidden (recursively): an unknown field (an injected
+    ``code``/``url``/``command`` side channel) is rejected, never silently
+    dropped, and numeric constraints are never coerced from JSON booleans or
+    strings (LIVE-VIDEO-005)."""
+
+    model_config = {"extra": "forbid"}
 
     name: str = Field(min_length=1, max_length=120)
     object_class: str
@@ -110,10 +132,23 @@ class LiveTask(BaseModel):
     trigger: TriggerType
     duration_seconds: float | None = Field(default=None, ge=1, le=3600)
     threshold: int | None = Field(default=None, ge=1, le=100)
+    # Supported event cooldown/debounce in SOURCE-video seconds. When None the
+    # VIDEO engine applies config.DEFAULT_COOLDOWN_SECONDS. Faithfully carried,
+    # never silently discarded (LIVE-VIDEO-005).
+    cooldown_seconds: float | None = Field(default=None, ge=0, le=3600)
     action: ActionType = "notify"
-    focus: bool = False
+    focus: StrictBool = False
     visual_observation: VisualObservation | None = None
     explanation: str = Field(default="", max_length=800)
+
+    @field_validator("duration_seconds", "threshold", "cooldown_seconds", mode="before")
+    @classmethod
+    def _reject_bool_numbers(cls, v):
+        # A JSON boolean is NEVER a valid count/duration/cooldown. Reject before
+        # type coercion so ``true``/``false`` cannot become 1/0.
+        if isinstance(v, bool):
+            raise ValueError("must be a finite number, not a boolean")
+        return v
 
     @field_validator("object_class")
     @classmethod
@@ -133,6 +168,16 @@ class LiveTask(BaseModel):
             raise ValueError("count_exceeded requires threshold >= 1")
         if self.action == "focus_notify":
             object.__setattr__(self, "focus", True)
+        # Semantic / state-change conditions are NOT supported on the enabled
+        # VIDEO surface: there is no Teacher verification and no closest-geometry
+        # fallback. Reject fail-closed so a presence rule can never stand in for a
+        # "when opened/unattended" request (LIVE-VIDEO-001). The legacy camera
+        # path (local QA only, camera ingest enabled) still carries it.
+        if self.visual_observation is not None and not config.CAMERA_INGEST_ENABLED:
+            raise ValueError(
+                "semantic/state-change visual observations are not supported in video mode; "
+                "only geometric zone rules are available"
+            )
         return self
 
 
@@ -149,7 +194,7 @@ class TaskStateRequest(BaseModel):
 def capabilities_doc() -> dict:
     """Machine-readable capability declaration handed to the planner. Keeps the
     planner honest about exactly what the backend can execute."""
-    return {
+    doc = {
         "object_classes": sorted(SUPPORTED_CLASSES),
         "triggers": [
             "presence_in_zone",
@@ -160,14 +205,26 @@ def capabilities_doc() -> dict:
         ],
         "actions": ["notify", "focus_notify"],
         "zone": ["full_frame", "polygon"],
+        "duration_seconds": "dwell duration in SOURCE-video seconds (>= 1), e.g. 1.25",
+        "cooldown_seconds": "optional event debounce in SOURCE-video seconds (default 10)",
         "focus": "highlight / enlarge the tracked bounding box in the Judges UI (NO physical camera pan/tilt)",
-        "visual_observation": (
+    }
+    if config.CAMERA_INGEST_ENABLED:
+        doc["visual_observation"] = (
             "optional non-actioning semantic/temporal check routed to a weak local VLM; "
             "reports uncertainty and never by itself triggers an action"
-        ),
-        "notes": [
+        )
+        doc["notes"] = [
             "Opening/unattended/semantic conditions are not directly detectable by the geometric engine.",
             "Express them as a visual_observation (uncertain) plus the closest geometric trigger, or ask for clarification.",
             "Never silently drop a requested condition.",
-        ],
-    }
+        ]
+    else:
+        # Enabled VIDEO surface: geometric rules only, fail-closed (LIVE-VIDEO-001).
+        doc["visual_observation"] = "UNSUPPORTED in video mode"
+        doc["notes"] = [
+            "Opening/unattended/loitering-intent/damage and any state-change or semantic condition are UNSUPPORTED.",
+            "There is no visual_observation, no Teacher verification and NO closest-geometry fallback for a semantic request.",
+            "If the request depends on such a condition, set supported=false with unsupported_reason; never approximate it with a presence/dwell rule.",
+        ]
+    return doc

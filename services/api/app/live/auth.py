@@ -205,18 +205,28 @@ def sweep_expired() -> set[str]:
     return alive
 
 
+def _trusted_proxy_peers() -> set[str]:
+    raw = config.FORWARDED_ALLOW_IPS or ""
+    return {p.strip() for p in raw.split(",") if p.strip()}
+
+
 def client_identity(peer: str | None, forwarded_for: str | None) -> str:
     """Resolve a trustworthy client identity for rate limiting.
 
-    Untrusted forwarding headers are IGNORED unless ``TRUSTED_PROXY_HOPS`` > 0, in
-    which case the identity is the (hops)-th address from the RIGHT of the XFF
-    chain — the entry inserted by the closest trusted proxy — so a client cannot
-    spoof it by prepending addresses."""
+    X-Forwarded-For is honored ONLY when (a) ``TRUSTED_PROXY_HOPS`` > 0 AND (b) the
+    DIRECT peer is one of the explicitly trusted proxy peers
+    (``FORWARDED_ALLOW_IPS``). The identity is then the (hops)-th address from the
+    RIGHT of the chain — the entry inserted by the closest trusted proxy — so a
+    client cannot spoof it by prepending addresses. A caller connecting directly
+    (untrusted peer) can never supply its own forwarding header to dodge the PIN
+    lockout (LIVE-VIDEO-006)."""
     hops = config.TRUSTED_PROXY_HOPS
-    if hops > 0 and forwarded_for:
-        chain = [a.strip() for a in forwarded_for.split(",") if a.strip()]
-        if len(chain) >= hops:
-            return chain[-hops]
+    if hops > 0 and forwarded_for and peer is not None:
+        trusted = _trusted_proxy_peers()
+        if "*" in trusted or peer in trusted:
+            chain = [a.strip() for a in forwarded_for.split(",") if a.strip()]
+            if len(chain) >= hops:
+                return chain[-hops]
     return peer or "unknown"
 
 
@@ -244,12 +254,14 @@ def origin_allowed(origin: str | None, host: str | None) -> bool:
     """Authoritative Origin policy for mutations and WebSocket upgrades.
 
     When an origin allowlist is configured it is the ONLY authority: the request
-    must carry an ``Origin`` in that list. The caller-controlled ``Host`` can
-    never bypass the allowlist. Only in unconfigured local dev do we fall back to
-    same-origin matching (Origin netloc == a trusted Host)."""
+    must carry an ``Origin`` in that list. The configured ``Host`` allowlist is ALSO
+    authoritative — a request with an allowed Origin but a Host outside the
+    allowlist (a Host-header attack) is refused (LIVE-VIDEO-006). Only in
+    unconfigured local dev do we fall back to same-origin matching."""
     if config.ALLOWED_ORIGINS:
-        # Strict: a configured deployment demands an explicit, allowlisted Origin.
-        return bool(origin) and origin in config.ALLOWED_ORIGINS
+        # Strict: a configured deployment demands an explicit, allowlisted Origin AND
+        # a Host within the configured host allowlist.
+        return bool(origin) and origin in config.ALLOWED_ORIGINS and host_trusted(host)
     # Unconfigured (dev): accept a missing Origin (non-browser / same-origin
     # navigation) or an Origin whose netloc matches a trusted Host.
     if not origin:

@@ -14,9 +14,12 @@ rooms, login attempts, and frame sizes.
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import hmac
 import json
 import logging
 import math
+import threading
 import time
 from pathlib import Path
 
@@ -60,30 +63,109 @@ app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 # ---------------------------------------------------------------- middleware
 
 
-@app.middleware("http")
-async def _limit_body(request: Request, call_next):
-    """Pre-parse body bound: reject oversize requests by Content-Length before any
-    JSON parsing so a huge body cannot be buffered (LIVE-005)."""
-    # The video upload route streams a large binary body under its OWN byte cap
-    # (enforced byte-by-byte); the small JSON cap must not apply to it.
-    is_video_upload = request.method == "POST" and request.url.path.endswith("/video")
-    if request.method in ("POST", "PUT", "PATCH") and not is_video_upload:
-        cl = request.headers.get("content-length")
+async def _send_simple_json(send, status: int, detail: str) -> None:
+    body = json.dumps({"detail": detail}).encode()
+    await send({
+        "type": "http.response.start",
+        "status": status,
+        "headers": [(b"content-type", b"application/json"),
+                    (b"content-length", str(len(body)).encode())],
+    })
+    await send({"type": "http.response.body", "body": body})
+
+
+class _BodyBoundMiddleware:
+    """Pure-ASGI pre-parse body bound.
+
+    Counts the ACTUAL bytes received from the ASGI ``receive`` channel and rejects
+    an oversize JSON body with 413 BEFORE any JSON buffering/parsing, independent of
+    whether a (possibly lying/absent) Content-Length is present — so a chunked
+    request cannot bypass the memory/parse bound (LIVE-VIDEO-007). A bounded receive
+    deadline prevents a trickle body from holding a worker. The large streamed video
+    upload has its OWN byte-by-byte cap in its route and is passed straight through.
+    """
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope.get("type") != "http":
+            await self.app(scope, receive, send)
+            return
+        method = scope.get("method", "")
+        path = scope.get("path", "")
+        is_video_upload = method == "POST" and path.endswith("/video")
+        if method not in ("POST", "PUT", "PATCH"):
+            await self.app(scope, receive, send)
+            return
+
+        headers = {k.decode().lower(): v.decode() for k, v in scope.get("headers", [])}
+        cl = headers.get("content-length")
+
+        if is_video_upload:
+            # Streamed under the route's own cap; only an early Content-Length reject
+            # here (never buffer the large body).
+            if cl is not None:
+                try:
+                    if int(cl) > config.MAX_VIDEO_BYTES:
+                        await _send_simple_json(send, 413, "video exceeds size limit")
+                        return
+                except ValueError:
+                    await _send_simple_json(send, 400, "invalid content-length")
+                    return
+            await self.app(scope, receive, send)
+            return
+
+        cap = config.MAX_JSON_BODY_BYTES
         if cl is not None:
             try:
-                if int(cl) > config.MAX_JSON_BODY_BYTES:
-                    return JSONResponse({"detail": "request body too large"}, status_code=413)
+                if int(cl) > cap:
+                    await _send_simple_json(send, 413, "request body too large")
+                    return
             except ValueError:
-                return JSONResponse({"detail": "invalid content-length"}, status_code=400)
-    elif is_video_upload:
-        cl = request.headers.get("content-length")
-        if cl is not None:
+                await _send_simple_json(send, 400, "invalid content-length")
+                return
+
+        # Buffer the body with a hard byte cap + receive deadline, then replay it.
+        deadline = time.monotonic() + config.REQUEST_RECEIVE_DEADLINE_SECONDS
+        chunks: list[bytes] = []
+        total = 0
+        more = True
+        while more:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                await _send_simple_json(send, 408, "request receive timeout")
+                return
             try:
-                if int(cl) > config.MAX_VIDEO_BYTES:
-                    return JSONResponse({"detail": "video exceeds size limit"}, status_code=413)
-            except ValueError:
-                return JSONResponse({"detail": "invalid content-length"}, status_code=400)
-    return await call_next(request)
+                message = await asyncio.wait_for(receive(), timeout=remaining)
+            except (asyncio.TimeoutError, TimeoutError):
+                await _send_simple_json(send, 408, "request receive timeout")
+                return
+            if message["type"] == "http.disconnect":
+                return
+            body = message.get("body", b"")
+            if body:
+                total += len(body)
+                if total > cap:
+                    await _send_simple_json(send, 413, "request body too large")
+                    return
+                chunks.append(body)
+            more = message.get("more_body", False)
+
+        buffered = b"".join(chunks)
+        served = False
+
+        async def replay():
+            nonlocal served
+            if not served:
+                served = True
+                return {"type": "http.request", "body": buffered, "more_body": False}
+            return await receive()
+
+        await self.app(scope, replay, send)
+
+
+app.add_middleware(_BodyBoundMiddleware)
 
 
 # ---------------------------------------------------------------- helpers
@@ -134,6 +216,45 @@ def _require_room_member(sess: auth.Session, room_id: str) -> rooms.RoomState:
         # A valid session bound to a different room (or none) cannot cross over.
         raise HTTPException(403, "not a member of this room")
     return room
+
+
+# ------------------------------------------------- canonical approval drafts
+# Server-bound, room-scoped canonical task drafts for the plan -> (edit) ->
+# validate -> activate contract (LIVE-VIDEO-005). Kept here under an app-level
+# lock/dict (NOT in rooms.py). A draft binds the canonical task bytes to the
+# room id, the uploaded source sha256 and the task version it was approved
+# against, so a stale/replayed/tampered approval cannot activate.
+_drafts: dict[str, dict] = {}
+_drafts_lock = threading.Lock()
+
+
+def _canonical_task_json(task: dict) -> str:
+    return json.dumps(task, sort_keys=True, separators=(",", ":"))
+
+
+def _draft_hash(task: dict, source_sha: str | None, room_id: str, version: int) -> str:
+    payload = f"{_canonical_task_json(task)}|{source_sha or ''}|{room_id}|{int(version)}"
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def _store_draft(room_id: str, task: dict, source_sha: str | None, version: int) -> tuple[str, int]:
+    digest = _draft_hash(task, source_sha, room_id, version)
+    with _drafts_lock:
+        _drafts[room_id] = {
+            "hash": digest, "version": version,
+            "source_sha": source_sha, "task": task,
+        }
+    return digest, version
+
+
+def _pop_draft(room_id: str) -> None:
+    with _drafts_lock:
+        _drafts.pop(room_id, None)
+
+
+def _reset_drafts_for_tests() -> None:
+    with _drafts_lock:
+        _drafts.clear()
 
 
 # ---------------------------------------------------------------- pages
@@ -449,10 +570,21 @@ def plan_task(room_id: str, sess: auth.Session = Depends(require_mutation),
     room = _require_room_member(sess, room_id)
     text = str(body.get("text", ""))
     result = planner.plan(text, room.room_id)
+    # A successful plan issues a server-bound canonical draft so the judge can
+    # approve the EXACT task that was previewed (LIVE-VIDEO-005).
+    draft_hash = None
+    expected_version = None
+    if result.status == "ok" and result.task:
+        with room.lock:
+            src = room.video_sha256
+            ver = room.task_version
+        draft_hash, expected_version = _store_draft(room.room_id, result.task, src, ver)
     return {
         "status": result.status,
         "original_text": text,
         "task": result.task,
+        "draft_hash": draft_hash,
+        "expected_version": expected_version,
         "proposal": result.proposal,
         "clarification": result.clarification,
         "unsupported_reason": result.unsupported_reason,
@@ -463,6 +595,30 @@ def plan_task(room_id: str, sess: auth.Session = Depends(require_mutation),
             "attempt": result.attempt,
         },
     }
+
+
+@app.post("/api/live/rooms/{room_id}/task/validate")
+def validate_task(room_id: str, sess: auth.Session = Depends(require_mutation),
+                  body: dict = Body(...)):
+    """Validate an edited task against the backend-owned DSL and issue a server-bound
+    canonical draft (hash + version) the judge can then approve verbatim. This
+    supports manual JSON edits of a planned task (LIVE-VIDEO-005)."""
+    if sess.role != "judge":
+        raise HTTPException(403, "only a judge can validate a task")
+    room = _require_room_member(sess, room_id)
+    raw_task = body.get("task")
+    if not isinstance(raw_task, dict):
+        raise HTTPException(400, "task object required")
+    try:
+        task = LiveTask.model_validate(raw_task)
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(422, f"task failed validation: {exc}")
+    canonical = task.model_dump()
+    with room.lock:
+        src = room.video_sha256
+        ver = room.task_version
+    digest, expected = _store_draft(room.room_id, canonical, src, ver)
+    return {"task": canonical, "draft_hash": digest, "expected_version": expected}
 
 
 @app.post("/api/live/rooms/{room_id}/task/activate")
@@ -479,11 +635,45 @@ def activate_task(room_id: str, sess: auth.Session = Depends(require_mutation),
         task = LiveTask.model_validate(raw_task)
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(422, f"task failed validation: {exc}")
+    canonical = task.model_dump()
+
+    # Canonical approval binding (LIVE-VIDEO-005). When a draft_hash / expected_version
+    # is supplied, it MUST exactly match the server-bound draft for the CURRENT source
+    # and version; a wrong, missing-counterpart, stale or replayed approval is rejected
+    # fail-closed. (An approval with no binding fields still activates the re-validated
+    # task, preserving the direct activation path; the UI sends the full binding.)
+    draft_hash = body.get("draft_hash")
+    expected_version = body.get("expected_version")
+    if draft_hash is not None or expected_version is not None:
+        if not isinstance(draft_hash, str) or not draft_hash:
+            raise HTTPException(422, "draft_hash required with expected_version")
+        if not isinstance(expected_version, int) or isinstance(expected_version, bool):
+            raise HTTPException(422, "expected_version must be an integer")
+        with room.lock:
+            cur_version = room.task_version
+            src = room.video_sha256
+        with _drafts_lock:
+            stored = _drafts.get(room_id)
+        if cur_version != expected_version:
+            raise HTTPException(409, "stale approval: task version changed; re-validate")
+        if stored is None:
+            raise HTTPException(409, "no validated draft for this room; validate first")
+        want = _draft_hash(canonical, src, room_id, expected_version)
+        # Submitted hash must match the canonical bytes bound to the live source+version
+        # AND the stored validated draft (replay/tamper protection).
+        if not hmac.compare_digest(draft_hash, want) or \
+                not hmac.compare_digest(str(stored.get("hash")), want):
+            raise HTTPException(422, "approval does not match the validated draft")
+        if stored.get("source_sha") != src:
+            raise HTTPException(409, "source changed since approval; re-validate")
+
     with room.lock:
         fw = room.latest_meta.get("w") or 1
         fh = room.latest_meta.get("h") or 1
-        version = rooms.activate_task(room, task.model_dump(), fw, fh)
+        version = rooms.activate_task(room, canonical, fw, fh)
         has_video = room.video_path is not None
+    # One-shot: consume the draft so the same approval cannot be replayed.
+    _pop_draft(room_id)
     # A new approved request on the SAME video reruns the analysis from frame 0
     # with fresh detector/tracker/engine state. Any in-flight job is superseded;
     # its stale events are already dropped by the version guard.
@@ -495,7 +685,7 @@ def activate_task(room_id: str, sess: auth.Session = Depends(require_mutation),
             rerun = True
         except RuntimeError:
             rerun = False
-    return {"ok": True, "task_version": version, "task": task.model_dump(), "rerun": rerun}
+    return {"ok": True, "task_version": version, "task": canonical, "rerun": rerun}
 
 
 @app.post("/api/live/rooms/{room_id}/task/state")
@@ -531,6 +721,11 @@ def task_state(room_id: str, sess: auth.Session = Depends(require_mutation),
 @app.post("/api/live/rooms/{room_id}/probe")
 def probe_teacher(room_id: str, sess: auth.Session = Depends(require_mutation),
                   body: dict = Body(...)):
+    # The Teacher observation path belongs to the disabled camera/semantic flow and
+    # is not verifiable on the enabled VIDEO surface. Keep it inaccessible
+    # (fail-closed 404) unless camera ingest is explicitly enabled (LIVE-VIDEO-001).
+    if not config.CAMERA_INGEST_ENABLED:
+        raise HTTPException(404, "not found")
     if sess.role != "judge":
         raise HTTPException(403, "only a judge can probe")
     room = _require_room_member(sess, room_id)

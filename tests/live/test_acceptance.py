@@ -462,24 +462,49 @@ def test_task_state_requires_typed_boolean(h):
     assert r.status_code==422, f'string false accepted as enabled={r.json().get("task_enabled")}'
 
 
+class _FakeStdin:
+    def __init__(self): self.data = ''
+    def write(self, s): self.data += s
+    def close(self): pass
+
+
+class _FakeStream:
+    def __init__(self, text): self._text = text; self._served = False
+    def read(self, n=-1):
+        if self._served: return ''
+        self._served = True; return self._text
+
+
 def test_model_branch_novel_wording_and_invocation_contract(h, monkeypatch):
+    # Updated to the Popen process-group contract (LIVE-VIDEO-008) and to verify the
+    # throwaway cwd is OUTSIDE the repo (the old fixed-ROOT path assumption was a
+    # harness defect). All real security assertions are preserved.
     calls=[]
+    text='Give the advisor a heads-up if a truck remains visible for seventeen seconds.'
     p=proposal('truck','dwell_in_zone'); p['duration_seconds']=17
-    def fake_run(argv, **kwargs):
-        calls.append((argv,kwargs))
-        assert kwargs['shell'] is False
-        assert kwargs['input'] == 'Give the advisor a heads-up if a truck remains visible for seventeen seconds.'
-        assert Path(kwargs['cwd']).is_relative_to(ROOT)
-        assert set(kwargs['env']) == {'HOME','PATH'}
-        assert argv[argv.index('--tools')+1] == ''
-        assert '--safe-mode' in argv and '--strict-mcp-config' in argv
-        return subprocess.CompletedProcess(argv,0,json.dumps({'subtype':'success','is_error':False,
-               'structured_output':p,'modelUsage':{'QA_ONLY_MODEL':{'outputTokens':9}},
-               'usage':{'output_tokens':9}}),'')
-    monkeypatch.setattr(planner.subprocess,'run',fake_run)
+    envelope=json.dumps({'subtype':'success','is_error':False,
+           'structured_output':p,'modelUsage':{'QA_ONLY_MODEL':{'outputTokens':9}},
+           'usage':{'output_tokens':9}})
+    class FakePopen:
+        def __init__(self, argv, **kwargs):
+            calls.append((argv,kwargs))
+            assert kwargs['shell'] is False
+            assert kwargs['start_new_session'] is True
+            cwd=Path(kwargs['cwd'])
+            assert cwd.is_dir() and not cwd.is_relative_to(REPO), cwd
+            assert set(kwargs['env']) == {'HOME','PATH'}
+            assert argv[argv.index('--tools')+1] == ''
+            assert '--safe-mode' in argv and '--strict-mcp-config' in argv
+            self.pid=424242; self.returncode=0
+            self.stdin=_FakeStdin()
+            self.stdout=_FakeStream(envelope); self.stderr=_FakeStream('')
+        def wait(self, timeout=None):
+            # The untrusted judge text travels on STDIN, never in argv/system prompt.
+            assert self.stdin.data == text
+            return 0
+    monkeypatch.setattr(planner.subprocess,'Popen',FakePopen)
     c,room,code=h.room(); judge=h.judge(code)
-    r=h.post(judge,f'/api/live/rooms/{room.room_id}/task/plan',{'text':
-       'Give the advisor a heads-up if a truck remains visible for seventeen seconds.'})
+    r=h.post(judge,f'/api/live/rooms/{room.room_id}/task/plan',{'text':text})
     assert r.status_code==200 and r.json()['status']=='ok'
     assert r.json()['task']['duration_seconds']==17
     assert room.task_enabled is False and room.task is None  # draft never activated
