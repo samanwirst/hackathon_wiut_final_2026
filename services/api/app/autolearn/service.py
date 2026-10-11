@@ -220,12 +220,21 @@ def _reserve_attempt(resv_session, task_id: int, *, image_hash: str, dedupe_key:
       * ``"dedupe"`` — an identical image/prompt/model attempt is already in flight
         or recently sent; reuse/skip without a second outbound request.
 
-    Cross-process atomicity comes from ``UNIQUE(task_id, slot)``: a collision on a
-    concurrent insert triggers a recount-and-retry, so two workers can never both
-    push the task over budget."""
-    for _ in range(budget + 8):
-        # Reuse/reject an identical in-flight or already-sent attempt first so a
-        # duplicate never triggers a second outbound call.
+    Cross-process atomicity does NOT rely on a count read taken before the insert
+    (that read can go stale in a count/slot interleaving). Instead the slot insert
+    is durably committed first, then an AUTHORITATIVE post-commit resolution re-reads
+    the committed active set and decides ownership from it, so two workers/loops that
+    each picked a distinct slot can never both proceed:
+      * identical dedupe identity -> only the lowest-slot owner proceeds; a later
+        duplicate releases its slot and reports ``dedupe``.
+      * budget -> only the ``budget`` lowest-slot rows survive; a row beyond that
+        rank releases itself and reports ``budget``.
+    ``UNIQUE(task_id, slot)`` still prevents two reservers from taking the same slot
+    (recount-and-retry on collision). A released row consumes nothing and stays
+    visible in the ledger for traceability."""
+    for _ in range(budget + 16):
+        # Fast-path: an identical in-flight or already-sent attempt already owns
+        # this dedupe identity -> reuse without a second outbound call.
         dup = (
             resv_session.query(LabelingReservation)
             .filter(
@@ -258,7 +267,30 @@ def _reserve_attempt(resv_session, task_id: int, *, image_hash: str, dedupe_key:
             # Another reserver claimed this slot; recount and retry.
             resv_session.rollback()
             continue
-        return {"outcome": "reserved", "reservation_id": row.id}
+        # Authoritative post-commit resolution against the committed active set.
+        active = (
+            resv_session.query(LabelingReservation)
+            .filter(
+                LabelingReservation.task_id == task_id,
+                LabelingReservation.status.in_(("reserved", "sent")),
+            )
+            .order_by(LabelingReservation.slot.asc())
+            .all()
+        )
+        same_key = [r for r in active if r.dedupe_key == dedupe_key]
+        if same_key and same_key[0].id != row.id:
+            # A lower-slot reserver already owns this identical attempt.
+            row.status = "released"
+            resv_session.commit()
+            return {"outcome": "dedupe"}
+        winners = {r.id for r in active[:budget]}
+        if row.id in winners:
+            return {"outcome": "reserved", "reservation_id": row.id}
+        # We lost the budget race: release our own slot (consumes nothing) and
+        # recount — the next iteration sees the winner and reports ``budget``.
+        row.status = "released"
+        resv_session.commit()
+        continue
     return {"outcome": "budget", "spent": budget}
 
 
@@ -325,6 +357,20 @@ def _cache_put(resv_session, task_id: int, *, cache_key: str, image_hash: str,
         resv_session.commit()
 
 
+def _valid_cached_label(label, confidence, permitted: set) -> bool:
+    """Whether a persisted/cached Teacher result is still trustworthy to reuse
+    (C-005). A corrupted cache row (unsupported label, or confidence that is a
+    bool/non-number/non-finite/out-of-range) must NEVER authorize a classification;
+    it is treated as a miss so the caller re-labels under budget instead."""
+    if label not in permitted:
+        return False
+    if confidence is None:
+        return True
+    if isinstance(confidence, bool) or not isinstance(confidence, (int, float)):
+        return False
+    return math.isfinite(confidence) and 0.0 <= float(confidence) <= 1.0
+
+
 def _cached_label(session: Session, task: AutoLearnTask, sample: TrainingSample):
     """Reuse an identical already-labeled result (same task, image content, prompt
     and model) so an identical input costs zero new attempts (C-005)."""
@@ -378,6 +424,11 @@ def run_labeling(session: Session, task: AutoLearnTask, *, limit: int | None = N
     resv_session, independent = _reservation_session(session)
     try:
         for s in pending:
+            # Durably commit each sample's result/audit as it completes and NEVER
+            # hold the job's write transaction open across an independent reservation
+            # commit or the outbound network call (C-005): the independent
+            # reservation session serializes on the shared SQLite file, so a
+            # long-lived job writer would self-lock it. Partial jobs stay traceable.
             # Within-job duplicate suppression / durable cached reuse: a repeated
             # identical image reuses the first result rather than paying a call.
             dup = seen_in_job.get(s.image_hash)
@@ -390,12 +441,14 @@ def run_labeling(session: Session, task: AutoLearnTask, *, limit: int | None = N
                 s.teacher_prompt = task.visual_prompt
                 s.teacher_raw = {"cache_hit": True, "source_sample_id": cache_src.id}
                 _audit(session, task, s, status="cache_hit")  # zero attempts consumed
+                session.commit()
                 cached += 1
                 seen_in_job[s.image_hash] = s
                 continue
 
             if attempts >= job_cap:
                 _audit(session, task, s, status="suppressed_budget")  # zero attempts
+                session.commit()
                 suppressed += 1
                 continue
 
@@ -406,6 +459,7 @@ def run_labeling(session: Session, task: AutoLearnTask, *, limit: int | None = N
                 s.teacher_status = "error"
                 s.teacher_prompt = task.visual_prompt
                 _audit(session, task, s, status="error")  # local, zero attempts
+                session.commit()
                 failed += 1
                 continue
 
@@ -414,10 +468,12 @@ def run_labeling(session: Session, task: AutoLearnTask, *, limit: int | None = N
                                     dedupe_key=dkey, budget=budget)
             if resv["outcome"] == "budget":
                 _audit(session, task, s, status="suppressed_budget")  # zero attempts
+                session.commit()
                 suppressed += 1
                 continue
             if resv["outcome"] == "dedupe":
                 _audit(session, task, s, status="deduped")  # zero attempts
+                session.commit()
                 deduped += 1
                 continue
 
@@ -442,6 +498,9 @@ def run_labeling(session: Session, task: AutoLearnTask, *, limit: int | None = N
                 failed += 1
             _audit(session, task, s, status=cand.status, latency_ms=cand.latency_ms,
                    provider_host=cand.provider_host, model=cand.model, method=cand.method)
+            # Durably commit this sample's result + audit before the next iteration
+            # so a later sample's fault cannot roll back completed work (C-005).
+            session.commit()
 
         task.teacher_model = task.teacher_model or config.VLM_MODEL or None
         task.status = "review" if (labeled or cached) else task.status
@@ -590,34 +649,67 @@ def _embed(rows: list[TrainingSample]) -> tuple[np.ndarray, list[float]]:
     return enc.embed_bytes(blobs)
 
 
-def _load_verified_artifact(version: ModelVersion):
+_ARTIFACT_PROVENANCE_FIELDS = (
+    ("class_mapping", "class_mapping"),
+    ("encoder_name", "encoder_name"),
+    ("encoder_weights_version", "encoder_weights_version"),
+    ("preprocess_version", "preprocess_version"),
+    ("dataset_hash", "dataset_hash"),
+    ("split_hash", "split_hash"),
+)
+
+_NO_EXTRA = object()
+
+
+def _load_verified_artifact(version: ModelVersion, *, require_complete: bool = True):
     """Load a Student artifact and verify its stored provenance matches the
-    registry row (C-008/C-009). ``torch.load`` raises ``FileNotFoundError`` when
-    the artifact file is gone; this raises ``AutoLearnError`` when the artifact
-    describes a different model than its row claims (class mapping, encoder/
-    preprocess identity, dataset/split hashes). A mock classifier without
-    ``.extra`` (unit fixtures) skips the metadata check."""
-    clf = student.StudentClassifier.load(version.artifact_path)
-    extra = getattr(clf, "extra", None)
-    if extra:
-        mismatches = []
-        if extra.get("class_mapping") not in (None, version.class_mapping):
-            mismatches.append("class_mapping")
-        if extra.get("encoder_name") not in (None, version.encoder_name):
-            mismatches.append("encoder_name")
-        if extra.get("encoder_weights_version") not in (None, version.encoder_weights_version):
-            mismatches.append("encoder_weights_version")
-        if extra.get("preprocess_version") not in (None, version.preprocess_version):
-            mismatches.append("preprocess_version")
-        if extra.get("dataset_hash") not in (None, version.dataset_hash):
-            mismatches.append("dataset_hash")
-        if extra.get("split_hash") not in (None, version.split_hash):
-            mismatches.append("split_hash")
-        if mismatches:
+    registry row (C-008/C-009).
+
+    A missing artifact file raises ``FileNotFoundError``; a corrupt/unpicklable
+    archive is normalized to a bounded ``AutoLearnError`` (never a raw 500). When
+    the loaded artifact carries provenance it must MATCH its row (class mapping +
+    ordering, encoder/preprocess identity, dataset/split hashes); when
+    ``require_complete`` (gate/evaluate/activate/rollback) every provenance field is
+    also MANDATORY, so an empty/partial-provenance archive or a reversed class
+    mapping is refused rather than silently trusted. A bare mock classifier without
+    an ``.extra`` attribute (unit fixtures) skips the metadata check."""
+    try:
+        clf = student.StudentClassifier.load(version.artifact_path)
+    except FileNotFoundError:
+        raise
+    except AutoLearnError:
+        raise
+    except Exception as exc:  # noqa: BLE001 — corrupt/unpicklable archive
+        raise AutoLearnError(f"artifact could not be loaded ({type(exc).__name__})")
+
+    extra = getattr(clf, "extra", _NO_EXTRA)
+    if extra is _NO_EXTRA:
+        return clf  # bare mock fixture: no provenance to verify
+    if not isinstance(extra, dict):
+        raise AutoLearnError("artifact provenance is missing or malformed")
+
+    if require_complete:
+        missing = [field for field, _ in _ARTIFACT_PROVENANCE_FIELDS if not extra.get(field)]
+        if missing:
             raise AutoLearnError(
-                "artifact provenance does not match its registry row: "
-                + ", ".join(mismatches)
+                "artifact is missing required provenance: " + ", ".join(missing)
             )
+
+    mismatches = []
+    for field, attr in _ARTIFACT_PROVENANCE_FIELDS:
+        value = extra.get(field)
+        if value is not None and value != getattr(version, attr):
+            mismatches.append(field)
+    # The saved model's class ordering must agree with the registry class mapping
+    # (classes[i] -> i); a reversed mapping would invert every prediction (C-008).
+    classes = getattr(clf, "classes", None)
+    if classes is not None and version.class_mapping:
+        if {c: i for i, c in enumerate(classes)} != version.class_mapping:
+            mismatches.append("class_ordering")
+    if mismatches:
+        raise AutoLearnError(
+            "artifact provenance does not match its registry row: " + ", ".join(mismatches)
+        )
     return clf
 
 
@@ -655,6 +747,18 @@ def _reserve_version(session: Session, task: AutoLearnTask, plan, enc) -> ModelV
             continue
         return mv
     raise AutoLearnError("could not reserve a unique model version (too many collisions)")
+
+
+def _artifact_sha256(path) -> str | None:
+    """SHA-256 of the artifact file bytes, or None if unreadable (C-002).
+
+    Bound into the evaluated metrics so the gate can refuse metrics that were
+    computed against a DIFFERENT artifact than the one currently on disk (tampered /
+    swapped weights that still load but no longer produce the measured quality)."""
+    try:
+        return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+    except OSError:
+        return None
 
 
 def _manifest_digest(members: list[tuple]) -> str:
@@ -742,6 +846,8 @@ def train(session: Session, task: AutoLearnTask) -> ModelVersion:
             for r in split_rows
         ]
         test_metrics["manifest_digest"] = _manifest_digest(members)
+        # Bind the exact artifact bytes these metrics were measured against (C-002).
+        test_metrics["artifact_sha256"] = _artifact_sha256(artifact)
 
         mv.threshold = threshold
         mv.metrics = test_metrics
@@ -789,15 +895,29 @@ def train(session: Session, task: AutoLearnTask) -> ModelVersion:
 def _validate_proba(probs, n: int) -> "np.ndarray":
     """Return a validated 1-D probability array or raise (C-002).
 
-    Every predicted probability must be a finite real number in [0, 1] and the
-    array must have exactly one entry per row. A NaN/inf/out-of-range/wrong-shape
-    output is a broken model, not a passing one, so metrics are never computed from
-    it and classification returns an explicit unknown instead."""
-    arr = np.asarray(probs, dtype=np.float64).reshape(-1)
+    The RAW output type and shape are validated BEFORE any float coercion: a bool
+    array, a string/object array (incl. numeric strings like ``"0.5"``), or a
+    multi-dimensional array (a (N,1) column or (1,N) row) is a broken model, not a
+    passing one — np coercion would silently paper over it. Only a genuine real
+    numeric 1-D array with exactly one finite value per row in [0, 1] is accepted;
+    anything else raises so metrics are never computed from it and classification
+    returns an explicit unknown instead."""
+    arr = np.asarray(probs)
+    if arr.dtype == np.bool_:
+        raise AutoLearnError("student produced boolean outputs, not probabilities")
+    if not np.issubdtype(arr.dtype, np.number) or np.issubdtype(arr.dtype, np.complexfloating):
+        raise AutoLearnError(
+            f"student produced non-numeric outputs (dtype {arr.dtype}), not probabilities"
+        )
+    if arr.ndim != 1:
+        raise AutoLearnError(
+            f"student probabilities must be 1-D (got shape {tuple(arr.shape)})"
+        )
     if arr.shape[0] != n:
         raise AutoLearnError(
             f"student produced {arr.shape[0]} probabilities for {n} inputs (wrong shape)"
         )
+    arr = arr.astype(np.float64)
     if not np.all(np.isfinite(arr)):
         raise AutoLearnError("student produced non-finite probabilities")
     if np.any(arr < 0.0) or np.any(arr > 1.0):
@@ -849,6 +969,16 @@ def _frozen_manifest(session: Session, version: ModelVersion) -> dict:
             raise AutoLearnError(f"manifest sample {ms.sample_id} no longer exists")
         if s.image_hash != ms.image_hash:
             raise AutoLearnError(f"manifest sample {ms.sample_id} content changed")
+        # Bind the ACTUAL image bytes on disk, not just the recorded DB hash (C-002):
+        # a file whose bytes were swapped under an unchanged DB hash must fail closed.
+        # (If the file is absent — e.g. pure-DB unit fixtures — the DB-hash check
+        # above already applies; embedding would fail later for a real evaluation.)
+        try:
+            disk_bytes = Path(s.image_path).read_bytes()
+        except OSError:
+            disk_bytes = None
+        if disk_bytes is not None and hashlib.sha256(disk_bytes).hexdigest() != ms.image_hash:
+            raise AutoLearnError(f"manifest sample {ms.sample_id} image bytes changed on disk")
         if not s.verified or s.verified_label != ms.verified_label:
             raise AutoLearnError(f"manifest sample {ms.sample_id} verified label changed")
         by_split[ms.split].append(s)
@@ -879,6 +1009,7 @@ def evaluate(session: Session, version: ModelVersion) -> dict:
         clf = _load_verified_artifact(version)
         m = _evaluate_rows(clf, info["by_split"]["test"], task.positive_label, version.threshold)
         m["manifest_digest"] = info["digest"]
+        m["artifact_sha256"] = _artifact_sha256(version.artifact_path)
     except (AutoLearnError, FileNotFoundError) as exc:
         version.metrics = {"error": str(exc), "support": 0, "f1": None}
         session.commit()
@@ -971,34 +1102,58 @@ def gate_status(version: ModelVersion, session: Session | None = None) -> dict:
                 )
         except AutoLearnError as exc:
             reasons.append(f"frozen manifest inconsistent: {exc}")
+        # Bind the artifact bytes the metrics were measured against (C-002): tampered
+        # weights that still load but change quality must invalidate the gate.
+        stored_hash = m.get("artifact_sha256")
+        current_hash = _artifact_sha256(version.artifact_path)
+        if not stored_hash:
+            reasons.append(
+                "stored metrics are not bound to an artifact hash; re-evaluate "
+                "before activation (fail-closed)"
+            )
+        elif current_hash is None:
+            reasons.append("artifact file is missing or unreadable")
+        elif current_hash != stored_hash:
+            reasons.append(
+                "artifact bytes changed since evaluation; re-evaluate before "
+                "activation (fail-closed)"
+            )
 
+    # Strict F1 validation (C-002): a real finite number in [0, 1]. bool, NaN/inf,
+    # numeric strings and out-of-range values can never pass or be serialized raw.
+    f1_valid = (
+        isinstance(f1, (int, float)) and not isinstance(f1, bool)
+        and math.isfinite(f1) and 0.0 <= float(f1) <= 1.0
+    )
     if f1 is None:
         reasons.append("no held-out metrics; run evaluate first")
-    elif not (isinstance(f1, (int, float)) and math.isfinite(f1)):
-        reasons.append(f"held-out F1 is not a finite number ({f1!r})")
+    elif not f1_valid:
+        reasons.append(f"held-out F1 is not a finite number in [0, 1] ({f1!r})")
 
-    if support != snapshot_test:
+    if not isinstance(support, int) or isinstance(support, bool) or support != snapshot_test:
         reasons.append(
-            f"evaluated support {support} != frozen snapshot test count {snapshot_test}; "
+            f"evaluated support {support!r} != frozen snapshot test count {snapshot_test}; "
             "membership is inconsistent"
         )
     if snapshot_test < config.AUTOLEARN_GATE_MIN_TEST:
         reasons.append(
             f"test support {snapshot_test} < required {config.AUTOLEARN_GATE_MIN_TEST}"
         )
-    if positives is None or negatives is None or positives < 1 or negatives < 1:
+    if not isinstance(positives, int) or isinstance(positives, bool) \
+            or not isinstance(negatives, int) or isinstance(negatives, bool) \
+            or positives < 1 or negatives < 1:
         reasons.append(
-            f"held-out set must contain both classes (positives={positives}, negatives={negatives})"
+            f"held-out set must contain both classes (positives={positives!r}, negatives={negatives!r})"
         )
-    if f1 is not None and isinstance(f1, (int, float)) and math.isfinite(f1) \
-            and f1 < config.AUTOLEARN_GATE_MIN_F1:
+    if f1_valid and float(f1) < config.AUTOLEARN_GATE_MIN_F1:
         reasons.append(f"held-out F1 {f1} < gate {config.AUTOLEARN_GATE_MIN_F1}")
 
     passed = not reasons
     return {
         "passed": passed,
-        "f1": f1,
-        "support": support,
+        # Only ever surface a JSON-safe F1 (never raw NaN/inf/bool/string).
+        "f1": float(f1) if f1_valid else None,
+        "support": support if (isinstance(support, int) and not isinstance(support, bool)) else None,
         "min_f1": config.AUTOLEARN_GATE_MIN_F1,
         "test_count": snapshot_test,
         "min_test": config.AUTOLEARN_GATE_MIN_TEST,
@@ -1107,12 +1262,15 @@ def classify_offline(session: Session, task: AutoLearnTask, image_bytes: bytes) 
     if not task.active_version_id:
         return {"status": "unavailable", "detail": "no active Student version", "action": "none"}
     version = session.get(ModelVersion, task.active_version_id)
-    # Load defensively: a missing/unloadable active artifact is a bounded
-    # unavailable state, never a 500 (C-002/C-009).
+    # Load through the VERIFIED loader so the active route can never classify with a
+    # mismatched/wrong-row artifact while reporting this version (C-008). A
+    # missing/unusable/mismatched artifact is a bounded unavailable state, not a 500.
     try:
-        clf = student.StudentClassifier.load(version.artifact_path)
+        clf = _load_verified_artifact(version, require_complete=False)
     except FileNotFoundError:
         return {"status": "unavailable", "detail": "active Student artifact is missing", "action": "none"}
+    except AutoLearnError as exc:
+        return {"status": "unavailable", "detail": f"active Student artifact unusable: {exc}", "action": "none"}
     except Exception:  # noqa: BLE001
         return {"status": "unavailable", "detail": "active Student artifact could not be loaded", "action": "none"}
     enc = encoder.get_encoder()
@@ -1144,7 +1302,9 @@ def classify_offline(session: Session, task: AutoLearnTask, image_bytes: bytes) 
                 )
                 .first()
             )
-            if cached is not None:
+            if cached is not None and _valid_cached_label(
+                cached.teacher_label, cached.teacher_confidence, {pos, neg}
+            ):
                 return {
                     "status": "teacher_fallback", "student_confidence": round(p, 4),
                     "margin": round(margin, 4), "teacher_status": "cache_hit",
@@ -1154,11 +1314,16 @@ def classify_offline(session: Session, task: AutoLearnTask, image_bytes: bytes) 
             try:
                 cache_row = _cache_get(resv_session, task.id, cache_key)
                 if cache_row is not None and cache_row.status == "labeled":
-                    return {
-                        "status": "teacher_fallback", "student_confidence": round(p, 4),
-                        "margin": round(margin, 4), "teacher_status": "cache_hit",
-                        "label": cache_row.label, "action": "none",
-                    }
+                    # Strictly re-validate the persisted cache before trusting it
+                    # (C-005): a corrupted row never authorizes a classification.
+                    if _valid_cached_label(cache_row.label, cache_row.confidence, {pos, neg}):
+                        return {
+                            "status": "teacher_fallback", "student_confidence": round(p, 4),
+                            "margin": round(margin, 4), "teacher_status": "cache_hit",
+                            "label": cache_row.label, "action": "none",
+                        }
+                    resv_session.delete(cache_row)
+                    resv_session.commit()
                 resv = _reserve_attempt(
                     resv_session, task.id, image_hash=image_hash,
                     dedupe_key=cache_key, budget=config.AUTOLEARN_LABEL_BUDGET_PER_TASK,

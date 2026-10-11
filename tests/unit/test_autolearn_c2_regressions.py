@@ -218,26 +218,58 @@ def test_malformed_envelope_model_is_invalid_response(monkeypatch):
     assert cand.attempted is True  # a real attempt; budget must not be refunded
 
 
-def test_scoring_provenance_preserved_and_alias_distinct():
+def test_scoring_provenance_matches_actual_local_teacher_contract():
+    # The ACTUAL local experimental Teacher reports provenance in a top-level
+    # ``experimental_metrics`` object with the real revision and a candidate-sequence
+    # softmax scoring block (output_is_generated_json=False) (C-007).
     data = {
-        "model": "qa/scoring-alias",
+        "model": "qa/verified-actual-model",
         "choices": [{"message": {"content": '{"label": "occupied", "confidence": 0.8}'}}],
-        "providerexperimental_classification": {
-            "method": "two_candidate_likelihood",
-            "confidence_calibrated": False,
-            "candidate_scores": {"occupied": -2.0, "empty": -3.0},
-            "forward_passes": 2,
-            "model_revision": "qa/revision-pinned",
+        "experimental_metrics": {
+            "revision": "qa/pinned-revision",
+            "scoring": {
+                "method": "candidate_sequence_softmax",
+                "uncalibrated": True,
+                "candidate_labels": ["occupied", "empty"],
+                "normalized_probabilities": [0.8, 0.2],
+                "model_forward_calls": 2,
+                "actual_model_processed_tokens": 27,
+                "output_is_generated_json": False,
+            },
         },
     }
-    method, revision, scores, forwards = labeling._scoring_provenance(data)
-    assert method == "two_candidate_likelihood"
-    assert revision == "qa/revision-pinned"
-    assert scores == {"occupied": -2.0, "empty": -3.0}
-    assert forwards == 2
-    # An unknown/untrusted method falls back to generated-JSON, never faked.
-    assert labeling._scoring_provenance({"providerexperimental_classification":
-                                         {"method": "totally-made-up"}})[0] == "chat_json"
+    prov = labeling._scoring_provenance(data)
+    assert prov["method"] == "candidate_sequence_softmax"
+    assert prov["model_revision"] == "qa/pinned-revision"  # from envelope, not model id
+    assert prov["candidate_scores"] == {"occupied": 0.8, "empty": 0.2}
+    assert prov["forward_passes"] == 2
+    assert prov["processed_tokens"] == 27
+    assert prov["output_is_generated_json"] is False
+    assert prov["scoring_uncalibrated"] is True
+    # A plain generated-JSON response (no scoring block) is chat_json, and the
+    # revision is never inferred from the model id.
+    plain = labeling._scoring_provenance({"model": "qa/x", "experimental_metrics": {}})
+    assert plain["method"] == "chat_json"
+    assert plain["model_revision"] is None
+    # An unknown/invented scoring method is ignored, never trusted.
+    bogus = labeling._scoring_provenance(
+        {"experimental_metrics": {"scoring": {"method": "totally-made-up",
+                                              "output_is_generated_json": False}}}
+    )
+    assert bogus["method"] == "chat_json"
+
+
+def test_bounded_scores_tolerates_overflow_and_oversize():
+    # A 10**400 int, NaN, bool and 1000 scores must never raise and must be bounded
+    # (C-006 P2). ``_finite_number`` drops overflow/NaN/bool; ``_bounded_scores`` caps.
+    assert labeling._finite_number(10 ** 400) is None
+    assert labeling._finite_number(float("nan")) is None
+    assert labeling._finite_number(True) is None
+    big = labeling._bounded_scores([f"c{i}" for i in range(1000)],
+                                   [float(i) for i in range(1000)])
+    assert big is not None and len(big) <= 8
+    assert labeling._bounded_usage({"prompt_tokens": True, "completion_tokens": "3",
+                                    "total_tokens": float("nan"), "extra": "X" * 9999}) is None
 
 
 # ============================================================ C-008 versions

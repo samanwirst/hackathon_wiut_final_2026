@@ -84,11 +84,15 @@ def _get_owned_loop() -> asyncio.AbstractEventLoop:
         return _owned_loop
 
 
-# Allowlisted labeling methods (C-007). ``chat_json`` is generated-JSON chat
-# completion; ``two_candidate_likelihood`` is image-conditioned candidate
-# likelihood scoring (two forward passes, serialized JSON). A provider-reported
-# method outside this set is ignored (never trusted into storage).
-_ALLOWED_METHODS = {"chat_json", "two_candidate_likelihood"}
+# Labeling-method provenance (C-007). ``chat_json`` is a plain generated-JSON chat
+# completion. The ACTUAL local experimental Teacher (B's local_teacher.py) reports
+# candidate-scoring provenance in a top-level ``experimental_metrics`` object whose
+# ``scoring.method`` is ``candidate_sequence_softmax`` with
+# ``output_is_generated_json=False`` (image-conditioned candidate-sequence softmax,
+# one forward pass per candidate). A method/envelope outside this contract is
+# ignored and never trusted into storage; identity/method/usage are never invented.
+_GENERATED_JSON_METHOD = "chat_json"
+_ALLOWED_SCORING_METHODS = {"candidate_sequence_softmax"}
 
 
 @dataclass
@@ -107,10 +111,15 @@ class LabelCandidate:
     # configured alias in ``config.VLM_MODEL`` (C-007). None when the provider did
     # not report one (an "unknown actual model", never faked from the alias).
     model_revision: str | None = None
-    # Validated candidate likelihood scores and forward-pass count for a scoring
+    # Validated candidate-sequence scores and forward-pass count for a scoring
     # provider (C-007); None for generated JSON.
     candidate_scores: dict | None = None
     forward_passes: int | None = None
+    # Actual tokens the model processed across candidate forward passes, and whether
+    # the label came from free generation (chat_json) vs serialized candidate
+    # scoring (C-007). Reported only by the real scoring contract; else None/True.
+    processed_tokens: int | None = None
+    output_is_generated_json: bool | None = None
     # Whether ``confidence`` is calibrated. Generated self-reported confidence is
     # NOT calibrated; likelihood scores are explicitly uncalibrated too.
     confidence_calibrated: bool = False
@@ -179,6 +188,19 @@ async def classify(
     host = _provider_host()
     if not provider_configured():
         return LabelCandidate(status="unavailable", detail="VLM_BASE_URL/VLM_MODEL not set")
+    # Local endpoint preflight BEFORE any send-state (C-005): an invalid/unsupported
+    # URL (bad scheme, no host) never reaches the network, so it must consume zero
+    # budget. ``attempted=False`` keeps the reservation released, not spent.
+    try:
+        _parsed = urlparse(config.VLM_BASE_URL)
+        _url_ok = _parsed.scheme in ("http", "https") and bool(_parsed.hostname)
+    except Exception:  # noqa: BLE001
+        _url_ok = False
+    if not _url_ok:
+        return LabelCandidate(
+            status="error", provider_host=host, attempted=False,
+            detail="provider URL is not a valid http(s) endpoint",
+        )
     if len(image_bytes) > config.AUTOLEARN_LABEL_MAX_IMAGE_BYTES:
         return LabelCandidate(
             status="error",
@@ -285,34 +307,39 @@ async def classify(
         )
     # Provenance (C-007): record the model/revision the provider actually
     # reported (distinct from the configured alias), the labeling method, a bounded
-    # raw snippet + usage counts, and, when present, validated candidate-likelihood
-    # scoring metadata. Never store API keys or raw image bytes.
+    # raw snippet + usage counts, and, when present, the validated candidate-sequence
+    # scoring metadata from the actual ``experimental_metrics`` contract. Every
+    # provider-controlled value is strictly bounded so a malformed/oversized/overflow
+    # field can never raise or be trusted (C-006). Never store API keys or raw bytes.
     actual_model = _bounded_str(raw_model, 128)
-    usage = data.get("usage") if isinstance(data, dict) else None
-    if not isinstance(usage, dict):
-        usage = None
+    usage = _bounded_usage(data.get("usage") if isinstance(data, dict) else None)
     content_preview = content[:256] if isinstance(content, str) else None
-    method, revision, scores, forwards = _scoring_provenance(data)
+    prov = _scoring_provenance(data)
     return LabelCandidate(
         status="labeled",
         label=label,
         confidence=conf,
         model=actual_model,  # None (unknown actual model) is never faked from the alias
-        model_revision=revision or actual_model,
-        candidate_scores=scores,
-        forward_passes=forwards,
+        model_revision=prov["model_revision"],  # actual revision; never the alias/model id
+        candidate_scores=prov["candidate_scores"],
+        forward_passes=prov["forward_passes"],
+        processed_tokens=prov["processed_tokens"],
+        output_is_generated_json=prov["output_is_generated_json"],
         latency_ms=latency_ms,
         provider_host=host,
-        method=method,
+        method=prov["method"],
         confidence_calibrated=False,  # neither self-report nor likelihood is calibrated
         attempted=True,
         raw={
-            "method": method,
+            "method": prov["method"],
             "configured_alias": config.VLM_MODEL,
             "response_model": actual_model,
-            "model_revision": revision,
-            "candidate_scores": scores,
-            "forward_passes": forwards,
+            "model_revision": prov["model_revision"],
+            "candidate_scores": prov["candidate_scores"],
+            "forward_passes": prov["forward_passes"],
+            "processed_tokens": prov["processed_tokens"],
+            "output_is_generated_json": prov["output_is_generated_json"],
+            "scoring_uncalibrated": prov["scoring_uncalibrated"],
             "confidence_calibrated": False,
             "usage": usage,
             "content_preview": content_preview,
@@ -327,38 +354,108 @@ def _bounded_str(value, max_len: int) -> str | None:
     return None
 
 
-def _scoring_provenance(data) -> tuple[str, str | None, dict | None, int | None]:
-    """Extract validated, allowlisted labeling-method provenance (C-007).
+def _bounded_int(value, lo: int, hi: int) -> int | None:
+    """Return ``value`` only if it is a genuine (non-bool) int within [lo, hi]."""
+    if isinstance(value, bool) or not isinstance(value, int):
+        return None
+    return value if lo <= value <= hi else None
 
-    Honours an optional image-conditioned likelihood-scoring block
-    (``providerexperimental_classification``) emitted by a scoring provider: two
-    candidate forward passes + serialized JSON. Never hardcodes ``chat_json`` when
-    the provider reports a valid scoring method; untrusted/malformed metadata is
-    dropped (method falls back to the default generated-JSON label)."""
-    default = ("chat_json", None, None, None)
+
+def _finite_number(value) -> float | None:
+    """Return a float ONLY for a genuine finite real number (C-006).
+
+    Rejects bool, strings, and — critically — an integer so large it overflows
+    ``float`` (e.g. ``10**400``), which would otherwise raise ``OverflowError`` and
+    500 the request. Also rejects NaN/inf."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    try:
+        f = float(value)
+    except (OverflowError, ValueError):
+        return None
+    return f if math.isfinite(f) else None
+
+
+def _bounded_usage(usage) -> dict | None:
+    """Strictly bound provider-reported token usage (C-006): keep only the three
+    known non-negative integer counters, drop everything else (unbounded extras,
+    NaN totals, wrong-typed counts)."""
+    if not isinstance(usage, dict):
+        return None
+    out: dict = {}
+    for key in ("prompt_tokens", "completion_tokens", "total_tokens"):
+        v = _bounded_int(usage.get(key), 0, 2_000_000_000)
+        if v is not None:
+            out[key] = v
+    return out or None
+
+
+def _bounded_scores(labels, probabilities) -> dict | None:
+    """Build a bounded {label: probability} map from the actual scoring block's
+    candidate labels + normalized probabilities (C-007). At most 8 candidates; each
+    label a short string, each probability a finite number. Malformed/oversized
+    entries are dropped rather than trusted (C-006)."""
+    if not isinstance(labels, list) or not isinstance(probabilities, list):
+        return None
+    out: dict = {}
+    for lab, prob in list(zip(labels, probabilities))[:8]:
+        if not isinstance(lab, str):
+            continue
+        p = _finite_number(prob)
+        if p is None:
+            continue
+        out[lab[:64]] = p
+    return out or None
+
+
+def _scoring_provenance(data) -> dict:
+    """Extract validated provenance from the ACTUAL local Teacher contract (C-007).
+
+    The real experimental image Teacher returns a top-level ``experimental_metrics``
+    object with the actual model ``revision`` and, in candidate-scoring mode, a
+    ``scoring`` block whose ``method`` is ``candidate_sequence_softmax`` and
+    ``output_is_generated_json`` is False, carrying the candidate labels/normalized
+    probabilities, ``model_forward_calls`` and ``actual_model_processed_tokens``. A
+    plain generated-JSON response (no scoring block) is ``chat_json``. The revision
+    is read from the envelope, never inferred from the model id; every value is
+    strictly bounded (C-006); an envelope outside this contract is ignored."""
+    prov = {
+        "method": _GENERATED_JSON_METHOD,
+        "model_revision": None,
+        "candidate_scores": None,
+        "forward_passes": None,
+        "processed_tokens": None,
+        "output_is_generated_json": True,
+        "scoring_uncalibrated": None,
+    }
     if not isinstance(data, dict):
-        return default
-    block = data.get("providerexperimental_classification")
-    if not isinstance(block, dict):
-        return default
-    method = block.get("method")
-    if not isinstance(method, str) or method not in _ALLOWED_METHODS:
-        return default
-    revision = _bounded_str(block.get("model_revision"), 128)
-    scores = None
-    raw_scores = block.get("candidate_scores")
-    if isinstance(raw_scores, dict):
-        clean = {
-            str(k)[:64]: float(v)
-            for k, v in raw_scores.items()
-            if isinstance(k, str) and isinstance(v, (int, float))
-            and not isinstance(v, bool) and math.isfinite(float(v))
-        }
-        scores = clean or None
-    forwards = block.get("forward_passes")
-    if not (isinstance(forwards, int) and not isinstance(forwards, bool) and 0 < forwards <= 8):
-        forwards = None
-    return method, revision, scores, forwards
+        return prov
+    em = data.get("experimental_metrics")
+    if not isinstance(em, dict):
+        return prov
+    # Actual provider model revision — distinct from the configured alias and the
+    # response ``model`` id, and never inferred from either (C-007).
+    prov["model_revision"] = _bounded_str(em.get("revision"), 128)
+    scoring = em.get("scoring")
+    if not isinstance(scoring, dict):
+        return prov
+    method = scoring.get("method")
+    if not isinstance(method, str) or method not in _ALLOWED_SCORING_METHODS:
+        return prov
+    # The candidate-scoring contract emits serialized JSON, not free generation.
+    if scoring.get("output_is_generated_json") is not False:
+        return prov
+    prov["method"] = method
+    prov["output_is_generated_json"] = False
+    prov["scoring_uncalibrated"] = bool(scoring.get("uncalibrated"))
+    prov["forward_passes"] = _bounded_int(scoring.get("model_forward_calls"), 1, 64)
+    prov["processed_tokens"] = _bounded_int(
+        scoring.get("actual_model_processed_tokens"), 1, 2_000_000_000
+    )
+    prov["candidate_scores"] = _bounded_scores(
+        scoring.get("candidate_labels"), scoring.get("normalized_probabilities")
+    )
+    return prov
 
 
 class _ResponseTooLarge(RuntimeError):

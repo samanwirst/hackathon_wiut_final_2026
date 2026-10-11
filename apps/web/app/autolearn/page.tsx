@@ -99,6 +99,13 @@ export default function AutoLearnPage() {
   // retarget action buttons (activate/train/review) at the wrong task/version.
   const selGen = useRef(0);
 
+  // Monotonic operation-ownership token (C-004). ``busy`` cleanup is tracked by
+  // THIS, not by the selection generation: an operation (e.g. Create, which itself
+  // bumps the selection, or an A→B navigation while an action is in flight) must
+  // always release the busy lock when it finishes, even though its selection is no
+  // longer current. Stale successes/errors are still suppressed via ``live()``.
+  const opGen = useRef(0);
+
   const refreshTasks = useCallback(async () => {
     try {
       setTasks(await jget<Task[]>("/api/autolearn/tasks"));
@@ -152,11 +159,15 @@ export default function AutoLearnPage() {
   const run = async (label: string, fn: (ctx: RunCtx) => Promise<void>) => {
     const gen = selGen.current;
     const taskId = sel;
+    const myOp = ++opGen.current;
     const live = () => gen === selGen.current;
     setBusy(label); setErr(null);
     try { await fn({ gen, taskId, live }); }
     catch (e) { if (live()) setErr(String(e)); }
-    finally { if (live()) setBusy(null); }
+    // Release busy iff this op is still the current owner — independent of whether
+    // the selection changed meanwhile, so Create and A→B completions can never
+    // strand the UI with a permanently disabled control (C-004).
+    finally { if (opGen.current === myOp) setBusy(null); }
   };
 
   const createTask = () => run("create", async () => {
