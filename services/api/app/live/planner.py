@@ -1,7 +1,8 @@
-"""Real tool-less Claude Code CLI planner.
+"""Real tool-free API planner, with an explicit private HTTP CLI experiment.
 
-The dynamic agent is the ACTUAL `claude` CLI invoked as an isolated, typed
-planner — not a keyword matcher and not the blocked M2 nl_compiler. A judge's
+The public planner uses the authorized OpenAI API through an owned, bounded
+child process. The CLI is available only with an explicit provider selection
+and the private HTTP cookie opt-out. It is not a production API dependency. A judge's
 free-text request becomes a strict structured proposal that the backend then
 re-validates against its own allowlists (see dsl.py).
 
@@ -21,16 +22,20 @@ Hard safety properties:
 from __future__ import annotations
 
 import json
+import fcntl
 import logging
 import os
 import signal
 import subprocess
+import sys
 import tempfile
 import threading
 import time
+from pathlib import Path
 from dataclasses import dataclass, field
 
 from app.live import config, dsl
+from app import config as app_config
 
 logger = logging.getLogger("visionflow.live.planner")
 
@@ -209,7 +214,13 @@ def plan(text: str, room_id: str) -> PlannerResult:
     if not config.PLANNER_ENABLED:
         return PlannerResult(status="unavailable", error="planner disabled", attempt=attempt)
 
-    raw = _run_cli(text)
+    provider = os.environ.get("VISIONFLOW_LIVE_PLANNER_PROVIDER", "openai").strip()
+    if provider == "openai":
+        raw = _run_openai(text)
+    elif provider == "claude_cli" and not config.COOKIE_SECURE:
+        raw = _run_cli(text)
+    else:
+        raw = PlannerResult(status="unavailable", error="unsupported planner provider")
     raw.attempt = attempt
     return _finalize(raw)
 
@@ -482,3 +493,127 @@ def _run_cli(text: str) -> PlannerResult:
         duration_ms=envelope.get("duration_ms"),
         usage=envelope.get("usage"),
     )
+
+
+def _run_openai(text: str) -> PlannerResult:
+    """Use the authorized API through an owned, cancellable child process.
+
+    Shares the CLI's actual capacity permit and deadline. A timeout kills and
+    reaps the process group before releasing capacity; there is no background
+    network worker, retry, or subscription-CLI fallback. Credentials are passed
+    only through the child's private environment, never argv or prompt text.
+    """
+    key = os.environ.get("OPENAI_API_KEY", "").strip()
+    if not key:
+        return PlannerResult(status="unavailable", error="OpenAI planner credential missing")
+    deadline = config.PLANNER_TIMEOUT_SECONDS
+    t_wait = time.monotonic()
+    if not _planner_lock.acquire(timeout=deadline):
+        return PlannerResult(status="unavailable", error="planner busy")
+    remaining = deadline - (time.monotonic() - t_wait)
+    if remaining <= 0:
+        _planner_lock.release()
+        return PlannerResult(status="unavailable", error="planner deadline exhausted on admission")
+    try:
+        reserved = _reserve_api_attempt()
+    except Exception:
+        _planner_lock.release()
+        return PlannerResult(status="unavailable", error="API planner durable budget unavailable")
+    if not reserved:
+        _planner_lock.release()
+        return PlannerResult(status="budget_exhausted", error="OpenAI global planner budget exhausted")
+    tmpdir = None
+    try:
+        remaining = deadline - (time.monotonic() - t_wait)
+        if remaining <= 0:
+            return PlannerResult(status="unavailable", error="planner deadline exhausted before transport")
+        env = {
+            "PATH": "/usr/bin:/bin",
+            "OPENAI_API_KEY": key,
+            "VISIONFLOW_LIVE_PLANNER_MODEL": config.PLANNER_MODEL or "gpt-4.1-mini-2025-04-14",
+            "VISIONFLOW_LIVE_API_TIMEOUT": str(remaining),
+        }
+        try:
+            tmpdir = tempfile.mkdtemp(prefix="vf-api-planner-")
+            proc = subprocess.Popen(
+                [sys.executable, str(Path(__file__).with_name("planner_api_worker.py"))],
+                stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                text=True, cwd=tmpdir, env=env, shell=False, start_new_session=True,
+            )
+        except Exception:  # No exception strings can disclose credentials.
+            return PlannerResult(status="unavailable", error="API planner spawn failed")
+        rc, out, _err, timed_out = _communicate_bounded(
+            proc, json.dumps({"text": text, "system": _system_prompt(),
+                              "schema": PROPOSAL_SCHEMA}, allow_nan=False),
+            remaining, min(config.PLANNER_MAX_OUTPUT_BYTES, 64 * 1024),
+        )
+        if timed_out:
+            return PlannerResult(status="unavailable", error="planner timeout")
+    finally:
+        _planner_lock.release()
+        try:
+            if tmpdir is not None:
+                os.rmdir(tmpdir)
+        except OSError:
+            pass
+    if rc != 0:
+        return PlannerResult(status="unavailable", error="OpenAI planner request failed")
+    try:
+        envelope = json.loads(out)
+        proposal = envelope["structured_output"]
+        if envelope.get("subtype") != "success" or not isinstance(proposal, dict):
+            raise ValueError("invalid API envelope")
+    except (ValueError, TypeError, KeyError):
+        return PlannerResult(status="unavailable", error="API planner returned invalid output")
+    return PlannerResult(status="ok", proposal=proposal, model=envelope.get("model"),
+                         usage=envelope.get("usage"), duration_ms=envelope.get("duration_ms"),
+                         cost_usd=None)  # Token usage is measured; invoice cost is not fabricated.
+
+
+def _reserve_api_attempt() -> bool:
+    """Persist a conservative paid-attempt reservation before spawning transport.
+
+    The cap cannot exceed 50. Failed calls consume their reservation; process
+    restarts retain the count. An interrupted/corrupt file fails closed rather
+    than resetting spend. flock also serializes any overlapping app processes.
+    """
+    cap = int(os.environ.get("VISIONFLOW_LIVE_OPENAI_MAX_CALLS", "50"))
+    if not 1 <= cap <= 50:
+        raise ValueError("invalid API call cap")
+    app_config.DATA_DIR.mkdir(parents=True, exist_ok=True)
+    path = app_config.DATA_DIR / "openai-planner-budget.json"
+    flags = os.O_RDWR | os.O_NOFOLLOW
+    try:
+        fd = os.open(path, flags | os.O_CREAT | os.O_EXCL, 0o600)
+        created = True
+    except FileExistsError:
+        fd = os.open(path, flags)
+        created = False
+    with os.fdopen(fd, "r+", encoding="utf-8") as handle:
+        fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+        raw = handle.read(513)
+        if len(raw) > 512:
+            raise ValueError("invalid API counter")
+        if created and not raw:
+            calls = 0
+        else:
+            data = json.loads(raw)
+            calls = data.get("reserved_calls")
+            if (set(data) != {"version", "reserved_calls"} or type(data["version"]) is not int
+                    or data["version"] != 1
+                    or type(calls) is not int or not 0 <= calls <= 50):
+                raise ValueError("invalid API counter")
+        if calls >= cap:
+            return False
+        handle.seek(0)
+        handle.write(json.dumps({"version": 1, "reserved_calls": calls + 1}))
+        handle.truncate()
+        handle.flush()
+        os.fsync(handle.fileno())
+        if created:
+            directory_fd = os.open(app_config.DATA_DIR, os.O_RDONLY | os.O_DIRECTORY)
+            try:
+                os.fsync(directory_fd)
+            finally:
+                os.close(directory_fd)
+        return True
