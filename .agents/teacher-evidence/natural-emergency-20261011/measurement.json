@@ -1,0 +1,26 @@
+{
+  "HTTP_status": 200,
+  "HTTP_wall_seconds": 0.9659851350006647,
+  "POST_count": 1,
+  "model_forward_calls": 2,
+  "request_id": "local-b90eeca3ce964b968ffdaf2f93548efa",
+  "schema_valid": true,
+  "actual_reply": {
+    "label": "occupied",
+    "confidence": 0.9792594578376954
+  },
+  "server_log_exactly_matches_reply_metrics": true,
+  "response_wire_sha256": "d38a744e450c1e28dadd0060bf759aa130d5548a4391adf87e764825a354f217",
+  "reconstructed_candidate_probabilities": [
+    0.9792594578376954,
+    0.020740542162304563
+  ],
+  "output_is_model_generated_JSON": false,
+  "confidence_is_uncalibrated_candidate_probability": true,
+  "human_verified_ground_truth": false,
+  "quality_benchmark": "UNVERIFIED",
+  "GPU_kernel_time": "UNVERIFIED",
+  "savings": "UNVERIFIED",
+  "Student_training_or_activation": false,
+  "server_changed": false
+}

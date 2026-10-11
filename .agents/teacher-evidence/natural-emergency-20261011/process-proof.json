@@ -1,0 +1,22 @@
+{
+  "owned_pid": 677309,
+  "alive": true,
+  "owned_GPU_process_rows": [
+    "677309, .agents/runtime/local-teacher/.venv/bin/python, 1136"
+  ],
+  "command": "nvidia-smi --query-compute-apps=pid,process_name,used_gpu_memory --format=csv,noheader,nounits; retain only pid677309",
+  "process_cwd": "/home/samanwirst/Desktop/hackathon_wiut_final_2026/.agents/runtime/ten-hour/worktrees/B",
+  "process_exe": "/usr/bin/python3.12",
+  "unchanged_server_receipt": {
+    "pid": 677309,
+    "started_utc": "2026-10-10T21:47:25.510658+00:00",
+    "base_url": "http://127.0.0.1:18081/v1",
+    "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+    "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+    "scoring_labels": [
+      "occupied",
+      "empty"
+    ],
+    "experimental": true
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "original_dimensions": [
+    864,
+    596
+  ],
+  "decoded_RGB_dimensions": [
+    864,
+    596
+  ],
+  "provider_thumbnail_dimensions": [
+    512,
+    353
+  ],
+  "provider_thumbnail_API": "PIL.Image.Image.thumbnail((512,512)) with default resample BICUBIC; no mutation of original file",
+  "Pillow_version": "11.2.1",
+  "thumbnail_signature": "(self, size: 'tuple[float, float]', resample: 'Resampling' = <Resampling.BICUBIC: 3>, reducing_gap: 'float | None' = 2.0) -> 'None'",
+  "processor": "Idefics3ImageProcessor",
+  "Transformers_version": "4.51.3",
+  "processor_original_size_longest_edge": 2048,
+  "harness_processor_size_override_longest_edge": 512,
+  "max_image_size_longest_edge": 512,
+  "resample": 1,
+  "resample_name": "LANCZOS",
+  "do_image_splitting": true,
+  "do_pad": true,
+  "do_rescale": true,
+  "rescale_factor": 0.00392156862745098,
+  "do_normalize": true,
+  "image_mean": [
+    0.5,
+    0.5,
+    0.5
+  ],
+  "image_std": [
+    0.5,
+    0.5,
+    0.5
+  ],
+  "configured_loader_dtype": "torch.bfloat16",
+  "configured_image_tensor_dtype": "torch.bfloat16",
+  "dtype_evidence": "Unchanged executing harness load/infer paths; dtype is not independently introspected inside the server process",
+  "harness_sha256": "930be3d3b307993ed6bb712622ae75c6ed2b2e2477e95460642137b43f340d95",
+  "harness_unchanged_from_base_commit": true,
+  "base_commit": "9170b7bd53cc198deebe0d9d903f0b3f28c2d391",
+  "installed_processor_source_sha256": "f436aea3ef32c5087ad1e0ae7b72d0c64ef04d741d7d0d1a31b9ebc66c8a13d7",
+  "tensor_shape_live_inspection": "UNVERIFIED; not exposed by unchanged API"
+}

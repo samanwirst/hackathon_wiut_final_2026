@@ -1,0 +1,19 @@
+{
+  "method": "POST",
+  "url": "http://127.0.0.1:18081/v1/chat/completions",
+  "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+  "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+  "prompt": "Classify visible motor-vehicle presence in the supplied image. For this test, label occupied means at least one visible motor vehicle (car, truck, bus, or motorcycle), and label empty means no visible motor vehicle. Choose only occupied or empty. Do not infer an invisible vehicle.",
+  "max_tokens": 64,
+  "stream": false,
+  "image_sha256": "0969a507c3def0e0c73d3cef020df494b1884da6a4b95070049dc325e38e7279",
+  "image_bytes": 118385,
+  "image_content_type": "image/jpeg",
+  "image_encoding": "Inline JPEG data URI formed from base64 of exact original bytes; rebuild with QA runner",
+  "message_order": "one user message: text, then inline image_url",
+  "serialization": "json.dumps(ensure_ascii=False,separators=(',',':')).encode('utf-8')",
+  "request_body_sha256": "863f8ed793ae56a17c3b9fd3fd84bf3fa5918f0d9cb3eb42e60107f0040daac1",
+  "request_body_bytes": 158341,
+  "credentials_used": false,
+  "automatic_retries": 0
+}

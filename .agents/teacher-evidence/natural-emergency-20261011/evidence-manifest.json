@@ -1,0 +1,14 @@
+{
+  "gpu-identity.json": "f3e1f29e6b1aada55562b83d12c9fc9d3ad323688fdea3cae1a25f64c351f634",
+  "input-provenance.json": "3ff772cc7d8d08fc50b3c8037c17cc456644ace57e25d9a9cf3464d453db57d4",
+  "measurement.json": "85a17e84f66c2bcda7784d7e8ce2d76c53dc5a43a6efaf84e382bcf30e02b2db",
+  "original-nps-el-capitan.jpg": "0969a507c3def0e0c73d3cef020df494b1884da6a4b95070049dc325e38e7279",
+  "preprocessing.json": "3050e48a949a9847195c6dae8da1533583565dc18a610e733719bd0e65559cb0",
+  "process-proof.json": "bebff17d9f6e6c95bd685f1af78e732318a1fef2720b5616c07925215d8eb040",
+  "request-manifest.json": "a3241a42af9a8035f9e579e001af7cce000fb0d0c77a352460ec00433cc77d92",
+  "response-wire.json": "d38a744e450c1e28dadd0060bf759aa130d5548a4391adf87e764825a354f217",
+  "response.json": "c4ee791cd609e39114544eb425b45646d0096ab9f201ff529cc5b08567ee5f21",
+  "server-request-log.json": "224dc99704ce9f5438641a6943702a96cb43ca4fa44faa43ef824c24bc1f6c19",
+  "source-license.json": "e2f2c10f7ca11a5a73f07c37f7724cb541815ba415e094050ae1ba273be7634e",
+  "unchanged-server-model.json": "cbff9d9b557751e49245601f51919c39d7fccc805d7218c11985bbd0b826950e"
+}
