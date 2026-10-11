@@ -116,9 +116,14 @@ def flow():
     def _post(c, path, body):
         return c.post(path, json=body, headers={"X-CSRF-Token": _csrf(c)})
 
+    def _approve(c, path, body):
+        draft = _post(c, path.replace("/task/activate", "/task/validate"), body)
+        assert draft.status_code == 200, draft.text
+        return _post(c, path, draft.json())
+
     def _ws_path(c, path):
         # WebSocket upgrades carry the double-submit CSRF token as a query param.
         sep = "&" if "?" in path else "?"
         return f"{path}{sep}csrf={_csrf(c)}"
 
-    return SimpleNamespace(login=_login, csrf=_csrf, post=_post, ws_path=_ws_path)
+    return SimpleNamespace(login=_login, csrf=_csrf, post=_post, approve=_approve, ws_path=_ws_path)

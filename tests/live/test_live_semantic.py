@@ -130,7 +130,7 @@ def _room_with_semantic_task(client, flow, pin):
     judge = TestClient(client.app)
     flow.login(judge, "judge", pin)
     flow.post(judge, "/api/live/rooms/join", {"join_code": code})
-    flow.post(judge, f"/api/live/rooms/{rid}/task/activate", {"task": _bottle_semantic_task()})
+    flow.approve(judge, f"/api/live/rooms/{rid}/task/activate", {"task": _bottle_semantic_task()})
     return rid, judge
 
 
@@ -191,7 +191,7 @@ def test_pure_geometric_task_still_notifies(client, test_pin, flow, jpeg_frame):
     flow.login(judge, "judge", test_pin)
     flow.post(judge, "/api/live/rooms/join", {"join_code": code})
     plan = flow.post(judge, f"/api/live/rooms/{rid}/task/plan", {"text": "watch car"}).json()
-    flow.post(judge, f"/api/live/rooms/{rid}/task/activate", {"task": plan["task"]})
+    flow.approve(judge, f"/api/live/rooms/{rid}/task/activate", {"task": plan["task"]})
     _drive_frames(rooms.get_room(rid), jpeg_frame)
     state = judge.get(f"/api/live/rooms/{rid}/state").json()
     assert len(state["notifications"]) >= 1
@@ -220,7 +220,7 @@ def test_activate_preserves_decimal_dwell(client, test_pin, flow):
     flow.post(judge, "/api/live/rooms/join", {"join_code": code})
     task = {"name": "dwell", "object_class": "car", "zone": {"type": "full_frame"},
             "trigger": "dwell_in_zone", "duration_seconds": 1.25, "action": "notify"}
-    r = flow.post(judge, f"/api/live/rooms/{rid}/task/activate", {"task": task}).json()
+    r = flow.approve(judge, f"/api/live/rooms/{rid}/task/activate", {"task": task}).json()
     assert r["task"]["duration_seconds"] == 1.25
     state = judge.get(f"/api/live/rooms/{rid}/state").json()
     assert state["task"]["duration_seconds"] == 1.25

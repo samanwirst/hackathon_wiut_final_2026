@@ -112,7 +112,10 @@ def test_process_produces_events_with_video_clock_provenance(client, test_pin, q
     task = {"name": "QA_ONLY car presence", "object_class": "car",
             "zone": {"type": "full_frame", "polygon": []},
             "trigger": "presence_in_zone", "action": "notify"}
-    act = j.post(f"/api/live/rooms/{room_id}/task/activate", json={"task": task},
+    draft = j.post(f"/api/live/rooms/{room_id}/task/validate", json={"task": task},
+                   headers={"X-CSRF-Token": j.cookies.get(config.CSRF_COOKIE_NAME)})
+    assert draft.status_code == 200, draft.text
+    act = j.post(f"/api/live/rooms/{room_id}/task/activate", json=draft.json(),
                  headers={"X-CSRF-Token": j.cookies.get(config.CSRF_COOKIE_NAME)})
     assert act.status_code == 200, act.text
 

@@ -184,7 +184,7 @@ def test_health_reports_worker_liveness(client):
 
 
 def _activate(client, flow, rid, judge, task):
-    return flow.post(judge, f"/api/live/rooms/{rid}/task/activate", {"task": task})
+    return flow.approve(judge, f"/api/live/rooms/{rid}/task/activate", {"task": task})
 
 
 def _basic_task(cls="car", trigger="presence_in_zone"):

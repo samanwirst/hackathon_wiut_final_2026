@@ -71,7 +71,7 @@ def test_event_evidence_notification_pipeline(client, test_pin, flow, jpeg_frame
 
     plan = flow.post(judge, f"/api/live/rooms/{room_id}/task/plan", {"text": "watch the car"}).json()
     assert plan["status"] == "ok"
-    act = flow.post(judge, f"/api/live/rooms/{room_id}/task/activate", {"task": plan["task"]}).json()
+    act = flow.approve(judge, f"/api/live/rooms/{room_id}/task/activate", {"task": plan["task"]}).json()
     assert act["task_version"] == 1
 
     # Camera streams a frame; the worker processes several so the debounced
@@ -100,7 +100,7 @@ def test_disable_while_camera_persists(client, test_pin, flow, jpeg_frame):
     room_id, code = _camera_room(client, flow, test_pin)
     judge = _join_judge(client.app, flow, test_pin, code)
     plan = flow.post(judge, f"/api/live/rooms/{room_id}/task/plan", {"text": "watch car"}).json()
-    flow.post(judge, f"/api/live/rooms/{room_id}/task/activate", {"task": plan["task"]})
+    flow.approve(judge, f"/api/live/rooms/{room_id}/task/activate", {"task": plan["task"]})
 
     # Disable the task; the camera session stays connected and keeps streaming.
     r = flow.post(judge, f"/api/live/rooms/{room_id}/task/state", {"enabled": False}).json()
@@ -122,7 +122,7 @@ def test_version_guard_drops_stale_events(client, test_pin, flow, jpeg_frame):
     room_id, code = _camera_room(client, flow, test_pin)
     judge = _join_judge(client.app, flow, test_pin, code)
     plan = flow.post(judge, f"/api/live/rooms/{room_id}/task/plan", {"text": "watch car"}).json()
-    flow.post(judge, f"/api/live/rooms/{room_id}/task/activate", {"task": plan["task"]})
+    flow.approve(judge, f"/api/live/rooms/{room_id}/task/activate", {"task": plan["task"]})
     room = rooms.get_room(room_id)
 
     # Snapshot v1 engines, then disable (bumps version) BEFORE processing.
@@ -146,9 +146,9 @@ def test_task_replacement_new_version(client, test_pin, flow, jpeg_frame):
     judge = _join_judge(client.app, flow, test_pin, code)
 
     p1 = flow.post(judge, f"/api/live/rooms/{room_id}/task/plan", {"text": "watch car"}).json()
-    a1 = flow.post(judge, f"/api/live/rooms/{room_id}/task/activate", {"task": p1["task"]}).json()
+    a1 = flow.approve(judge, f"/api/live/rooms/{room_id}/task/activate", {"task": p1["task"]}).json()
     p2 = flow.post(judge, f"/api/live/rooms/{room_id}/task/plan", {"text": "watch bottle"}).json()
-    a2 = flow.post(judge, f"/api/live/rooms/{room_id}/task/activate", {"task": p2["task"]}).json()
+    a2 = flow.approve(judge, f"/api/live/rooms/{room_id}/task/activate", {"task": p2["task"]}).json()
     assert a2["task_version"] == a1["task_version"] + 1
     room = rooms.get_room(room_id)
     assert room.task["object_class"] == "bottle"

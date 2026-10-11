@@ -478,6 +478,44 @@ def room_evidence(room_id: str, filename: str, sess: auth.Session = Depends(requ
 # ---------------------------------------------------------------- video source (owner)
 
 
+@app.get("/api/live/rooms/{room_id}/video/source")
+def room_video_source(room_id: str, sha: str | None = None,
+                      sess: auth.Session = Depends(require_session)):
+    """Private playback of the room's current opaque uploaded source only."""
+    room = _require_room_member(sess, room_id)
+    with room.lock:
+        path = room.video_path
+        source_sha = room.video_sha256
+        if room.retired or path is None or not path.is_file():
+            raise HTTPException(404, "no video uploaded")
+        resolved = path.resolve()
+        if not resolved.is_relative_to(rooms.LIVE_VIDEO_DIR.resolve()) or not resolved.name.startswith(f"room_{room_id}_"):
+            raise HTTPException(404, "source not found")
+        if sha is not None and sha != source_sha:
+            raise HTTPException(409, "source changed; refresh the current source")
+    return FileResponse(resolved, media_type="video/mp4", filename="source.mp4",
+                        content_disposition_type="inline",
+                        headers={"Cache-Control":"private, no-store", "Pragma":"no-cache", "Vary":"Cookie"})
+
+
+_uploads_lock = threading.Lock()
+_upload_owners: set[str] = set()
+
+
+def _claim_upload(owner: str) -> None:
+    with _uploads_lock:
+        if owner in _upload_owners:
+            raise HTTPException(429, "one active upload per owner")
+        if len(_upload_owners) >= max(1, config.MAX_CONCURRENT_VIDEO_JOBS):
+            raise HTTPException(503, "upload capacity reached")
+        _upload_owners.add(owner)
+
+
+def _release_upload(owner: str) -> None:
+    with _uploads_lock:
+        _upload_owners.discard(owner)
+
+
 @app.post("/api/live/rooms/{room_id}/video")
 async def upload_video(room_id: str, request: Request):
     """Authenticated, bounded, decode-validated video upload (room owner only).
@@ -498,48 +536,85 @@ async def upload_video(room_id: str, request: Request):
     if not sess.owns_room:
         raise HTTPException(403, "only the room owner can upload a video")
 
-    rooms.LIVE_VIDEO_DIR.mkdir(parents=True, exist_ok=True)
-    # Opaque, non-guessable, room-scoped filename. No client-supplied path/name is
-    # ever used, so there is no arbitrary filesystem write.
+    _claim_upload(sess.token)
     tmp = rooms.LIVE_VIDEO_DIR / f"room_{room_id}_{secrets.token_urlsafe(10)}.mp4"
-    total = 0
+    handed_to_worker = False
+    cancelled = threading.Event()
+
+    def authorized() -> bool:
+        # Called INSIDE replace_source's job/registered-room/room lock scope.
+        # Do not reacquire the non-reentrant rooms registry lock here.
+        current = auth.get_session(sess.token)
+        return (not cancelled.is_set() and current is sess and current.role == "camera"
+                and current.owns_room and current.room_id == room_id
+                and room.owner_token == current.token)
+
+    def finish_upload() -> tuple[dict, str]:
+        attached = False
+        try:
+            # Root's VIDEO probe is a bounded, full-count decoder subprocess.
+            # This worker owns its upload permit until REAL completion, even
+            # if the awaiting HTTP task is cancelled/disconnected.
+            meta = video.probe(tmp)
+            sha = video.sha256_file(tmp)
+            if not authorized():
+                raise HTTPException(401, "upload owner session no longer valid")
+            video.replace_source(room, tmp, sha, meta, authorize=authorized)
+            attached = True
+            _pop_draft(room_id)
+            return meta, sha
+        finally:
+            try:
+                if not attached:
+                    tmp.unlink(missing_ok=True)
+            finally:
+                _release_upload(sess.token)
+
     try:
+        rooms.LIVE_VIDEO_DIR.mkdir(parents=True, exist_ok=True)
+        total = 0
+        deadline = time.monotonic() + config.REQUEST_RECEIVE_DEADLINE_SECONDS
+        stream = request.stream().__aiter__()
         with tmp.open("wb") as fh:
-            async for chunk in request.stream():
+            while True:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise HTTPException(408, "video receive timeout")
+                try:
+                    chunk = await asyncio.wait_for(stream.__anext__(), timeout=remaining)
+                except StopAsyncIteration:
+                    break
+                except (asyncio.TimeoutError, TimeoutError):
+                    raise HTTPException(408, "video receive timeout")
                 total += len(chunk)
                 if total > config.MAX_VIDEO_BYTES:
                     raise HTTPException(413, "video exceeds size limit")
                 fh.write(chunk)
-        if total == 0:
+        if not total:
             raise HTTPException(400, "empty upload")
-        meta = video.probe(tmp)
-        sha = video.sha256_file(tmp)
+        future = asyncio.get_running_loop().run_in_executor(None, finish_upload)
+        handed_to_worker = True
+        # Retrieve late worker exceptions without logging private paths/data.
+        future.add_done_callback(lambda done: done.exception() if not done.cancelled() else None)
+        meta, sha = await asyncio.shield(future)
+        return {"ok": True, "sha256": sha, "meta": meta}
+    except asyncio.CancelledError:
+        cancelled.set()
+        raise
     except HTTPException:
-        tmp.unlink(missing_ok=True)
         raise
     except video.VideoError as exc:
-        tmp.unlink(missing_ok=True)
+        if not authorized():
+            raise HTTPException(401, "upload owner session no longer valid")
         raise HTTPException(422, f"invalid video: {exc}")
-    except Exception as exc:  # noqa: BLE001
-        tmp.unlink(missing_ok=True)
-        logger.warning("video upload failed room=%s: %s", room_id, exc)
+    except Exception:  # noqa: BLE001
         raise HTTPException(400, "could not process upload")
-
-    with room.lock:
-        # Replace any prior source; stop any running job first (below) and delete
-        # the old file so private media never accumulates.
-        old = room.video_path
-        room.video_path = tmp
-        room.video_sha256 = sha
-        room.video_meta = meta
-        room.job_status = "idle"
-        room.job_processed = 0
-        room.job_total = meta["frame_count"]
-        room.job_error = None
-    video.cancel_job(room_id)
-    if old is not None and old != tmp:
-        old.unlink(missing_ok=True)
-    return {"ok": True, "sha256": sha, "meta": meta}
+    finally:
+        if not handed_to_worker:
+            try:
+                tmp.unlink(missing_ok=True)
+            finally:
+                _release_upload(sess.token)
 
 
 @app.post("/api/live/rooms/{room_id}/video/process")
@@ -637,43 +712,37 @@ def activate_task(room_id: str, sess: auth.Session = Depends(require_mutation),
         raise HTTPException(422, f"task failed validation: {exc}")
     canonical = task.model_dump()
 
-    # Canonical approval binding (LIVE-VIDEO-005). When a draft_hash / expected_version
-    # is supplied, it MUST exactly match the server-bound draft for the CURRENT source
-    # and version; a wrong, missing-counterpart, stale or replayed approval is rejected
-    # fail-closed. (An approval with no binding fields still activates the re-validated
-    # task, preserving the direct activation path; the UI sends the full binding.)
-    draft_hash = body.get("draft_hash")
-    expected_version = body.get("expected_version")
-    if draft_hash is not None or expected_version is not None:
-        if not isinstance(draft_hash, str) or not draft_hash:
-            raise HTTPException(422, "draft_hash required with expected_version")
-        if not isinstance(expected_version, int) or isinstance(expected_version, bool):
-            raise HTTPException(422, "expected_version must be an integer")
-        with room.lock:
-            cur_version = room.task_version
-            src = room.video_sha256
+    # Every activation requires the server-issued canonical approval identity.
+    # No direct task-only path may bypass human approval of a validated draft.
+    if set(body) != {"task", "draft_hash", "expected_version"}:
+        raise HTTPException(422, "task, draft_hash and expected_version are required; unknown fields forbidden")
+    draft_hash = body["draft_hash"]
+    expected_version = body["expected_version"]
+    if not isinstance(draft_hash, str) or not draft_hash:
+        raise HTTPException(422, "draft_hash must be a nonempty string")
+    if not isinstance(expected_version, int) or isinstance(expected_version, bool):
+        raise HTTPException(422, "expected_version must be an integer")
+    # Validation, one-shot draft consumption and version transition are atomic.
+    with room.lock:
+        if room.retired:
+            raise HTTPException(409, "room retired")
+        src = room.video_sha256
+        if room.task_version != expected_version:
+            raise HTTPException(409, "stale approval: task version changed; re-validate")
         with _drafts_lock:
             stored = _drafts.get(room_id)
-        if cur_version != expected_version:
-            raise HTTPException(409, "stale approval: task version changed; re-validate")
-        if stored is None:
-            raise HTTPException(409, "no validated draft for this room; validate first")
-        want = _draft_hash(canonical, src, room_id, expected_version)
-        # Submitted hash must match the canonical bytes bound to the live source+version
-        # AND the stored validated draft (replay/tamper protection).
-        if not hmac.compare_digest(draft_hash, want) or \
-                not hmac.compare_digest(str(stored.get("hash")), want):
-            raise HTTPException(422, "approval does not match the validated draft")
-        if stored.get("source_sha") != src:
-            raise HTTPException(409, "source changed since approval; re-validate")
-
-    with room.lock:
-        fw = room.latest_meta.get("w") or 1
-        fh = room.latest_meta.get("h") or 1
-        version = rooms.activate_task(room, canonical, fw, fh)
-        has_video = room.video_path is not None
-    # One-shot: consume the draft so the same approval cannot be replayed.
-    _pop_draft(room_id)
+            if stored is None:
+                raise HTTPException(409, "no validated draft for this room; validate first")
+            if stored["source_sha"] != src or stored["version"] != expected_version:
+                raise HTTPException(409, "source or task version changed; re-validate")
+            want = _draft_hash(canonical, src, room_id, expected_version)
+            if stored["task"] != canonical or not hmac.compare_digest(draft_hash, want) or not hmac.compare_digest(stored["hash"], want):
+                raise HTTPException(422, "approval does not match the validated draft")
+            fw = room.latest_meta.get("w") or 1
+            fh = room.latest_meta.get("h") or 1
+            version = rooms.activate_task(room, canonical, fw, fh)
+            has_video = room.video_path is not None
+            _drafts.pop(room_id, None)
     # A new approved request on the SAME video reruns the analysis from frame 0
     # with fresh detector/tracker/engine state. Any in-flight job is superseded;
     # its stale events are already dropped by the version guard.
