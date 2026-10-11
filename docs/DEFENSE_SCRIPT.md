@@ -28,4 +28,10 @@ VisionFlow measurement.
 - If live inference fails, play the recording and disclose the failure immediately.
   Technical trouble does not stop the jury clock.
 - Q&A: explain every metric's input hashes, split/session limits, actual inference
+- A fresh authenticated browser completed the entire geometric journey on an
+  isolated Docker network in33.755s, including real entry/dwell events and editing.
+  This was automated, not a spoken rehearsal. Keep polygon vertices above the
+  bottom drawing hint; rapid scripted requests can hit the gateway rate limit.
+  [Executed rehearsal and preserved failed attempts](../.agents/delivery-evidence/offline-browser-749d27b/VALIDATION.md).
+- Q&A: explain every metric's input hashes, split/session limits, actual inference
   method, action approval boundary, pricing hypothesis and remaining blocked gate.

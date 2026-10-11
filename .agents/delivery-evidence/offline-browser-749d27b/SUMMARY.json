@@ -1,0 +1,11 @@
+{
+  "application_sha": "749d27b33bcec03883d4a1b1ac481ee9a95fd91e",
+  "input_sha256": "10f00dac457264db9019a9410e1e720fb1299d2588cb7b23349506048a9752ed",
+  "steps": 13,
+  "browser_elapsed_ms": 33755,
+  "external_requests_observed": 0,
+  "teacher_decisions": 0,
+  "manual_student_activation": false,
+  "owned_resources_removed": true,
+  "scope": "Fresh cached image deployment; cold authenticated browser; actual user journey; no external networking, no application code changes. Automated pacing is not a human speaking rehearsal or load benchmark."
+}

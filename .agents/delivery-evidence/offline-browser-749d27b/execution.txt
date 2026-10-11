@@ -1,0 +1,13 @@
+Workspace loads with verified safe backend {}
+Upload selects actual MP4 {"source_id":1}
+Polygon persisted {"polygon":[[0.2499872351289252,0.1989742658739164],[0.5996425836099055,0.1989742658739164],[0.5996425836099055,0.8496346389506649],[0.2499872351289252,0.8496346389506649]]}
+Analysis unavailable until an approved rule exists {}
+Canonical JSON shown; draft disabled {"workflow_id":1}
+New-draft approval reset after field edit {}
+Explicit human approval activates saved JSON {"workflow_id":2}
+Real YOLO -> event -> JPEG -> one local action {"frames":50,"avg_inference_ms":51.829869800276356,"event_id":1,"timestamp":2.4,"confidence":0.852131187915802}
+Disable and reviewed re-enable work {}
+Re-enabled replay preserves local action deduplication {}
+Edit disables original; new reviewed version preserves old evidence {"old_id":2,"new_id":3}
+Edited dwell rule works with real YOLO {"event_id":2,"timestamp":3.4}
+Accepted fallback journey recorded; experimental paths unavailable {}

@@ -1,0 +1,146 @@
+{
+  "application_sha": "749d27b33bcec03883d4a1b1ac481ee9a95fd91e",
+  "started_utc_epoch": 1791678367.521849,
+  "commands": [
+    [
+      "docker",
+      "network",
+      "create",
+      "--internal",
+      "visionflow-offline-browser-20261011"
+    ],
+    [
+      "docker",
+      "run",
+      "-d",
+      "--pull",
+      "never",
+      "--network",
+      "visionflow-offline-browser-20261011",
+      "--name",
+      "visionflow-offline-browser-20261011-api",
+      "--network-alias",
+      "api",
+      "--tmpfs",
+      "/app/data:rw,uid=10001,gid=10001",
+      "--mount",
+      "type=bind,source=/home/samanwirst/Desktop/hackathon_wiut_final_2026/services/api/yolo11n.pt,target=/qa/yolo11n.pt,readonly",
+      "-e",
+      "VISIONFLOW_DEMO_SAFE=true",
+      "-e",
+      "VLM_BASE_URL=",
+      "-e",
+      "VLM_MODEL=",
+      "-e",
+      "VLM_API_KEY=",
+      "-e",
+      "DETECTOR_MODEL=/qa/yolo11n.pt",
+      "sha256:8bed7ca102449cd6f4a23b872adc908481d1411edfbc1d4c66d70bb6ac7f562b"
+    ],
+    [
+      "docker",
+      "run",
+      "-d",
+      "--pull",
+      "never",
+      "--network",
+      "visionflow-offline-browser-20261011",
+      "--name",
+      "visionflow-offline-browser-20261011-web",
+      "--network-alias",
+      "web",
+      "sha256:21af1857f06182a177f3d14a78fb0eeeb22377d6854f0606f8c7603cf1cf94b7"
+    ],
+    [
+      "docker",
+      "run",
+      "-d",
+      "--pull",
+      "never",
+      "--network",
+      "visionflow-offline-browser-20261011",
+      "--name",
+      "visionflow-offline-browser-20261011-gateway",
+      "--mount",
+      "type=bind,source=/home/samanwirst/Desktop/hackathon_wiut_final_2026/.agents/runtime/ten-hour/worktrees/D/deploy/nginx.conf,target=/etc/nginx/demo.conf,readonly",
+      "--mount",
+      "type=bind,source=/home/samanwirst/Desktop/hackathon_wiut_final_2026/.agents/runtime/ten-hour/delivery/public-candidate/auth.htpasswd,target=/run/secrets/demo_auth,readonly",
+      "sha256:dc73b49f5124cf2ee538dfbdfbd121f0b4ccdcb20fea30f3a81bd477c02e2bb5",
+      "nginx",
+      "-g",
+      "daemon off;",
+      "-c",
+      "/etc/nginx/demo.conf"
+    ],
+    [
+      "docker",
+      "inspect",
+      "--format",
+      "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}",
+      "visionflow-offline-browser-20261011-gateway"
+    ],
+    [
+      "docker",
+      "network",
+      "inspect",
+      "--format",
+      "{{.Internal}}",
+      "visionflow-offline-browser-20261011"
+    ],
+    [
+      "docker",
+      "exec",
+      "visionflow-offline-browser-20261011-api",
+      "cat",
+      "/proc/net/route"
+    ],
+    [
+      "docker",
+      "exec",
+      "visionflow-offline-browser-20261011-web",
+      "cat",
+      "/proc/net/route"
+    ],
+    [
+      "docker",
+      "exec",
+      "visionflow-offline-browser-20261011-gateway",
+      "cat",
+      "/proc/net/route"
+    ]
+  ],
+  "image_ids": {
+    "api": "sha256:8bed7ca102449cd6f4a23b872adc908481d1411edfbc1d4c66d70bb6ac7f562b",
+    "web": "sha256:21af1857f06182a177f3d14a78fb0eeeb22377d6854f0606f8c7603cf1cf94b7",
+    "gateway": "sha256:dc73b49f5124cf2ee538dfbdfbd121f0b4ccdcb20fea30f3a81bd477c02e2bb5"
+  },
+  "private_bridge_url": "http://172.28.0.4:8088",
+  "network_internal": true,
+  "container_ipv4_routes": {
+    "api": "Iface\tDestination\tGateway \tFlags\tRefCnt\tUse\tMetric\tMask\t\tMTU\tWindow\tIRTT                                                       \neth0\t00001CAC\t00000000\t0001\t0\t0\t0\t0000FFFF\t0\t0\t0",
+    "web": "Iface\tDestination\tGateway \tFlags\tRefCnt\tUse\tMetric\tMask\t\tMTU\tWindow\tIRTT                                                       \neth0\t00001CAC\t00000000\t0001\t0\t0\t0\t0000FFFF\t0\t0\t0",
+    "gateway": "Iface\tDestination\tGateway \tFlags\tRefCnt\tUse\tMetric\tMask\t\tMTU\tWindow\tIRTT                                                       \neth0\t00001CAC\t00000000\t0001\t0\t0\t0\t0000FFFF\t0\t0\t0"
+  },
+  "anonymous_health_status": 401,
+  "browser_exit": 1,
+  "browser_duration_seconds": 32.0532288789982,
+  "cleanup": [
+    {
+      "container": "visionflow-offline-browser-20261011-gateway",
+      "exit": 0
+    },
+    {
+      "container": "visionflow-offline-browser-20261011-web",
+      "exit": 0
+    },
+    {
+      "container": "visionflow-offline-browser-20261011-api",
+      "exit": 0
+    },
+    {
+      "network": "visionflow-offline-browser-20261011",
+      "exit": 0
+    }
+  ],
+  "finished_utc_epoch": 1791678400.6061802
+}

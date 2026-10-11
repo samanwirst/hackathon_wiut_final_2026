@@ -1,0 +1,58 @@
+{
+  "target_sha": "749d27b33bcec03883d4a1b1ac481ee9a95fd91e",
+  "steps": [
+    {
+      "step": "Workspace loads with verified safe backend",
+      "elapsed_ms": 1202
+    },
+    {
+      "step": "Upload selects actual MP4",
+      "elapsed_ms": 1311,
+      "source_id": 1
+    },
+    {
+      "step": "Polygon persisted",
+      "elapsed_ms": 1500,
+      "polygon": [
+        [
+          0.2499872351289252,
+          0.1989742658739164
+        ],
+        [
+          0.5996425836099055,
+          0.1989742658739164
+        ],
+        [
+          0.5996425836099055,
+          0.8496346389506649
+        ],
+        [
+          0.2499872351289252,
+          0.8496346389506649
+        ]
+      ]
+    },
+    {
+      "step": "Analysis unavailable until an approved rule exists",
+      "elapsed_ms": 1517
+    },
+    {
+      "step": "Canonical JSON shown; draft disabled",
+      "elapsed_ms": 1599,
+      "workflow_id": 1
+    }
+  ],
+  "probes": [],
+  "console_errors": [],
+  "request_failures": [],
+  "blocked_external_requests": [],
+  "container_network": "internal isolated Docker bridge; no external default route",
+  "browser_context": "fresh Chromium profile and empty cache",
+  "harness_note": "Zone bottom .85 avoids the visible point-placement hint; earlier .95 last click landed on that hint and never reached canvas. Original failed execution is archived.",
+  "paid_compute": false,
+  "student_activated": false,
+  "source_id": 1,
+  "zone_id": 1,
+  "first_workflow_id": 1,
+  "error": "SyntaxError: Unexpected token '<', \"<html>\r\n<h\"... is not valid JSON\n    at JSON.parse (<anonymous>)\n    at APIResponse.json (/tmp/visionflow-browser-s4z2hln7/node_modules/playwright-core/lib/coreBundle.js:60961:21)\n    at async file:///home/samanwirst/Desktop/hackathon_wiut_final_2026/.agents/runtime/ten-hour/delivery/offline-browser/journey.mjs:83:16"
+}

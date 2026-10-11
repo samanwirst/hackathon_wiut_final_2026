@@ -52,3 +52,12 @@ confidence, foveated gains, billed inference cost and savings are UNVERIFIED.
 
 No M1/M2 history/verdict was rewritten, no failed gate bypassed, no Student
 activated, no application publicly published and no credential committed.
+
+An additional [offline browser rehearsal](../.agents/delivery-evidence/offline-browser-749d27b/VALIDATION.md)
+executed the complete geometric journey in a fresh authenticated browser with
+the production containers isolated from external networks. It passed13 steps,
+including real entry/dwell events, evidence, deduplication and edits. Temporary
+resources were removed. Request pacing and drawing-hint limitations are disclosed;
+this is functional evidence, not a spoken rehearsal or performance benchmark.
+The fresh read-only Vast check at00:28:48UTC confirms the paid instance absent
+and debit unchanged. The experimental gates and deployment restrictions remain.

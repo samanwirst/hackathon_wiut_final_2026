@@ -1,0 +1,13 @@
+Workspace loads with verified safe backend {}
+Upload selects actual MP4 {"source_id":1}
+node:internal/process/promises:324
+    triggerUncaughtException(err, true /* fromPromise */);
+    ^
+
+page.waitForResponse: Timeout 30000ms exceeded while waiting for event "response"
+    at /home/samanwirst/Desktop/hackathon_wiut_final_2026/.agents/runtime/ten-hour/delivery/offline-browser/journey.mjs:68:26 {
+  log: [],
+  name: 'TimeoutError'
+}
+
+Node.js v26.10.0
