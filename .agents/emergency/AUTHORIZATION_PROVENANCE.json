@@ -1,0 +1,12 @@
+{
+  "previous_M2_review_commit": "5c12baca9022b20edeb6c9bd5cfb26bae3e3321e",
+  "previous_M3_review_commit": "8c252af2d826ec26fa214ec0d8825ba8f98d87b4",
+  "fallback": "723a4a73acf33e31843c59d86f942cd5247273c0",
+  "original_root": "ae2b5a5ebdaef0e9e58dd2710aee9b113a35f112",
+  "old_verdicts_preserved": true,
+  "new_rounds_each": 1,
+  "new_independent_reviews_each": 1,
+  "automatic_extra_rounds": false,
+  "student_activation_authorized": false,
+  "publication_authorized": false
+}

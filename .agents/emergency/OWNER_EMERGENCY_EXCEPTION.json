@@ -1,0 +1,25 @@
+{
+  "owner_authorization_received_utc": "2026-10-11T03:10:39.158087+00:00",
+  "authorization": "ONE exceptional M2 correction/review round and ONE exceptional M3 correction/review round explicitly authorized by owner latest message. Previous BLOCKED reports, history, original ledgers and fallback preserved.",
+  "base_m2": "25bccee269bde978745c168852a716670b7f999b",
+  "base_m3": "ff48ca9756e179e1bda1f9556e44d20c24776a8b",
+  "fallback": "723a4a73acf33e31843c59d86f942cd5247273c0",
+  "previous_call_cap": 11,
+  "new_call_cap": 15,
+  "authorized_new_calls": {
+    "M2": 1,
+    "M2_review": 1,
+    "M3": 1,
+    "M3_review": 1
+  },
+  "fix_timeout_seconds": 5400,
+  "review_timeout_seconds": 2400,
+  "phase_cutoff_epoch": 1791699035,
+  "phase_cutoff_utc": "2026-10-11T06:10:35+00:00",
+  "deadline_epoch": 1791703535,
+  "no_public_deployment": true,
+  "no_student_activation": true,
+  "paid_compute_all_in_cap_usd": 3,
+  "no_new_rental": true,
+  "repeat_exception_cycles": false
+}
