@@ -1,0 +1,132 @@
+{
+  "created_utc": "2026-10-11T04:47:58.937290+00:00",
+  "status": "ACTUAL_RAW_GENERATION_EXECUTED; TEMPORAL_NEGATIVE_CONTROL_FAILED; NONACTIONING_EXPERIMENT",
+  "files": [
+    {
+      "path": "CAPABILITY_CONCLUSION.md",
+      "bytes": 1961,
+      "sha256": "f4a6850d5405bbf3860574735fda145da846bccb1412724754e6f3e10c4e8b6f"
+    },
+    {
+      "path": "CLEANUP.json",
+      "bytes": 248,
+      "sha256": "ad8d5f93ea38226c6a7bf7eb78384284670e6d2b1c38081c3023b27a86707d2f"
+    },
+    {
+      "path": "EVIDENCE_SUMMARY.md",
+      "bytes": 2798,
+      "sha256": "eaff963401248ab13dcd0cfb8e9cfb555f0974fc7ce6cb1d4a6fb58ca4ad78bb"
+    },
+    {
+      "path": "HTTP_ATTEMPTS.json",
+      "bytes": 1643,
+      "sha256": "02922a7318a76b013b505386c798598bde2db5e13b717025e7d2f95bea75d519"
+    },
+    {
+      "path": "PRECHECK.json",
+      "bytes": 1871,
+      "sha256": "9cbbc03b14b6f9fb08f65258b484293694202263cbebc17d42fdcd2473bb2536"
+    },
+    {
+      "path": "READ_ME.md",
+      "bytes": 1961,
+      "sha256": "f4a6850d5405bbf3860574735fda145da846bccb1412724754e6f3e10c4e8b6f"
+    },
+    {
+      "path": "RESULT.json",
+      "bytes": 2256,
+      "sha256": "7d23d90c045483af5b5d033f5cdffc29fca16c488d6ff411a1cbc8d411095c15"
+    },
+    {
+      "path": "START_RECEIPT.json",
+      "bytes": 1165,
+      "sha256": "28d67b2185c26bd77f13b99d5eaadedbbe8704401cfb1218653beb1b085de7e6"
+    },
+    {
+      "path": "VERIFICATION.json",
+      "bytes": 988,
+      "sha256": "596f0a5a98a613fdf273f21036f2d1ed0c80bbd6711f28082d26e1beb7e65b71"
+    },
+    {
+      "path": "caption-request-manifest.json",
+      "bytes": 766,
+      "sha256": "886783d5546d7fb73c9b21c429ed045813b9f91c9746fd81552594db83516f97"
+    },
+    {
+      "path": "caption-response-wire.json",
+      "bytes": 713,
+      "sha256": "7ebb90fb5271bbb9d1a244709a2efa8f309fae8382b0a99fa0a8a8e968f1b103"
+    },
+    {
+      "path": "caption-response.json",
+      "bytes": 893,
+      "sha256": "c2c28e73fd444d969099adb39336d963074d525dc1af1c726523332fabc5c38c"
+    },
+    {
+      "path": "existing-models-after.json",
+      "bytes": 417,
+      "sha256": "c3b2ba8af2c5b429fdb6855aeaf6d247e4c13ab362cfd230104cfb688e6ababe"
+    },
+    {
+      "path": "existing-models-before.json",
+      "bytes": 417,
+      "sha256": "c3b2ba8af2c5b429fdb6855aeaf6d247e4c13ab362cfd230104cfb688e6ababe"
+    },
+    {
+      "path": "identical-pair-no-change-request-manifest.json",
+      "bytes": 1284,
+      "sha256": "5adb444df2885aea644d7dcd1d05450426a0d4308782be383043cbd35b5a39c7"
+    },
+    {
+      "path": "identical-pair-no-change-response-wire.json",
+      "bytes": 709,
+      "sha256": "ab0bccc59f86783d534704995da2d66e0a1219d52402614dcdf2875cfa656792"
+    },
+    {
+      "path": "identical-pair-no-change-response.json",
+      "bytes": 889,
+      "sha256": "7c723daf796dda366f6a6a7c55966b8884947f0856d0249d6c90b90aedf23888"
+    },
+    {
+      "path": "input-provenance.json",
+      "bytes": 1365,
+      "sha256": "ff17447ea05143d3f0d97b28089fa0993b53c54cc1548a6b85692726b4f16e00"
+    },
+    {
+      "path": "pinned-model-source.json",
+      "bytes": 230,
+      "sha256": "2cecf69e9516186058ed5574081bd9f827edc54e4e1add994b652f37844cabf8"
+    },
+    {
+      "path": "probe_runner.py",
+      "bytes": 7723,
+      "sha256": "2d939114cc2fff75bc59d559e7bb129d6291b8fca86b8761d121971f22c3ce7d"
+    },
+    {
+      "path": "raw-models-before.json",
+      "bytes": 368,
+      "sha256": "af3c20db692e3131e470123aaa4693a5a041335106eda9882cc82e9a0f9b76ac"
+    },
+    {
+      "path": "server-evidence/model.json",
+      "bytes": 541,
+      "sha256": "bd42a8164abc5b0cc3490e3f912e2b996704fcaeb271f2da68f9ef04edc7a47e"
+    },
+    {
+      "path": "server-evidence/requests.jsonl",
+      "bytes": 769,
+      "sha256": "9d2651e31fe611ef81bb49c74005352ee9ca3b4c2aabd92b68f17115598d2bbd"
+    },
+    {
+      "path": "server.log",
+      "bytes": 1243,
+      "sha256": "bd000f18a7a26f640f37a2342f82fe989814cdb756d60b5fc4cab89f62868cb1"
+    }
+  ],
+  "image_bytes_committed": false,
+  "request_wire_base64_committed": false,
+  "app_source_changed": false,
+  "known_credentials_scan": "CLEAN",
+  "source_model_harness_sha256": "930be3d3b307993ed6bb712622ae75c6ed2b2e2477e95460642137b43f340d95",
+  "native_video_or_bottle_opening_verified": false
+}

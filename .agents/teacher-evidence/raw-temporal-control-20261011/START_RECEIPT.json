@@ -1,0 +1,25 @@
+{
+  "owned_pid": 1070611,
+  "supervisor_pid": 1070608,
+  "started_utc": "2026-10-11T04:46:11.864531+00:00",
+  "argv": [
+    "/home/samanwirst/Desktop/hackathon_wiut_final_2026/.agents/runtime/ten-hour/worktrees/B/.agents/runtime/local-teacher/.venv/bin/python",
+    "/home/samanwirst/Desktop/hackathon_wiut_final_2026/.agents/runtime/ten-hour/worktrees/B/scripts/experiments/local_teacher.py"
+  ],
+  "environment": {
+    "PATH": "/usr/local/bin:/usr/bin:/bin",
+    "HOME": "/home/samanwirst",
+    "LANG": "C.UTF-8",
+    "LOCAL_TEACHER_HOST": "127.0.0.1",
+    "LOCAL_TEACHER_PORT": "18082",
+    "LOCAL_TEACHER_MODEL_DIR": "/home/samanwirst/Desktop/hackathon_wiut_final_2026/.agents/runtime/ten-hour/worktrees/B/.agents/runtime/local-teacher/cache/pinned-smolvlm",
+    "LOCAL_TEACHER_EVIDENCE": "/home/samanwirst/Desktop/hackathon_wiut_final_2026/.agents/runtime/ten-hour/TEACHER_EMERGENCY/temporal-capability-probe/server-evidence",
+    "LOCAL_TEACHER_SCORING_LABELS": "",
+    "HF_HUB_OFFLINE": "1",
+    "TRANSFORMERS_OFFLINE": "1",
+    "OMP_NUM_THREADS": "2",
+    "MKL_NUM_THREADS": "2",
+    "TOKENIZERS_PARALLELISM": "false",
+    "CUDA_VISIBLE_DEVICES": "0"
+  }
+}

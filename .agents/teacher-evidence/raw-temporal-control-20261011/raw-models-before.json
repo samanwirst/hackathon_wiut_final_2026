@@ -1,0 +1,17 @@
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "HuggingFaceTB/SmolVLM-500M-Instruct",
+      "object": "model",
+      "owned_by": "local-experiment",
+      "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47"
+    }
+  ],
+  "experimental": {
+    "active_request": null,
+    "max_concurrency": 1,
+    "output_mode": "raw_generation",
+    "scoring_labels": []
+  }
+}

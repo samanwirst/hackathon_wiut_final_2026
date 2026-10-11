@@ -1,0 +1,20 @@
+{
+  "checked_utc": "2026-10-11T04:47:04.300673+00:00",
+  "actual_HTTP_inferences": 2,
+  "actual_raw_generated_outputs": 2,
+  "no_retries": true,
+  "request_response_server_logs_correlated": true,
+  "all_input_sha256": "0969a507c3def0e0c73d3cef020df494b1884da6a4b95070049dc325e38e7279",
+  "raw_generation_supported_in_this_probe": true,
+  "two_image_input_supported_in_this_probe": true,
+  "strict_requested_JSON": false,
+  "no_change_control_passed": false,
+  "actual_negative_control_output": " MATCH\n\nThe two images are identical.",
+  "temporal_actions_qualified": false,
+  "native_video_tested": false,
+  "bottle_opening_tested": false,
+  "positive_temporal_accuracy_tested": false,
+  "confidence_calibration_tested": false,
+  "public_deployment_authorized_by_this_probe": false,
+  "recommended_behavior": "Malformed or contradictory semantic output must be rejected and treated UNCERTAIN/nonactioning. Preserve faithful unsupported behavior for unvalidated semantic transitions."
+}

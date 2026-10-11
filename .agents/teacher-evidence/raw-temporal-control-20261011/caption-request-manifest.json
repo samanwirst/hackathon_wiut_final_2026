@@ -1,0 +1,19 @@
+{
+  "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+  "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+  "input_image_count": 1,
+  "input_sha256": [
+    "0969a507c3def0e0c73d3cef020df494b1884da6a4b95070049dc325e38e7279"
+  ],
+  "source": "One unmodified natural photograph repeated; not distinct real temporal captures",
+  "text_parts": [
+    "Describe only what is visibly present in this image in one concise sentence. Do not infer events or actions."
+  ],
+  "max_tokens": 96,
+  "request_body_sha256": "fd46ad5f1be6d2047b8054f3df56d3bcafec407828af045a1e80e6492f41c7eb",
+  "request_body_bytes": 158186,
+  "request_utc": "2026-10-11T04:46:21.893567+00:00",
+  "network": "loopback only",
+  "video_native": false,
+  "no_positive_temporal_accuracy_claim": true
+}

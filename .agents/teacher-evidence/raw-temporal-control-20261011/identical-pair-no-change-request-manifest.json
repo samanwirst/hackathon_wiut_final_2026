@@ -1,0 +1,22 @@
+{
+  "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+  "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+  "input_image_count": 2,
+  "input_sha256": [
+    "0969a507c3def0e0c73d3cef020df494b1884da6a4b95070049dc325e38e7279",
+    "0969a507c3def0e0c73d3cef020df494b1884da6a4b95070049dc325e38e7279"
+  ],
+  "source": "One unmodified natural photograph repeated; not distinct real temporal captures",
+  "text_parts": [
+    "Frame A (earlier observation):",
+    "Frame B (later observation):",
+    "Compare the two supplied images. Is there a visibly supported physical state change of any object between Frame A and Frame B? Return JSON with decision MATCH, NO_MATCH, or UNCERTAIN; supporting_frames as A/B identifiers; evidence as a concise visible explanation. MATCH requires an actual visibly changed object. Identical images are NO_MATCH. If the evidence is insufficient choose UNCERTAIN. Do not infer an action from object presence or movement unless the images support it."
+  ],
+  "max_tokens": 96,
+  "request_body_sha256": "fb7cc3cb2bd9cca4116afb77668a8604e5af72841947fe8ec2796733d8d3fbc7",
+  "request_body_bytes": 316596,
+  "request_utc": "2026-10-11T04:46:23.388064+00:00",
+  "network": "loopback only",
+  "video_native": false,
+  "no_positive_temporal_accuracy_claim": true
+}

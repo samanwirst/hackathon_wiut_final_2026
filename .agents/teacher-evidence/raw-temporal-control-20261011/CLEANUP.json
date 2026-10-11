@@ -1,0 +1,8 @@
+{
+  "stopped_utc": "2026-10-11T04:46:23.993246+00:00",
+  "owned_secondary_pid": 1070611,
+  "owned_secondary_returncode": -15,
+  "existing_pid989679_alive": true,
+  "total_elapsed_seconds": 12.184003050992033,
+  "existing_models_responding": true
+}

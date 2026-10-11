@@ -1,0 +1,38 @@
+{
+  "started_utc": "2026-10-11T04:46:11.810045+00:00",
+  "existing_pid": 989679,
+  "existing_service_preserved": true,
+  "model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+  "revision": "a7da5b986cb59b408707209984f360a5f4ad7e47",
+  "argv": [
+    "/home/samanwirst/Desktop/hackathon_wiut_final_2026/.agents/runtime/ten-hour/worktrees/B/.agents/runtime/local-teacher/.venv/bin/python",
+    "/home/samanwirst/Desktop/hackathon_wiut_final_2026/.agents/runtime/ten-hour/worktrees/B/scripts/experiments/local_teacher.py"
+  ],
+  "explicit_environment": {
+    "PATH": "/usr/local/bin:/usr/bin:/bin",
+    "HOME": "/home/samanwirst",
+    "LANG": "C.UTF-8",
+    "LOCAL_TEACHER_HOST": "127.0.0.1",
+    "LOCAL_TEACHER_PORT": "18082",
+    "LOCAL_TEACHER_MODEL_DIR": "/home/samanwirst/Desktop/hackathon_wiut_final_2026/.agents/runtime/ten-hour/worktrees/B/.agents/runtime/local-teacher/cache/pinned-smolvlm",
+    "LOCAL_TEACHER_EVIDENCE": "/home/samanwirst/Desktop/hackathon_wiut_final_2026/.agents/runtime/ten-hour/TEACHER_EMERGENCY/temporal-capability-probe/server-evidence",
+    "LOCAL_TEACHER_SCORING_LABELS": "",
+    "HF_HUB_OFFLINE": "1",
+    "TRANSFORMERS_OFFLINE": "1",
+    "OMP_NUM_THREADS": "2",
+    "MKL_NUM_THREADS": "2",
+    "TOKENIZERS_PARALLELISM": "false",
+    "CUDA_VISIBLE_DEVICES": "0"
+  },
+  "harness_sha256": "930be3d3b307993ed6bb712622ae75c6ed2b2e2477e95460642137b43f340d95",
+  "input": {
+    "path": "/home/samanwirst/Desktop/hackathon_wiut_final_2026/.agents/runtime/ten-hour/TEACHER_EMERGENCY/nps-el-capitan-original.jpg",
+    "sha256": "0969a507c3def0e0c73d3cef020df494b1884da6a4b95070049dc325e38e7279",
+    "bytes": 118385,
+    "license": "Public domain; NPS provenance in parent input-provenance.json"
+  },
+  "previous_agent_probe_actual_calls": 0,
+  "max_probe_HTTP_attempts": 2,
+  "native_video_input": false,
+  "temporal_positive_fixture_available": false
+}
