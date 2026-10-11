@@ -39,16 +39,38 @@
     <progress id="prog" class="hidden" max="100" value="0" style="width:100%"></progress>
 
     <h3 style="margin-top:18px">Processing</h3>
-    <p class="muted">The judge approves a task; processing then runs here with the source video clock.
-      Progress:</p>
+    <p class="muted">The judge approves a task; processing then runs here on the source video clock.
+      A task being enabled does not mean a job is running — the status below is the actual job state.</p>
     <div id="jobInfo" class="muted">idle</div>
     <img id="feed" class="feed" alt="annotated frame" style="max-width:100%;margin-top:10px;border-radius:8px" />
+    <details style="margin-top:8px">
+      <summary class="muted">Play / replay the uploaded source video</summary>
+      <video id="sourceVideo" controls preload="none"
+             style="width:100%;margin-top:8px;border-radius:8px"></video>
+    </details>
   </div>
 </div>
 
 <script src="/static/common.js"></script>
 <script>
-let roomId=null, pollTimer=null;
+let roomId=null, pollTimer=null, sourceVideoRoom=null;
+
+// A revoked/expired operator session (401/403) must stop the stale running display
+// and request sign-in rather than silently retaining old frames (LIVE-VIDEO-009).
+function isAuthError(e){
+  return /\b(401|403)\b|auth|session|sign ?in|expired|forbidden|unauthor|credential|not authenticated/i
+    .test(String((e && e.message) || e || ""));
+}
+function requireLogin(msg){
+  if (pollTimer) clearInterval(pollTimer); pollTimer=null;
+  roomId=null; sourceVideoRoom=null;
+  const f=document.getElementById("feed"); if(f) f.src="";
+  const sv=document.getElementById("sourceVideo"); if(sv) sv.src="";
+  const job=document.getElementById("jobInfo"); if(job) job.textContent="idle";
+  document.getElementById("main").classList.add("hidden");
+  document.getElementById("authCard").classList.remove("hidden");
+  setBanner("banner","err",msg||"Session expired — please sign in again.");
+}
 
 document.getElementById("signin").onclick = async () => {
   try {
@@ -84,6 +106,8 @@ document.getElementById("upload").onclick = async () => {
     const m = r.meta;
     document.getElementById("videoInfo").textContent =
       `Validated: ${m.w}x${m.h}, ${m.fps} fps, ${m.frame_count} frames, ${m.duration_seconds}s · sha256 ${r.sha256.slice(0,12)}…`;
+    const sv = document.getElementById("sourceVideo");
+    if (sv && roomId) { sv.src = `/api/live/rooms/${roomId}/video/source`; sourceVideoRoom = roomId; }
     setBanner("banner","info","Video uploaded & validated. Ask the judge to approve a task to start processing.");
   } catch(e){ setBanner("banner","err",e.message); }
 };
@@ -95,12 +119,28 @@ function startPolling() {
     try {
       const s = await api(`/api/live/rooms/${roomId}/state`);
       const v = s.video || {};
-      document.getElementById("jobInfo").textContent =
-        `status: ${v.job_status} · ${v.job_processed}/${v.job_total} frames` + (v.job_error?` · error: ${v.job_error}`:"");
+      const fps = (v.meta && v.meta.fps) ? v.meta.fps : null;
+      const total = v.job_total || (v.meta && v.meta.frame_count) || 0;
+      const proc = v.job_processed || 0;
+      let line = `status: ${v.job_status || "idle"} · ${proc}/${total} frames`;
+      if (fps) {
+        const elapsed = proc / fps;
+        const dur = total ? total / fps : (v.meta ? v.meta.duration_seconds : null);
+        line += ` · source t=${elapsed.toFixed(1)}s` + (dur != null ? ` / ${Number(dur).toFixed(1)}s` : "");
+      }
+      if (v.job_error) line += ` · error: ${v.job_error}`;
+      document.getElementById("jobInfo").textContent = line;
       if (v.job_status === "running" || v.job_status === "done") {
         img.src = `/api/live/rooms/${roomId}/frame?t=${Date.now()}`;
       }
-    } catch(e){ /* keep last */ }
+      const sv = document.getElementById("sourceVideo");
+      if (sv && roomId && v.job_status && sourceVideoRoom !== roomId) {
+        sv.src = `/api/live/rooms/${roomId}/video/source`; sourceVideoRoom = roomId;
+      }
+    } catch(e){
+      if (isAuthError(e)) requireLogin("Session expired — please sign in again.");
+      /* else transient: keep last */
+    }
   };
   tick(); pollTimer = setInterval(tick, 800);
 }
