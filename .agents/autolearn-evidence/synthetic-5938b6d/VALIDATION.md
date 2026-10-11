@@ -2,8 +2,9 @@
 
 Experimental snapshot: `5938b6d1f1396c1513d52ee9d9c3cdb377dc43a4`.
 This is an execution record, **not M3 acceptance or permission to activate**.
-Independent QA returned CHANGES_REQUIRED; the final bounded correction is in
-progress and this snapshot is not accepted. Historical M2 remains BLOCKED; Teacher-backed
+Independent QA returned CHANGES_REQUIRED. The final bounded correction at
+ff48ca9 also failed independent QA with six P1s; neither snapshot is accepted
+or integrated. Historical M2 remains BLOCKED; Teacher-backed
 workflow actions stay disabled. Active model is null; shadow actions are `none`.
 
 ## Inputs and protocol

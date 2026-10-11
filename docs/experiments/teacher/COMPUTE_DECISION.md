@@ -19,9 +19,10 @@ measured labels came from explicitly disclosed candidate likelihood scoring.
 A stronger pretrained image Teacher could improve label usefulness, but would
 require new task validation; no quality improvement is assumed from model size.
 
-The immediate blocking work is independent correctness review and correction
-of budget/provenance/UI/artifact/gating/rollback boundaries. It is not accelerated
-by renting a GPU. Current verified ground truth already supports the small
+The final independent review found six P1 defects in
+budget/provenance/UI/artifact/gating boundaries. The bounded correction/review
+allocation is closed; the experimental application is not integrated. Renting
+a GPU cannot fix these correctness failures. Current verified ground truth supports the small
 Student demonstration; natural footage and generalization remain unverified.
 
 The former Vast control could not enforce aggregate network/storage costs.

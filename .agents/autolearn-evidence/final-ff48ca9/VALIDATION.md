@@ -1,4 +1,4 @@
-# Final isolated AutoLearn snapshot — checks executed, review pending
+# Final isolated AutoLearn snapshot — checks passed, independent QA failed
 
 Handoff SHA: `ff48ca9756e179e1bda1f9556e44d20c24776a8b`.
 Implementation/test SHA: `8e9d95fe0c4d6939d793e086cf2820b80231a5a8`.
@@ -18,10 +18,14 @@ make smoke
 event/evidence/local action. Actual command logs and exact SHA/exit/duration
 receipts are adjacent; these are independently executed root checks.
 
-One fresh independent Codex review started on this exact tested commit at
-2026-10-10 23:34:28 UTC, bounded to 1500 seconds. **Its verdict is pending.**
-Tests/build/smoke do not synthesize PASS. No further normal correction cycle
-is authorized after its final result. M2 remains BLOCKED.
+One fresh independent Codex review ran on this exact tested commit from
+2026-10-10 23:34:28 to 23:53:12 UTC, within its 1500-second limit.
+**CHANGES_REQUIRED: six P1 and one P2**. It independently ran54 focused
+AutoLearn tests and36 safety checks, plus original and new real TCP/CPU/UI
+reproductions. [Final report](../../reviews/AUTOLEARN-TEN-HOUR-FINAL.md),
+archived on review branch commit8c252af. This was conclusive, not a timeout.
+Tests/build/smoke do not override QA. No further normal correction cycle is
+authorized; C is BLOCKED and not integrated. M2 remains BLOCKED.
 
 This code is not integrated into the delivery application, no Student is
 activated and no public application is published. The real 24-image/6-held-out

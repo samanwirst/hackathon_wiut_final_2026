@@ -42,8 +42,10 @@ labeling and applied the user's verification of 24 exact synthetic images.
 Twelve biased Teacher proposals needed correction. A real Student was fitted,
 saved, reloaded and compared in shadow on six held-out synthetic images:
 Student 6/6 correct, Teacher 3/6. The independent review of that experimental
-snapshot returned CHANGES_REQUIRED; its final second normal correction pass is
-in progress. See the [executed pilot evidence](.agents/autolearn-evidence/synthetic-5938b6d/VALIDATION.md)
+snapshot returned CHANGES_REQUIRED. The final correction at `ff48ca9` passed249
+tests/build/realYOLO but independently failed QA with6P1; the experiment is
+BLOCKED, closed and not integrated. See the [final review](.agents/reviews/AUTOLEARN-TEN-HOUR-FINAL.md)
+and [executed pilot evidence](.agents/autolearn-evidence/synthetic-5938b6d/VALIDATION.md)
 for exact inputs, timings and limits. No model was activated; this is not M3
 acceptance. The verified fallback
 is protected on `feature/demo-safe`.

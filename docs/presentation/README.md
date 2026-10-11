@@ -8,7 +8,9 @@ The deck names experimental results and failed QA honestly. The six unique
 synthetic held-out inputs are not natural footage. Eighteen timing observations
 do not create eighteen independent quality samples. No Student is activated,
 no cost savings percentage is claimed, and the closed rental performed no
-remote inference. Update status only after the exact fresh review returns.
+remote inference. Final review of ff48ca9 returned CHANGES_REQUIRED with6P1;
+the experimental application is excluded from delivery. Show its executed
+evidence with failed QA disclosed, using the geometric application live.
 
 All PNG previews were generated and visually inspected using the artifact
 presentation runtime; `VALIDATION.json` binds the PPTX and actual model panel.

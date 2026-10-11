@@ -1,0 +1,20 @@
+{
+  "phase": "BLOCKED",
+  "target_sha": "ff48ca9756e179e1bda1f9556e44d20c24776a8b",
+  "code_sha": "8e9d95fe0c4d6939d793e086cf2820b80231a5a8",
+  "verdict": "CHANGES_REQUIRED",
+  "P1_findings": [
+    "C-004",
+    "C-005-BATCH",
+    "C-005",
+    "C-002",
+    "C-008",
+    "C-007"
+  ],
+  "final_review_completed_at": "2026-10-10T23:53:12Z",
+  "additional_normal_cycles_authorized": false,
+  "integrated": false,
+  "student_activated": false,
+  "actual_user_dataset_untouched": true,
+  "smallest_safe_scope": "Retain accepted geometric delivery. Keep all AutoLearn experimental application code out of delivery; show genuine pilot evidence only with failed QA disclosed. NL/Teacher workflow actions remain disabled."
+}
