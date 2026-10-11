@@ -25,6 +25,7 @@ import json
 import fcntl
 import logging
 import os
+import re
 import signal
 import subprocess
 import sys
@@ -129,6 +130,15 @@ def _system_prompt() -> str:
         "Only use zone.type=polygon if the user actually supplies coordinates. Never invent "
         "polygon coordinates. Preserve every duration and cooldown exactly, including 1.25. "
         "Set cooldown_seconds=null only when no cooldown was requested; zero means zero.\n"
+        "Trigger definitions are binding: entered_zone means an observed transition from "
+        "outside to inside (enters, arrives, comes into, crosses into). exited_zone means "
+        "inside to outside (leaves, exits, departs, goes out). dwell_in_zone means the SAME "
+        "tracked object remains continuously inside for the requested duration. "
+        "presence_in_zone means only currently visible inside, and MUST NOT replace entry, "
+        "exit or dwell. A repeated observation is not a new entry. Preserve numeric duration "
+        "and notification spacing exactly. Negation, exceptions, combinations of operators, "
+        "and per-person composite constraints require unsupported/clarification unless "
+        "every condition is directly represented by the single supported typed rule.\n"
         "3. Semantic/temporal/state-change conditions (opening, unattended, loitering intent, "
         "damage, 'when somebody opens it') are UNSUPPORTED in video mode. There is no "
         "visual_observation, no Teacher verification and NO closest-geometry fallback. If the "
@@ -209,7 +219,7 @@ def plan(text: str, room_id: str) -> PlannerResult:
     if transport is not None:
         result = transport(text, room_id)
         result.attempt = attempt
-        return _finalize(result)
+        return _guard_semantics(text, _finalize(result))
 
     if not config.PLANNER_ENABLED:
         return PlannerResult(status="unavailable", error="planner disabled", attempt=attempt)
@@ -222,7 +232,49 @@ def plan(text: str, room_id: str) -> PlannerResult:
     else:
         raw = PlannerResult(status="unavailable", error="unsupported planner provider")
     raw.attempt = attempt
-    return _finalize(raw)
+    return _guard_semantics(text, _finalize(raw))
+
+
+def _guard_semantics(text: str, result: PlannerResult) -> PlannerResult:
+    """Reject evident semantic loss; never generate or repair a model's task.
+
+    This conservative check covers explicit transition verbs and numeric time
+    constraints. Language interpretation remains the real model's responsibility;
+    unfamiliar or ambiguous requests still require review/clarification. The
+    guard only withholds an inconsistent proposal from approval.
+    """
+    if result.status != "ok" or result.task is None:
+        return result
+    normalized = text.lower()
+    transitions = {
+        "entered_zone": r"\b(?:enter(?:s|ed|ing)?|arriv(?:e|es|ed|ing)|com(?:e|es|ing)\s+(?:in|into)|cross(?:es|ed|ing)?\s+into)\b",
+        "exited_zone": r"\b(?:leav(?:e|es|ing)|exit(?:s|ed|ing)?|depart(?:s|ed|ing)?|go(?:es|ing)?\s+out)\b",
+        "dwell_in_zone": r"\b(?:remain(?:s|ed|ing)?|stay(?:s|ed|ing)?|linger(?:s|ed|ing)?|dwell(?:s|ed|ing)?)\b",
+    }
+    requested = {operator for operator, pattern in transitions.items() if re.search(pattern, normalized)}
+    reason = None
+    if re.search(r"\b(?:no|not|never|unless|except|without|each|every\s+person|don['’]t|doesn['’]t|isn['’]t)\b", normalized):
+        reason = "negated, exception or per-object composite conditions require clarification"
+    elif re.search(r"\b(?:email|sms|webhook|unlock|shutdown|open(?:s|ed|ing)?|damage(?:d)?|unattended)\b|\bturn\s+(?:on|off)\b", normalized):
+        reason = "the requested semantic condition or external action is not implemented"
+    elif len(requested) > 1:
+        reason = "multiple temporal operators cannot be represented by this single rule"
+    elif requested and result.task.get("trigger") not in requested:
+        reason = "the proposed trigger does not preserve the requested transition"
+    duration = re.search(r"\bfor\s+(?:(?:more\s+than|at\s+least|exactly|precisely|over)\s+)?(\d+(?:\.\d+)?)\s*(?:seconds?|secs?|s)\b", normalized)
+    cooldown = (re.search(r"(\d+(?:\.\d+)?)\s*(?:seconds?|secs?|s)\s+between\b", normalized)
+                or re.search(r"\bcooldown\s*(?:of\s+)?(\d+(?:\.\d+)?)", normalized))
+    if duration and (result.task.get("trigger") != "dwell_in_zone"
+                     or result.task.get("duration_seconds") != float(duration.group(1))):
+        reason = "the proposed rule does not preserve the exact requested dwell duration"
+    if cooldown and result.task.get("cooldown_seconds") != float(cooldown.group(1)):
+        reason = "the proposed rule does not preserve the exact notification spacing"
+    if reason:
+        result.status = "unsupported"
+        result.unsupported_reason = reason
+        result.clarification = "Please express one supported geometric rule with its exact conditions."
+        result.task = None
+    return result
 
 
 def _finalize(result: PlannerResult) -> PlannerResult:
